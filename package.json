@@ -1,0 +1,26 @@
+{
+  "name": "reel-nest",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config web/vite.config.ts",
+    "build": "tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts",
+    "test": "npm run build && go test ./... && playwright test",
+    "test:browser": "npm run build && playwright test",
+    "format:check": "prettier --check web scripts tests playwright.config.ts package.json compose*.yaml"
+  },
+  "dependencies": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.1",
+    "@types/react": "19.1.16",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.4",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
+    "vite": "7.1.7"
+  }
+}

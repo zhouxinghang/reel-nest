@@ -1,0 +1,10 @@
+node_modules/
+internal/web/dist/
+data/
+.env
+secrets/
+playwright-report/
+test-results/
+.reelnest-test/
+bin/
+.DS_Store

@@ -1,6 +1,6 @@
 # 核心家庭媒体管理系统：Ticket 索引
 
-发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖；本次仅发布任务，不开始实现。
+发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–03；Docker 校验按用户要求跳过。
 
 ## 执行依据
 
@@ -10,15 +10,15 @@
 - [ADR 0002：以宿主机挂载目录作为媒体接入边界](/Users/bytedance/workspace/reel-nest/docs/adr/0002-host-mounted-media-directories.md)。
 - [ADR 0003：外部播放器使用不过期的单文件只读链接](/Users/bytedance/workspace/reel-nest/docs/adr/0003-non-expiring-read-only-stream-links.md)。
 
-正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。仓库暂无应用代码，不需要前置重构任务。
+正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–03，不新增技术锁定 ADR。
 
 ## Tickets 与依赖
 
 | 编号 | Ticket | Blocked by | Status |
 | --- | --- | --- | --- |
-| 01 | [单机部署与家庭共享账号登录](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/01-household-login-and-deployment.md) | 无 | ready-for-agent |
-| 02 | [媒体目录扫描与基础媒体库浏览](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/02-media-directory-scan-and-library.md) | 01 | ready-for-agent |
-| 03 | [电视剧、季与单集组织](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/03-series-seasons-and-episodes.md) | 02 | ready-for-agent |
+| 01 | [单机部署与家庭共享账号登录](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/01-household-login-and-deployment.md) | 无 | resolved |
+| 02 | [媒体目录扫描与基础媒体库浏览](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/02-media-directory-scan-and-library.md) | 01 | resolved |
+| 03 | [电视剧、季与单集组织](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/03-series-seasons-and-episodes.md) | 02 | resolved |
 | 04 | [浏览器直放与家庭共用续播](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/04-browser-playback-and-progress.md) | 02 | ready-for-agent |
 | 05 | [IINA/PotPlayer 单文件只读串流](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/05-external-player-streaming.md) | 04 | ready-for-agent |
 | 06 | [网页外挂字幕选择与关闭](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/06-browser-sidecar-subtitles.md) | 04 | ready-for-agent |
@@ -30,11 +30,10 @@
 
 ## Frontier
 
-- 当前可领取：**01**。所有任务均未领取、未实现，ready-for-agent 不代表依赖已解除。
-- 01 完成后：02。
-- 02 完成后：03、04、09 可独立推进；按编号领取时下一项为 03。
-- 04 完成后：05、06 可推进，不等待 TMDB。
-- 03 与 04 均完成后：07。07 完成后：08。
+- 已完成：**01–03**（resolved）；Docker 实测按用户要求跳过并保留未验证记录。
+- 下一顺序 frontier：**04**（ready-for-agent）。09 的依赖也已解除；04–09 尚未领取/实现，当前无 claimed ticket。
+- 04 完成后：05、06、07 可推进；05、06 不等待 TMDB，07 的 03 依赖已满足。
+- 07 完成后：08。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -73,8 +72,18 @@
 - 自动化测试、真实 TMDB 联通、Docker 运行、浏览器播放及 IINA/PotPlayer 实机兼容性分别记录环境、结果与未验证项。此前环境探查未在 PATH 找到 Docker CLI，也没有 Windows/PotPlayer 实机通过记录；实施时重新检查，不虚构通过结果。
 - 没有已约定的容量、并发或延迟指标，不自行声称达标；浏览器格式兼容、中文资料覆盖和 PotPlayer 协议注册均不做普遍保证。
 
-## 发布审计
+## 发布审计（历史）
 
 父规格发布前的 SHA-256：b59d28b65b485cead460fbf863830c6b99ee371a9666d57d8ca33cadc85747ff。
 
-本次只新增本索引与 9 个独立 ticket；没有修改父规格、实现代码或执行媒体操作。所有验收复选框保持未完成。
+发布时仅新增本索引与 9 个独立 ticket；没有修改父规格、实现代码或执行媒体操作，当时所有验收复选框保持未完成。
+
+## 实施记录
+
+- 2026-09-30：01、02 已交付并回填 Answer/验收状态；父规格及 ADR 保持不变。
+- 通过构建、真实应用 HTTP、race/vet、Chrome 浏览器及 Linux/amd64 交叉编译验证；完整记录见 [验证记录](/Users/bytedance/workspace/reel-nest/docs/verification.md)。
+- Docker 镜像构建和容器运行按用户要求跳过，不是通过；01 的容器验收保留未勾选，不阻塞此次明确要求的继续推进。
+- 01、02 阶段测试仅使用隔离临时媒体，未触碰用户媒体；当时 03–09 后续能力及真实播放/TMDB/外部播放器兼容性未验证。
+- 2026-09-30：03 已交付并回填 Answer/全部验收状态；新增持久化本地电视剧 → 季 → 单集组织、保守文件名识别、数值排序、独立文件版本及未组织回退，未匹配媒体仍完整可浏览。
+- 03 增量通过 12 个应用级用例（新增 4 个，含 25 种命名子用例）、race/vet、Chrome 季集导航及桌面/窄屏布局检查、构建/格式/依赖审计和 Linux/amd64 交叉编译；真实 02 旧版 → 新版的离线媒体升级与再次重启验证通过，保留账号、媒体文件标识和组织结果。
+- 03 未修改父规格或 ADR，未操作用户媒体；Docker 继续明确跳过，不是通过。04–09 未实现，下一顺序 frontier 为 04，09 亦已解除阻塞。

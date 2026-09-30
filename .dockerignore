@@ -1,0 +1,11 @@
+.git
+.scratch
+node_modules
+internal/web/dist
+data
+.env
+secrets
+bin
+test-results
+playwright-report
+.reelnest-test
