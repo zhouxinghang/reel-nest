@@ -32,7 +32,18 @@ func run() error {
 		}
 		password = strings.TrimRight(string(contents), "\r\n")
 	}
-	application, err := app.New(app.Config{DataDir: env("DATA_DIR", "./data"), Username: os.Getenv("HOUSEHOLD_USERNAME"), Password: password, CookieSecure: os.Getenv("COOKIE_SECURE") == "true", Assets: web.Assets(), MediaRoots: filepath.SplitList(os.Getenv("MEDIA_ROOTS"))})
+	token := os.Getenv("TMDB_READ_ACCESS_TOKEN")
+	if path := os.Getenv("TMDB_READ_ACCESS_TOKEN_FILE"); path != "" {
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			// Optional metadata configuration must not take down local media.
+			token = ""
+			log.Print("无法读取 TMDB_READ_ACCESS_TOKEN_FILE；已禁用资料获取，本地媒体仍可使用")
+		} else {
+			token = strings.TrimSpace(string(contents))
+		}
+	}
+	application, err := app.New(app.Config{TMDBToken: token, DataDir: env("DATA_DIR", "./data"), Username: os.Getenv("HOUSEHOLD_USERNAME"), Password: password, CookieSecure: os.Getenv("COOKIE_SECURE") == "true", Assets: web.Assets(), MediaRoots: filepath.SplitList(os.Getenv("MEDIA_ROOTS"))})
 	if err != nil {
 		return err
 	}

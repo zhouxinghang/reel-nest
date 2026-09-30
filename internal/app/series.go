@@ -7,15 +7,16 @@ import (
 )
 
 type SeriesSummary struct {
-	DirectoryPath      string `json:"directoryPath"`
-	ID                 string `json:"id"`
-	Title              string `json:"title"`
-	DirectoryID        string `json:"directoryId"`
-	SeasonCount        int    `json:"seasonCount"`
-	EpisodeCount       int    `json:"episodeCount"`
-	FileCount          int    `json:"fileCount"`
-	AvailableFileCount int    `json:"availableFileCount"`
-	Matched            bool   `json:"matched"`
+	Match              metadataAssociation `json:"match"`
+	DirectoryPath      string              `json:"directoryPath"`
+	ID                 string              `json:"id"`
+	Title              string              `json:"title"`
+	DirectoryID        string              `json:"directoryId"`
+	SeasonCount        int                 `json:"seasonCount"`
+	EpisodeCount       int                 `json:"episodeCount"`
+	FileCount          int                 `json:"fileCount"`
+	AvailableFileCount int                 `json:"availableFileCount"`
+	Matched            bool                `json:"matched"`
 }
 
 type Episode struct {
@@ -46,7 +47,7 @@ func seriesSummaries(files []MediaFile) []SeriesSummary {
 		}
 		group := groups[ref.SeriesID]
 		if group == nil {
-			group = &collection{summary: SeriesSummary{ID: ref.SeriesID, Title: ref.SeriesTitle, DirectoryID: file.DirectoryID, DirectoryPath: file.DirectoryPath}, seasons: map[int]map[int]bool{}}
+			group = &collection{summary: SeriesSummary{ID: ref.SeriesID, Title: ref.SeriesTitle, Match: file.Match, Matched: file.Matched, DirectoryID: file.DirectoryID, DirectoryPath: file.DirectoryPath}, seasons: map[int]map[int]bool{}}
 			groups[ref.SeriesID] = group
 		}
 		group.summary.FileCount++
@@ -98,6 +99,11 @@ func (a *App) series(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(files) == 0 {
 		fail(w, 404, "电视剧不存在")
+		return
+	}
+	rows.Close()
+	if err := a.attachMetadata(r.Context(), files); err != nil {
+		fail(w, 500, "无法读取影片资料")
 		return
 	}
 	detail := SeriesDetail{SeriesSummary: seriesSummaries(files)[0], Seasons: []Season{}}

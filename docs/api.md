@@ -1,4 +1,4 @@
-# 当前应用 HTTP 契约（01–06）
+# 当前应用 HTTP 契约（01–08）
 
 应用与网页同源。所有写入请求为 `application/json`，无参数 POST 发送 `{}`；错误返回 `{"error":"可显示的错误说明"}`。对跨站浏览器写入请求返回 403。除健康检查和登录外，API 均要求家庭共享账号会话；独立的 `/stream/{id}` 使用单文件只读串流凭证，不能代替网页会话。
 
@@ -17,11 +17,11 @@
 
 目录字段：`id / path / kind / scanStatus / scanError / scanStarted / scanFinished`。状态为 `pending / running / completed / failed / interrupted`。时间为 Unix 秒，未开始/完成为 0。新增或重扫响应仅代表请求已接受；应轮询目录列表观察终态，不按固定延时假定成功。
 
-媒体文件字段：`id / directoryId / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress`。大小为字节，修改时间为 Unix 秒；`available` 是最近一次完整扫描的文件版本状态，不是实时探测结果。当前尚未接入影片资料，`matched=false`；即使不可用仍可查看记录和源文件路径。
+媒体文件字段：`id / directoryId / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress / match`。大小为字节，修改时间为 Unix 秒；`available` 是最近一次完整扫描的文件版本状态，不是实时探测结果。`matched` 表示存在未过期的 TMDB 资料；即使不可用仍可查看记录和源文件路径。
 
 `episode` 为 `null`（电影或未组织文件），或 `{seriesId, seriesTitle, seasonNumber, episodeNumber}`。无法识别的电视剧文件通过 `organizationReason` 解释原因；识别成功时为空字符串。`matched` 表示影片资料匹配，不能用 `episode != null` 代替它。
 
-电视剧摘要字段：`id / title / directoryId / directoryPath / seasonCount / episodeCount / fileCount / availableFileCount / matched`。季/集数量按逻辑季集去重，文件数量不合并版本；来源目录区分跨目录的同名作品。`/api/library` 的摘要对应本次筛选出的文件；`items` 始终保留每个文件，不被电视剧摘要替代。
+电视剧摘要字段：`id / title / directoryId / directoryPath / seasonCount / episodeCount / fileCount / availableFileCount / matched / match`。季/集数量按逻辑季集去重，文件数量不合并版本；来源目录区分跨目录的同名作品。`/api/library` 的摘要对应本次筛选出的文件；`items` 始终保留每个文件，不被电视剧摘要替代。
 
 `GET /api/series/{id}` 在摘要之外返回：
 
@@ -37,7 +37,7 @@
 
 同一个媒体文件至多关联一个季集位置，不以作品标题或季集编号作为读取/修改目标。重复扫描和版本升级保留原文件标识；同一单集下可有多个独立版本，包括已不可用的旧文件记录。
 
-未登录 API 返回 401；受保护页面 `/library`、`/directories`、`/media/{id}`、`/series/{id}` 引导至 `/login`。电视剧页面使用 `?season=2` 选择第 2 季；不存在的季显示明确提示。前端资源不包含秘密。TMDB 匹配或删除尚未实现，不应将文件详情响应当成播放验证。
+未登录 API 返回 401；受保护页面 `/library`、`/directories`、`/media/{id}`、`/series/{id}` 引导至 `/login`。电视剧页面使用 `?season=2` 选择第 2 季；不存在的季显示明确提示。前端资源不包含秘密。安全删除尚未实现，不应将文件详情响应当成播放验证。
 
 扫描在真实文件系统根句柄内进行，拒绝符号链接并检测根目录替换；失败扫描不发布部分索引。应用数据（SQLite，WAL 模式）独立保存；按目录和文件版本建立稳定随机文件标识。身份识别的精确边界见 README。
 
@@ -78,3 +78,20 @@
 字幕 id 是媒体标识、候选文件名和文件指纹的 SHA-256，不是文件路径，也不是授权凭证；只认当前候选集合，不能指定任意路径。读取拒绝符号链接、非常规文件和读取过程中发生的替换。候选变化返回 404，权限/读取竞态 409；格式、编码、结构、时间错误或超过 2 MiB 返回 422 JSON 错误。读取/转换不修改源字幕；详细命名/格式子集见 README。
 
 网页预先获取并验证 VTT，再通过本地 Blob 交给原生 `<track>` 渲染，选择切换会禁用/移除旧 track、取消未完成请求并释放 Blob。CSP 仅为原生媒体增加 `blob:` 来源，脚本仍只允许同源。字幕错误不会停止视频或伪造加载成功。
+
+## TMDB 影片资料（07）
+
+所有以下路由都要求家庭共享账号；串流凭证不授予权限。
+
+- `GET /api/metadata/status` → `{configured,running,error,finishedAt,revision,cooldownUntil}`。凭据本身从不返回。`revision` 在后台批次完成、手动确认成功或清理到期缓存后递增；`finishedAt` / `cooldownUntil` 为 Unix 秒。
+- `POST /api/metadata/refresh`，空 JSON `{}` → 202 排队；未配置 503、已有批次 409。不扫描磁盘；仅对已收录电影和已组织电视剧尝试唯一精确匹配，刷新到期关联。有效缓存沿用。
+- `GET|HEAD /api/metadata/posters/{kind}/{tmdbId}` → 已缓存有效图片；未配置不影响未到期缓存读取。无海报、错误类型/标识、到期返回 404；未登录 401。响应 `no-store`，避免浏览器长期保留 TMDB 图片。无任意 URL/路径代理。
+- 媒体文件与电视剧响应新增 `match: {metadata,selection,status,error}`。`metadata` 为 `null` 或 `{source,tmdbId,kind,title,originalTitle,year,overview,posterUrl,sourceUrl,fetchedAt,expiresAt}`；`kind` 为 `movie|series`，`selection` 为 `automatic|manual` 或尚未关联时空字符串，`status` 为 `unmatched|matched|failed|expired`。`matched` 表示当前有未到期的可展示资料，而不是视频是否可播放。资料失效不改变本地媒体 ID、季集关系或观看进度。
+- `GET /api/library?q=` 同时搜索本地文件名、本地电视剧名和有效资料标题；既有字段保留，电视剧 `title` 仍是本地组织名称，中文资料通过 `match.metadata.title` 提供。
+
+## 手动修正影片资料（08）
+
+- `GET /api/matching/{kind}/{id}/search?q=<作品标题>` → `{items:[TitleMetadata...],moreResults}`。`kind=movie|series`；查询去首尾空白后 1–200 UTF-8 字节，参数错误 400，目标不存在/类型不符 404，未登录 401，TMDB 不可用 503。返回前 20 个同类型候选，包含标题/原始标题/年份/TMDB ID；搜索从不修改关联。
+- `POST /api/matching/{kind}/{id}/selection`，`{kind,tmdbId}` → 200 返回新 `match`。`tmdbId` 为正整数，body 类型必须与路由相同；类型/ID 不符 400，目标不存在 404，后台匹配或其他确认争用时 409，外部失败 503，持久化失败 500。确认成功后 `selection=manual`；失败保留旧关联，取消无需请求。
+- `movie` 的 `id` 为该电影媒体文件 ID。`series` 的 `id` 为本地电视剧 ID；对尚未组织到电视剧的文件，也接受该电视剧文件 ID，仅关联资料而不创建季集结构。已组织单集须使用其 `episode.seriesId`，不能把某一版本确认伪装成整个电视剧之外的新内容。
+- 稳定文件 ID、源文件、其他电影版本、季集关系和观看进度不受影响。过期缓存刷新沿用手动选择的类型和 TMDB ID；正常重扫/重启不回退为自动匹配。

@@ -52,6 +52,9 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
   );
   copyFileSync("tests/fixtures/playback.webm", join(root, "missing.webm"));
   await login(page);
+  await expect(
+    page.getByRole("region", { name: "TMDB 设置与状态" }),
+  ).toContainText("未配置 TMDB 凭据");
   const added = await context.request.post("/api/directories", {
     data: { path: root, kind: "movie" },
   });

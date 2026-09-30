@@ -17,15 +17,16 @@ import { randomBytes } from "node:crypto";
 
 if (
   ![4, 5].includes(process.argv.length) ||
-  (process.argv[4] && process.argv[4] !== "--playback")
+  (process.argv[4] && !["--playback", "--metadata"].includes(process.argv[4]))
 )
   throw new Error(
-    "Usage: node scripts/verify-organization-upgrade.mjs /absolute/old-binary /absolute/current-binary [--playback]",
+    "Usage: node scripts/verify-organization-upgrade.mjs /absolute/old-binary /absolute/current-binary [--playback|--metadata]",
   );
 const [oldBinary, currentBinary] = process.argv
   .slice(2, 4)
   .map((path) => resolve(path));
-const playback = process.argv[4] === "--playback";
+const metadata = process.argv[4] === "--metadata";
+const playback = metadata || process.argv[4] === "--playback";
 let streamPath = "";
 const root = mkdtempSync(join(tmpdir(), "reelnest-upgrade-"));
 const media = join(root, "media");
@@ -75,6 +76,8 @@ async function start(binary, bootstrap) {
       HOUSEHOLD_PASSWORD: bootstrap ? password : "",
       HOUSEHOLD_PASSWORD_FILE: "",
       COOKIE_SECURE: "false",
+      TMDB_READ_ACCESS_TOKEN: "",
+      TMDB_READ_ACCESS_TOKEN_FILE: "",
     },
     stdio: ["ignore", "ignore", "inherit"],
   });
@@ -143,11 +146,27 @@ try {
   const before = await request("/api/library");
   assert.equal(before.items.length, 3);
   assert.ok(
-    playback
-      ? before.series?.length === 1
-      : !before.series || before.series.length === 0,
+    metadata
+      ? "PASS: real pre-TMDB playback application → offline-source metadata migration → restored source → restart; account, IDs, hierarchy, saved progress and original stream credential preserved."
+      : playback
+        ? before.series?.length === 1
+        : !before.series || before.series.length === 0,
     "old binary must match the requested pre-03/pre-04 baseline",
   );
+  if (metadata) {
+    assert.equal(
+      before.items[0].match,
+      undefined,
+      "old binary must predate TMDB support",
+    );
+    const id = before.items[0].id;
+    await request(`/api/media/${id}/progress`, {
+      position: 12.5,
+      duration: 60,
+      completed: false,
+    });
+    streamPath = (await request(`/api/media/${id}/stream-link`, {})).path;
+  }
   await stop();
   renameSync(media, media + "-offline");
   await start(currentBinary, false);
@@ -169,14 +188,27 @@ try {
   );
   if (playback) {
     const id = after.items[0].id;
-    assert.equal((await request(`/api/media/${id}/progress`)).updatedAt, 0);
+    if (metadata) {
+      assert.equal((await request(`/api/media/${id}/progress`)).position, 12.5);
+      assert.equal((await request("/api/metadata/status")).configured, false);
+      assert.equal(after.items[0].match.metadata, null);
+    } else
+      assert.equal((await request(`/api/media/${id}/progress`)).updatedAt, 0);
     renameSync(media + "-offline", media);
     await request(`/api/media/${id}/progress`, {
       position: 12.5,
       duration: 60,
       completed: false,
     });
-    streamPath = (await request(`/api/media/${id}/stream-link`, {})).path;
+    const newStreamPath = (await request(`/api/media/${id}/stream-link`, {}))
+      .path;
+    if (metadata)
+      assert.equal(
+        newStreamPath,
+        streamPath,
+        "migration changed stream credential",
+      );
+    streamPath = newStreamPath;
     const stream = await fetch(baseURL + streamPath, {
       headers: { Range: "bytes=0-7" },
     });
@@ -205,9 +237,11 @@ try {
     );
   }
   console.log(
-    playback
-      ? "PASS: real pre-04 application → offline-source upgrade → shared progress and independent stream → repeated restart; account, IDs, organization, progress and stream key preserved."
-      : "PASS: real pre-03 application → offline-source upgrade → repeated restart; account, file IDs and series organization preserved.",
+    metadata
+      ? "PASS: real pre-TMDB playback application → offline-source metadata migration → restored source → restart; account, IDs, hierarchy, saved progress and original stream credential preserved."
+      : playback
+        ? "PASS: real pre-04 application → offline-source upgrade → shared progress and independent stream → repeated restart; account, IDs, organization, progress and stream key preserved."
+        : "PASS: real pre-03 application → offline-source upgrade → repeated restart; account, file IDs and series organization preserved.",
   );
 } finally {
   await stop();

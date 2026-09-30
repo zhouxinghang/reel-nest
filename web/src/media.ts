@@ -13,6 +13,7 @@ export type EpisodeReference = {
 };
 
 export type MediaFile = {
+  match: MetadataAssociation;
   progress: WatchProgress | null;
   id: string;
   directoryId: string;
@@ -30,6 +31,7 @@ export type MediaFile = {
 };
 
 export type SeriesSummary = {
+  match: MetadataAssociation;
   id: string;
   title: string;
   directoryId: string;
@@ -46,4 +48,24 @@ export type SeriesDetail = SeriesSummary & {
     number: number;
     episodes: { number: number; files: MediaFile[] }[];
   }[];
+};
+
+export type TitleMetadata = {
+  source: "TMDB";
+  tmdbId: number;
+  kind: "movie" | "series";
+  title: string;
+  originalTitle: string;
+  year: string;
+  overview: string;
+  posterUrl: string;
+  sourceUrl: string;
+  fetchedAt: number;
+  expiresAt: number;
+};
+export type MetadataAssociation = {
+  metadata: TitleMetadata | null;
+  selection: string;
+  status: string;
+  error: string;
 };

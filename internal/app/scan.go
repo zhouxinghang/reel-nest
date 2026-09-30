@@ -78,6 +78,7 @@ func (a *App) collect(root *os.Root, prefix string, files *[]discoveredFile) err
 func (a *App) scan(d Directory) {
 	err := a.scanFiles(d)
 	if err == nil {
+		a.queueMetadata()
 		return
 	}
 	status, message := "failed", fmt.Sprintf("扫描失败，保留已有媒体记录；请检查挂载和读取权限后重试：%s", err)

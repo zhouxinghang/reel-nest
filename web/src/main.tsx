@@ -5,6 +5,8 @@ import "./style.css";
 import { Library, Directories, MediaDetails } from "./library";
 import { SeriesDetails } from "./series";
 
+import { MetadataStatus, TMDBCredits } from "./metadata";
+
 type Session = { username: string };
 
 function Brand() {
@@ -194,6 +196,7 @@ function App() {
           </div>
         </header>
         <main className="content">
+          <MetadataStatus />
           {error && (
             <p role="alert" className="error">
               {error}
@@ -212,7 +215,10 @@ function App() {
           </>
         </main>
         <footer>
-          REEL NEST <span>让收藏回到生活</span>
+          <div>
+            REEL NEST <span>让收藏回到生活</span>
+          </div>
+          <TMDBCredits />
         </footer>
       </div>
     </div>

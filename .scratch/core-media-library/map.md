@@ -1,6 +1,6 @@
 # 核心家庭媒体管理系统：Ticket 索引
 
-发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–06；Docker 校验按用户要求跳过。
+发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–08；Docker 校验按用户要求跳过。
 
 ## 执行依据
 
@@ -10,7 +10,7 @@
 - [ADR 0002：以宿主机挂载目录作为媒体接入边界](/Users/bytedance/workspace/reel-nest/docs/adr/0002-host-mounted-media-directories.md)。
 - [ADR 0003：外部播放器使用不过期的单文件只读链接](/Users/bytedance/workspace/reel-nest/docs/adr/0003-non-expiring-read-only-stream-links.md)。
 
-正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–06，不新增技术锁定 ADR。
+正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–08，不新增技术锁定 ADR。
 
 ## Tickets 与依赖
 
@@ -22,17 +22,16 @@
 | 04 | [浏览器直放与家庭共用续播](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/04-browser-playback-and-progress.md) | 02 | resolved |
 | 05 | [IINA/PotPlayer 单文件只读串流](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/05-external-player-streaming.md) | 04 | resolved |
 | 06 | [网页外挂字幕选择与关闭](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/06-browser-sidecar-subtitles.md) | 04 | resolved |
-| 07 | [TMDB 影片资料与故障降级](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/07-tmdb-metadata-and-fallback.md) | 03, 04 | ready-for-agent |
-| 08 | [手动修正影片资料匹配](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/08-manual-metadata-matching.md) | 07 | ready-for-agent |
+| 07 | [TMDB 影片资料与故障降级](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/07-tmdb-metadata-and-fallback.md) | 03, 04 | resolved |
+| 08 | [手动修正影片资料匹配](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/08-manual-metadata-matching.md) | 07 | resolved |
 | 09 | [安全地永久删除单个源文件](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/09-single-file-permanent-deletion.md) | 02 | ready-for-agent |
 
 所有依赖均指向更早编号，且只列真正阻塞本项的能力。每项交付自身必要的持久化、接口、界面、测试及使用说明，不拆出横向“后端/前端/测试”任务。
 
 ## Frontier
 
-- 已完成：**01–06**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
-- 下一顺序 frontier：**07**（ready-for-agent），03/04 依赖已满足。09 的 02 依赖也已解除；07–09 尚未领取/实现，当前无 claimed ticket。
-- 07 完成后：08。05、06 已完成，不再阻塞任何切片。
+- 已完成：**01–08**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
+- 下一顺序 frontier：**09**（ready-for-agent），02 依赖已满足；本轮未领取。当前无 claimed ticket。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -90,3 +89,9 @@
 - 2026-09-30：本轮完成 04–06，回填 Answer/验收状态。原始视频范围读取、家庭共用进度、不过期单文件只读串流和 UTF-8 SRT/VTT 字幕已交付；通过 17 个 Go 应用级用例、4 个 Chrome 流程及新增 3 流程×3 次重复。真实 03→新版离线升级/恢复/进度/独立串流/再次重启通过，父规格和 ADR 未修改。
 - 04–06 的可播放样本为项目自生成 60 秒无音轨 VP8/WebM；浏览器实际解码、限速下拖动后新 Range 请求及原生字幕显示/关闭均验证，未触碰用户媒体。
 - Docker 继续明确跳过；IINA/macOS 与 Windows/PotPlayer 实机、跨设备局域网、真实 NAS、其他编码/音轨及真实 TMDB 未验证。协议和 HTTP 通过不等于实机通过。下一顺序 frontier 为 07，09 也可领取；09 落地需补真实删除接口的串流凭证隔离及删除后读取失败回归。
+
+
+- 2026-09-30：本轮完成 07–08 并回填 Answer/验收状态：TMDB 中文优先、英文/本地回退、30 天缓存、可观察失败与手动修正已交付；扫描/播放与资料故障隔离，自动匹配不覆盖用户选择。
+- 通过 25 个 Go 应用级用例（另有进程辅助入口）、全量 race/vet、7 个 Chrome 流程和资料流程 3×3 次重复；构建/格式/依赖审计/Linux 交叉编译及真实旧播放版本→资料版本离线升级通过。人工检查桌面海报墙与窄屏季集/匹配对话框。
+- 无 TMDB 凭据、可选凭据文件缺失及服务失败时均通过实际浏览器视频解码验证；测试只替换外部 TMDB，不冒充真实联通。不操作用户媒体，父规格 SHA-256 与发布时一致，ADR 未修改。
+- Docker 继续明确跳过；真实 TMDB API、NAS/跨设备和 IINA/PotPlayer 实机仍未验证。09 安全永久删除保留 ready-for-agent，是剩余唯一未完成切片。

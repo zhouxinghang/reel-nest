@@ -2,6 +2,8 @@ import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join, basename } from "node:path";
 
+import { startTMDBFixture } from "./tmdb-fixture.mjs";
+
 const root = process.env.REELNEST_TEST_ROOT;
 if (!root || !basename(root).startsWith("reelnest-browser-"))
   throw new Error("Isolated test root required");
@@ -11,6 +13,11 @@ const binary = join(root, "reelnest");
 execFileSync("go", ["build", "-o", binary, "./cmd/reelnest"], {
   stdio: "inherit",
 });
+const metadataBinary = join(root, "reelnest-metadata");
+execFileSync("go", ["build", "-o", metadataBinary, "./tests/server"], {
+  stdio: "inherit",
+});
+const fixture = await startTMDBFixture();
 const child = spawn(binary, [], {
   env: {
     ...process.env,
@@ -21,12 +28,27 @@ const child = spawn(binary, [], {
     HOUSEHOLD_PASSWORD: "browser-test-password",
     HOUSEHOLD_PASSWORD_FILE: "",
     COOKIE_SECURE: "false",
+    TMDB_READ_ACCESS_TOKEN: "",
+    // An unreadable optional token file must not prevent the real app starting.
+    TMDB_READ_ACCESS_TOKEN_FILE: join(root, "intentionally-missing-tmdb-token"),
   },
   stdio: "inherit",
 });
-for (const signal of ["SIGINT", "SIGTERM"])
-  process.on(signal, () => child.kill("SIGTERM"));
+let stopping = false;
+function stop() {
+  if (stopping) return;
+  stopping = true;
+  child.kill("SIGTERM");
+  fixture.close();
+}
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, stop);
+child.on("error", (error) => {
+  console.error(error);
+  stop();
+  process.exitCode = 1;
+});
 child.on("exit", (code) => {
+  stop();
   rmSync(root, { recursive: true, force: true });
   process.exit(code ?? 0);
 });

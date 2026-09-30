@@ -17,3 +17,11 @@ media, private media, external film footage, FFmpeg or server-side transcoding.
 - SRT/VTT fixtures are created in temporary media directories by tests; they are
   never placed beside user media. This silent fixture does not validate audio
   codecs or general container compatibility.
+
+## TMDB fixture poster
+
+`tmdb-poster.png` is a locally generated 120 × 180 RGB gradient PNG, not downloaded
+artwork or real TMDB content. The controlled external-service fixture serves it
+so browser tests verify actual image decoding through the authenticated cache
+endpoint, separately from real TMDB connectivity. Each metadata browser flow
+starts a fresh real app process/SQLite database; only the external TMDB is faked.

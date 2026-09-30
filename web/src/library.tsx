@@ -6,6 +6,9 @@ import { SeriesCard, seriesURL } from "./series";
 import { Player, clock } from "./player";
 import { ExternalPlayer } from "./external-player";
 
+import { Matching } from "./matching";
+import { Poster, MetadataInfo } from "./metadata";
+
 type Directory = {
   id: string;
   path: string;
@@ -32,17 +35,25 @@ export function Library() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   useEffect(() => {
-    api<{ items: MediaFile[]; series: SeriesSummary[] }>("/api/library")
-      .then((result) => {
-        setItems(result.items);
-        setSeries(result.series);
-        setLoaded(true);
-      })
-      .catch((error) => setError(message(error)));
+    const refresh = () => {
+      void api<{ items: MediaFile[]; series: SeriesSummary[] }>("/api/library")
+        .then((result) => {
+          setItems(result.items);
+          setSeries(result.series);
+          setLoaded(true);
+        })
+        .catch((error) => setError(message(error)));
+    };
+    refresh();
+    window.addEventListener("metadata-updated", refresh);
+    return () => window.removeEventListener("metadata-updated", refresh);
   }, []);
   const shown = items.filter(
     (item) =>
-      (item.filename.toLocaleLowerCase().includes(query.toLocaleLowerCase()) ||
+      (item.match.metadata?.title
+        .toLocaleLowerCase()
+        .includes(query.toLocaleLowerCase()) ||
+        item.filename.toLocaleLowerCase().includes(query.toLocaleLowerCase()) ||
         item.episode?.seriesTitle
           .toLocaleLowerCase()
           .includes(query.toLocaleLowerCase())) &&
@@ -176,20 +187,15 @@ export function Library() {
                 key={item.id}
                 className="media-card"
               >
-                <div className="poster-placeholder">
-                  <span className="poster-top">
-                    REEL NEST / {item.kind === "movie" ? "MOVIE" : "SERIES"}
-                  </span>
-                  <span className="poster-symbol" aria-hidden="true">
-                    ▥
-                  </span>
-                  <span className="poster-title">
-                    {item.filename.replace(/\.[^.]+$/, "")}
-                  </span>
-                  <span className="poster-bottom">本地收藏</span>
-                </div>
+                <Poster
+                  metadata={item.match.metadata}
+                  title={
+                    item.match.metadata?.title ||
+                    item.filename.replace(/\.[^.]+$/, "")
+                  }
+                />
                 <div className="card-heading">
-                  <h2>{item.filename}</h2>
+                  <h2>{item.match.metadata?.title || item.filename}</h2>
                   {!item.available && (
                     <span className="unavailable">不可用</span>
                   )}
@@ -200,7 +206,12 @@ export function Library() {
                     : item.episode
                       ? `第 ${item.episode.seasonNumber} 季 · 第 ${item.episode.episodeNumber} 集`
                       : "未组织的电视剧文件"}{" "}
-                  <span>· 未匹配媒体</span>
+                  <span>
+                    ·{" "}
+                    {item.matched
+                      ? item.match.metadata?.year || "TMDB"
+                      : "未匹配媒体"}
+                  </span>
                 </p>
               </a>
             ))}
@@ -393,9 +404,14 @@ export function MediaDetails({ id }: { id: string }) {
   const [file, setFile] = useState<MediaFile | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    api<MediaFile>(`/api/media/${encodeURIComponent(id)}`)
-      .then(setFile)
-      .catch((error) => setError(message(error)));
+    const refresh = () => {
+      void api<MediaFile>(`/api/media/${encodeURIComponent(id)}`)
+        .then(setFile)
+        .catch((error) => setError(message(error)));
+    };
+    refresh();
+    window.addEventListener("metadata-updated", refresh);
+    return () => window.removeEventListener("metadata-updated", refresh);
   }, [id]);
   return (
     <>
@@ -425,26 +441,30 @@ export function MediaDetails({ id }: { id: string }) {
         <p role="status">正在加载媒体文件…</p>
       ) : (
         <div className="detail-layout">
-          <div className="poster-placeholder detail-poster">
-            <span className="poster-top">REEL NEST / LOCAL COLLECTION</span>
-            <span className="poster-symbol" aria-hidden="true">
-              ▥
-            </span>
-            <span className="poster-title">
-              {file.filename.replace(/\.[^.]+$/, "")}
-            </span>
-            <span className="poster-bottom">本地收藏</span>
-          </div>
+          <Poster
+            detail
+            metadata={file.match.metadata}
+            title={file.match.metadata?.title || file.filename}
+          />
           <section className="detail-info">
             <p className="eyebrow">
               {file.kind === "movie" ? "MOVIE" : "SERIES FILE"}
             </p>
-            <h1>{file.filename}</h1>
-            <span className="pill">未匹配媒体</span>
-            <p className="detail-description">
-              尚未关联影片资料，保留原始文件名供浏览。未匹配媒体也可以直接尝试播放，不要求
-              TMDB 凭据。
-            </p>
+            <h1>{file.match.metadata?.title || file.filename}</h1>
+            {file.matched && (
+              <p className="fine file-path">原始文件：{file.filename}</p>
+            )}
+            <MetadataInfo match={file.match} />
+            <Matching
+              target={{
+                kind: file.kind,
+                id: file.episode?.seriesId || file.id,
+                title:
+                  file.match.metadata?.title ||
+                  file.episode?.seriesTitle ||
+                  file.filename.replace(/\.[^.]+$/, ""),
+              }}
+            />
             {file.organizationReason && (
               <p className="notice">识别说明：{file.organizationReason}</p>
             )}

@@ -1088,3 +1088,138 @@ footer span {
   margin-top: 6px;
   font-size: 13px;
 }
+
+.poster-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.metadata-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 18px;
+  margin-bottom: 28px;
+  border: 1px solid #303631;
+  border-radius: 12px;
+}
+.metadata-status strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.metadata-status button {
+  flex-shrink: 0;
+}
+.metadata-status .notice {
+  margin: 8px 0 0;
+}
+.series-metadata {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 24px;
+  margin: 24px 0;
+}
+.tmdb-credits {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  font-size: 11px;
+}
+.tmdb-credits img {
+  display: block;
+  max-width: none;
+}
+@media (max-width: 650px) {
+  .metadata-status {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .series-metadata {
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .tmdb-credits {
+    align-items: flex-start;
+  }
+}
+
+footer {
+  flex-direction: column;
+}
+.tmdb-credits {
+  color: #99a28f;
+  letter-spacing: normal;
+}
+
+.matching-entry {
+  margin: 20px 0;
+}
+.matching-dialog {
+  color: #edece5;
+  background: #19201a;
+  border: 1px solid #4b5b43;
+  border-radius: 16px;
+  padding: 28px;
+  width: min(640px, calc(100vw - 32px));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.matching-dialog::backdrop {
+  background: #000b;
+}
+.matching-dialog h2 {
+  margin-top: 0;
+}
+.matching-dialog > p {
+  overflow-wrap: anywhere;
+}
+.matching-search > div {
+  display: flex;
+  gap: 12px;
+}
+.matching-search input {
+  min-width: 0;
+  flex: 1;
+}
+.matching-search button {
+  flex-shrink: 0;
+}
+.matching-candidates {
+  margin: 24px 0;
+  padding: 12px;
+  border: 1px solid #45523e;
+  border-radius: 8px;
+}
+.matching-candidate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px;
+  cursor: pointer;
+}
+.matching-candidate input {
+  width: auto;
+  flex-shrink: 0;
+}
+.matching-candidate .fine {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.matching-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 650px) {
+  .matching-dialog {
+    padding: 20px;
+  }
+  .matching-search > div {
+    flex-direction: column;
+  }
+}

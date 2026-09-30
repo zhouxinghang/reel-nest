@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api, message } from "./api";
 import type { SeriesDetail, SeriesSummary } from "./media";
 
+import { Matching } from "./matching";
+import { Poster, MetadataInfo } from "./metadata";
+
 export function seriesURL(id: string, season?: number): string {
   return `/series/${encodeURIComponent(id)}${season === undefined ? "" : `?season=${season}`}`;
 }
@@ -9,16 +12,12 @@ export function seriesURL(id: string, season?: number): string {
 export function SeriesCard({ series }: { series: SeriesSummary }) {
   return (
     <a href={seriesURL(series.id)} className="media-card series-card">
-      <div className="poster-placeholder">
-        <span className="poster-top">REEL NEST / SERIES</span>
-        <span className="poster-symbol" aria-hidden="true">
-          ▥
-        </span>
-        <span className="poster-title">{series.title}</span>
-        <span className="poster-bottom">电视剧 · {series.seasonCount} 季</span>
-      </div>
+      <Poster
+        metadata={series.match.metadata}
+        title={series.match.metadata?.title || series.title}
+      />
       <div className="card-heading">
-        <h2>{series.title}</h2>
+        <h2>{series.match.metadata?.title || series.title}</h2>
         {series.availableFileCount === 0 && (
           <span className="unavailable">不可用</span>
         )}
@@ -38,9 +37,14 @@ export function SeriesDetails({ id }: { id: string }) {
   const [series, setSeries] = useState<SeriesDetail | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    api<SeriesDetail>(`/api/series/${encodeURIComponent(id)}`)
-      .then(setSeries)
-      .catch((error) => setError(message(error)));
+    const refresh = () => {
+      void api<SeriesDetail>(`/api/series/${encodeURIComponent(id)}`)
+        .then(setSeries)
+        .catch((error) => setError(message(error)));
+    };
+    refresh();
+    window.addEventListener("metadata-updated", refresh);
+    return () => window.removeEventListener("metadata-updated", refresh);
   }, [id]);
   const requested = new URLSearchParams(window.location.search).get("season");
   const season =
@@ -65,7 +69,7 @@ export function SeriesDetails({ id }: { id: string }) {
           <div className="series-heading">
             <div>
               <p className="eyebrow">STORIES, ONE EPISODE AT A TIME</p>
-              <h1>{series.title}</h1>
+              <h1>{series.match.metadata?.title || series.title}</h1>
               <p className="muted">
                 {series.seasonCount} 季 · {series.episodeCount} 集 ·{" "}
                 {series.fileCount} 个媒体文件
@@ -74,8 +78,24 @@ export function SeriesDetails({ id }: { id: string }) {
             </div>
             <span className="pill">电视剧</span>
           </div>
+          <div className="series-metadata">
+            <Poster
+              metadata={series.match.metadata}
+              title={series.match.metadata?.title || series.title}
+            />
+            <div>
+              <MetadataInfo match={series.match} />
+              <Matching
+                target={{
+                  kind: "series",
+                  id: series.id,
+                  title: series.match.metadata?.title || series.title,
+                }}
+              />
+            </div>
+          </div>
           <p className="notice">
-            按本地文件名组织，尚未匹配影片资料。同一单集的不同文件版本分别保留，请选择具体文件查看详情。
+            季与单集按本地文件名组织，不受影片资料匹配影响。同一单集的不同文件版本分别保留，请选择具体文件查看详情。
           </p>
           <nav className="season-nav" aria-label="季导航">
             {series.seasons.map((item) => (

@@ -9,20 +9,21 @@ import (
 )
 
 type MediaFile struct {
-	Progress           *WatchProgress    `json:"progress"`
-	DirectoryPath      string            `json:"directoryPath"`
-	Episode            *EpisodeReference `json:"episode"`
-	OrganizationReason string            `json:"organizationReason"`
-	ID                 string            `json:"id"`
-	DirectoryID        string            `json:"directoryId"`
-	Filename           string            `json:"filename"`
-	RelativePath       string            `json:"relativePath"`
-	Path               string            `json:"path"`
-	Kind               string            `json:"kind"`
-	Size               int64             `json:"size"`
-	ModifiedAt         int64             `json:"modifiedAt"`
-	Available          bool              `json:"available"`
-	Matched            bool              `json:"matched"`
+	Match              metadataAssociation `json:"match"`
+	Progress           *WatchProgress      `json:"progress"`
+	DirectoryPath      string              `json:"directoryPath"`
+	Episode            *EpisodeReference   `json:"episode"`
+	OrganizationReason string              `json:"organizationReason"`
+	ID                 string              `json:"id"`
+	DirectoryID        string              `json:"directoryId"`
+	Filename           string              `json:"filename"`
+	RelativePath       string              `json:"relativePath"`
+	Path               string              `json:"path"`
+	Kind               string              `json:"kind"`
+	Size               int64               `json:"size"`
+	ModifiedAt         int64               `json:"modifiedAt"`
+	Available          bool                `json:"available"`
+	Matched            bool                `json:"matched"`
 }
 
 const mediaColumns = `f.id, f.directory_id, f.filename, f.relative_path, d.path, d.kind, f.size, f.modified_at, f.available, COALESCE(s.id,''), COALESCE(s.title,''), COALESCE(o.season_number,0), COALESCE(o.episode_number,0), COALESCE(o.reason,''), COALESCE(p.position,0), COALESCE(p.duration,0), COALESCE(p.completed,0), COALESCE(p.updated_at,0)`
@@ -69,14 +70,24 @@ func (a *App) library(w http.ResponseWriter, r *http.Request) {
 			fail(w, 500, "无法读取媒体库")
 			return
 		}
-		if query == "" || strings.Contains(strings.ToLower(file.Filename), query) || (file.Episode != nil && strings.Contains(strings.ToLower(file.Episode.SeriesTitle), query)) {
-			files = append(files, file)
-		}
+		files = append(files, file)
 	}
 	if rows.Err() != nil {
 		fail(w, 500, "无法读取媒体库")
 		return
 	}
+	rows.Close()
+	if err := a.attachMetadata(r.Context(), files); err != nil {
+		fail(w, 500, "无法读取影片资料")
+		return
+	}
+	filtered := []MediaFile{}
+	for _, file := range files {
+		if query == "" || strings.Contains(strings.ToLower(file.Filename), query) || (file.Episode != nil && strings.Contains(strings.ToLower(file.Episode.SeriesTitle), query)) || (file.Match.Metadata != nil && strings.Contains(strings.ToLower(file.Match.Metadata.Title), query)) {
+			filtered = append(filtered, file)
+		}
+	}
+	files = filtered
 	respond(w, 200, map[string]any{"items": files, "series": seriesSummaries(files)})
 }
 
@@ -90,5 +101,10 @@ func (a *App) media(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "无法读取媒体文件详情")
 		return
 	}
-	respond(w, 200, file)
+	files := []MediaFile{file}
+	if err := a.attachMetadata(r.Context(), files); err != nil {
+		fail(w, 500, "无法读取影片资料")
+		return
+	}
+	respond(w, 200, files[0])
 }

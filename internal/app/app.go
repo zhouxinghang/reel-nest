@@ -12,12 +12,18 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 )
 
 type Config struct {
+	TMDBToken    string
+	TMDBAPIURL   string // Override only for controlled external-service tests.
+	TMDBImageURL string
+	TMDBTimeout  time.Duration
+
 	DataDir      string
 	Username     string
 	Password     string
@@ -27,6 +33,8 @@ type Config struct {
 }
 
 type App struct {
+	metadata *metadataService
+
 	streamKey    []byte
 	db           *sql.DB
 	config       Config
@@ -91,6 +99,10 @@ func New(config Config) (*App, error) {
 		a.Close()
 		return nil, err
 	}
+	if err := a.initializeMetadata(); err != nil {
+		a.Close()
+		return nil, err
+	}
 	return a, nil
 }
 
@@ -136,6 +148,11 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("POST /api/login", a.login)
 	mux.Handle("POST /api/logout", a.auth(http.HandlerFunc(a.logout)))
 	mux.Handle("GET /api/session", a.auth(http.HandlerFunc(a.session)))
+	mux.Handle("GET /api/matching/{kind}/{id}/search", a.auth(http.HandlerFunc(a.matching)))
+	mux.Handle("POST /api/matching/{kind}/{id}/selection", a.auth(http.HandlerFunc(a.matching)))
+	mux.Handle("GET /api/metadata/status", a.auth(http.HandlerFunc(a.metadataStatus)))
+	mux.Handle("POST /api/metadata/refresh", a.auth(http.HandlerFunc(a.refreshMetadata)))
+	mux.Handle("GET /api/metadata/posters/{kind}/{id}", a.auth(http.HandlerFunc(a.metadataPoster)))
 	mux.Handle("GET /api/library", a.auth(http.HandlerFunc(a.library)))
 	mux.Handle("GET /api/media/{id}", a.auth(http.HandlerFunc(a.media)))
 	mux.HandleFunc("GET /stream/{id}", a.stream)

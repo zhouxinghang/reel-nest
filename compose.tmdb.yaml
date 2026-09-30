@@ -1,0 +1,10 @@
+# Optional: enable with -f compose.yaml -f compose.tmdb.yaml.
+services:
+  reelnest:
+    environment:
+      TMDB_READ_ACCESS_TOKEN_FILE: /run/secrets/tmdb_read_access_token
+    secrets:
+      - tmdb_read_access_token
+secrets:
+  tmdb_read_access_token:
+    file: ./secrets/tmdb_read_access_token.txt
