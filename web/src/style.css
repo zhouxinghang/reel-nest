@@ -1223,3 +1223,26 @@ footer {
     flex-direction: column;
   }
 }
+
+.deletion-entry {
+  margin: 2rem 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid #303932;
+}
+button.danger.secondary {
+  color: #ffb4b4;
+  border-color: #a44c4c;
+}
+button.danger.primary {
+  background: #ae303b;
+  color: #fff;
+}
+.deletion-dialog {
+  max-width: min(640px, calc(100vw - 32px));
+}
+.deletion-path {
+  overflow-wrap: anywhere;
+  padding: 1rem;
+  background: #101317;
+  border-radius: 8px;
+}

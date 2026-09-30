@@ -1,0 +1,13 @@
+# Opt-in alternative to compose.media.yaml; never combine the two media overlays.
+# Permanently deleting videos also requires host/NAS permissions for UID/GID 10001.
+services:
+  reelnest:
+    environment:
+      MEDIA_ROOTS: /media
+    volumes:
+      - type: bind
+        source: ${MEDIA_HOST_PATH:?Set MEDIA_HOST_PATH to an existing absolute host directory}
+        target: /media
+        read_only: false
+        bind:
+          create_host_path: false

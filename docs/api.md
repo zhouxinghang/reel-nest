@@ -1,4 +1,4 @@
-# 当前应用 HTTP 契约（01–08）
+# 当前应用 HTTP 契约（01–09）
 
 应用与网页同源。所有写入请求为 `application/json`，无参数 POST 发送 `{}`；错误返回 `{"error":"可显示的错误说明"}`。对跨站浏览器写入请求返回 403。除健康检查和登录外，API 均要求家庭共享账号会话；独立的 `/stream/{id}` 使用单文件只读串流凭证，不能代替网页会话。
 
@@ -17,7 +17,7 @@
 
 目录字段：`id / path / kind / scanStatus / scanError / scanStarted / scanFinished`。状态为 `pending / running / completed / failed / interrupted`。时间为 Unix 秒，未开始/完成为 0。新增或重扫响应仅代表请求已接受；应轮询目录列表观察终态，不按固定延时假定成功。
 
-媒体文件字段：`id / directoryId / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress / match`。大小为字节，修改时间为 Unix 秒；`available` 是最近一次完整扫描的文件版本状态，不是实时探测结果。`matched` 表示存在未过期的 TMDB 资料；即使不可用仍可查看记录和源文件路径。
+媒体文件字段：`id / directoryId / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress / match`。大小为字节，修改时间为 Unix 秒；`available` 是最近一次完整扫描或成功删除后的索引状态，不是实时探测结果。`matched` 表示存在未过期的 TMDB 资料；即使不可用仍可查看记录和源文件路径。
 
 `episode` 为 `null`（电影或未组织文件），或 `{seriesId, seriesTitle, seasonNumber, episodeNumber}`。无法识别的电视剧文件通过 `organizationReason` 解释原因；识别成功时为空字符串。`matched` 表示影片资料匹配，不能用 `episode != null` 代替它。
 
@@ -37,7 +37,7 @@
 
 同一个媒体文件至多关联一个季集位置，不以作品标题或季集编号作为读取/修改目标。重复扫描和版本升级保留原文件标识；同一单集下可有多个独立版本，包括已不可用的旧文件记录。
 
-未登录 API 返回 401；受保护页面 `/library`、`/directories`、`/media/{id}`、`/series/{id}` 引导至 `/login`。电视剧页面使用 `?season=2` 选择第 2 季；不存在的季显示明确提示。前端资源不包含秘密。安全删除尚未实现，不应将文件详情响应当成播放验证。
+未登录 API 返回 401；受保护页面 `/library`、`/directories`、`/media/{id}`、`/series/{id}` 引导至 `/login`。电视剧页面使用 `?season=2` 选择第 2 季；不存在的季显示明确提示。前端资源不包含秘密。删除必须使用下面的独立两步接口，文件详情不授予删除权限；不能将详情响应当成播放验证。
 
 扫描在真实文件系统根句柄内进行，拒绝符号链接并检测根目录替换；失败扫描不发布部分索引。应用数据（SQLite，WAL 模式）独立保存；按目录和文件版本建立稳定随机文件标识。身份识别的精确边界见 README。
 
@@ -95,3 +95,18 @@
 - `POST /api/matching/{kind}/{id}/selection`，`{kind,tmdbId}` → 200 返回新 `match`。`tmdbId` 为正整数，body 类型必须与路由相同；类型/ID 不符 400，目标不存在 404，后台匹配或其他确认争用时 409，外部失败 503，持久化失败 500。确认成功后 `selection=manual`；失败保留旧关联，取消无需请求。
 - `movie` 的 `id` 为该电影媒体文件 ID。`series` 的 `id` 为本地电视剧 ID；对尚未组织到电视剧的文件，也接受该电视剧文件 ID，仅关联资料而不创建季集结构。已组织单集须使用其 `episode.seriesId`，不能把某一版本确认伪装成整个电视剧之外的新内容。
 - 稳定文件 ID、源文件、其他电影版本、季集关系和观看进度不受影响。过期缓存刷新沿用手动选择的类型和 TMDB ID；正常重扫/重启不回退为自动匹配。
+
+## 单文件永久删除（09）
+
+两条路由均要求家庭共享账号 Cookie，并应用同源/JSON 校验；串流凭证及确认字符串本身不构成管理授权。无路径、目录、季集或批量删除接口。
+
+| 请求 | 输入 / 结果 |
+| --- | --- |
+| `POST /api/media/{id}/deletion-preview` | 输入 `{}`；仅校验文件，不修改文件或索引。200 `{path,confirmation,expiresAt}`；path 是实际应用可见绝对路径，expiresAt 为 Unix 秒，确认有效期 10 分钟 |
+| `POST /api/media/{id}/delete` | 输入 `{confirmation,confirmed:true}`；重新验证目标后才尝试永久删除该单个视频。200 `{deleted:true,indexUpdated:boolean,message}` |
+
+`confirmation` 使用独立域分隔 HMAC，绑定有效期、媒体标识、完整路径、父目录身份与文件设备/inode/模式/大小/mtime/ctime；它不是只读串流凭证。过期/缺失/错误确认、目标变化或不可确认返回 409；未知媒体 404，缺失或已标记不可用 410；删除系统调用的权限不足/只读挂载 403。参数外的路径或数组拒绝为 400。拒绝请求不提前清除索引，不将不存在文件无条件当作成功。
+
+200 **不表示两个步骤都成功**：必须检查 `indexUpdated`。false 意味着**文件确已永久删除**但 SQLite 更新失败，message 明确要求修复存储并重扫，不能自动重试删除或表示可恢复。文件删除后即使 HTTP 客户端取消，服务端仍以独立有界上下文尝试更新索引。网络/进程/远端存储异常可能导致调用方不知道实际结果，须核实文件并扫描；这不是跨文件系统和数据库的原子事务。
+
+正常成功后保留文件记录和已有资料/季集/进度，仅置 `available=false`；后续内容、字幕、播放检查和旧串流请求返回 410。文件不存在或已替换时读取也会独立拒绝，即使索引写入曾失败。已有打开的媒体句柄可能继续读取。扫描与删除在本进程串行化；外部宿主机/NAS 写入竞态的边界见 README，不承诺 POSIX 原子按 inode 条件删除。

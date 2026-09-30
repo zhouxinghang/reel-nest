@@ -90,6 +90,9 @@ func (a *App) scan(d Directory) {
 }
 
 func (a *App) scanFiles(d Directory) error {
+	a.mediaMutationMu.Lock()
+	defer a.mediaMutationMu.Unlock()
+	// A pre-deletion snapshot must never publish availability after unlink.
 	root, info, err := a.openDirectory(d.Path)
 	if err != nil {
 		return err

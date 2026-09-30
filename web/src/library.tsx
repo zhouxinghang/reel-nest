@@ -1,3 +1,4 @@
+import { DeleteSourceFile } from "./deletion";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, message } from "./api";
 
@@ -398,6 +399,7 @@ export function Directories() {
 }
 
 export function MediaDetails({ id }: { id: string }) {
+  const [deleted, setDeleted] = useState(false);
   const [play, setPlay] = useState(
     new URLSearchParams(window.location.search).get("play") === "1",
   );
@@ -469,7 +471,11 @@ export function MediaDetails({ id }: { id: string }) {
               <p className="notice">识别说明：{file.organizationReason}</p>
             )}
             <div className="media-actions">
-              <button className="primary" onClick={() => setPlay(true)}>
+              <button
+                className="primary"
+                disabled={deleted}
+                onClick={() => setPlay(true)}
+              >
                 网页播放
               </button>
             </div>
@@ -489,9 +495,9 @@ export function MediaDetails({ id }: { id: string }) {
               <dd>{file.kind === "movie" ? "电影" : "电视剧文件"}</dd>
               <dt>文件状态</dt>
               <dd>
-                {file.available
+                {file.available && !deleted
                   ? "上次完整扫描时可用"
-                  : "文件不可用：完整扫描未发现此版本"}
+                  : "文件不可用：已删除或完整扫描未发现此版本"}
               </dd>
               <dt>文件大小</dt>
               <dd>{file.size.toLocaleString()} 字节</dd>
@@ -503,15 +509,30 @@ export function MediaDetails({ id }: { id: string }) {
               <dd className="file-path">{file.id}</dd>
             </dl>
             <p className="fine">
-              文件状态来自最近一次成功扫描；原文件变更后请重新扫描。
+              文件状态来自最近一次成功扫描或删除更新；原文件变更后请重新扫描。
               <br />
               浏览器兼容性取决于容器与编码；无法直放时可使用外部播放器。
             </p>
           </section>
         </div>
       )}
-      {file && play && <Player key={file.id} file={file} />}
-      {file && <ExternalPlayer key={`external-${file.id}`} id={file.id} />}
+      {file && (
+        <DeleteSourceFile
+          key={`delete-${file.id}`}
+          id={file.id}
+          onDeleted={() => {
+            setDeleted(true);
+            setPlay(false);
+            setFile((current) =>
+              current ? { ...current, available: false } : current,
+            );
+          }}
+        />
+      )}
+      {file && play && !deleted && <Player key={file.id} file={file} />}
+      {file && !deleted && (
+        <ExternalPlayer key={`external-${file.id}`} id={file.id} />
+      )}
     </>
   );
 }

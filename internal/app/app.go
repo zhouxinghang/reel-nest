@@ -45,6 +45,9 @@ type App struct {
 	directoryMu  sync.Mutex
 	failedLogins int
 	loginWindow  int64
+
+	// Serialize complete scan snapshots with destructive filesystem mutations.
+	mediaMutationMu sync.Mutex
 }
 
 func New(config Config) (*App, error) {
@@ -155,6 +158,8 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("GET /api/metadata/posters/{kind}/{id}", a.auth(http.HandlerFunc(a.metadataPoster)))
 	mux.Handle("GET /api/library", a.auth(http.HandlerFunc(a.library)))
 	mux.Handle("GET /api/media/{id}", a.auth(http.HandlerFunc(a.media)))
+	mux.Handle("POST /api/media/{id}/deletion-preview", a.auth(http.HandlerFunc(a.deletionPreview)))
+	mux.Handle("POST /api/media/{id}/delete", a.auth(http.HandlerFunc(a.deleteMedia)))
 	mux.HandleFunc("GET /stream/{id}", a.stream)
 	mux.Handle("POST /api/media/{id}/stream-link", a.auth(http.HandlerFunc(a.streamLink)))
 	mux.Handle("GET /api/media/{id}/subtitles", a.auth(http.HandlerFunc(a.subtitles)))

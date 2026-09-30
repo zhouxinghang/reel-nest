@@ -1,4 +1,4 @@
-// Supply a pre-03 binary (or pre-04 with --playback) and the current binary. State is created through
+// Supply a matching older binary and the current binary. State is created through
 // public HTTP, so the migration test never fabricates or queries private SQL.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -6,6 +6,8 @@ import { once } from "node:events";
 import { createServer } from "node:net";
 import {
   mkdtempSync,
+  existsSync,
+  readFileSync,
   mkdirSync,
   writeFileSync,
   renameSync,
@@ -17,16 +19,19 @@ import { randomBytes } from "node:crypto";
 
 if (
   ![4, 5].includes(process.argv.length) ||
-  (process.argv[4] && !["--playback", "--metadata"].includes(process.argv[4]))
+  (process.argv[4] &&
+    !["--playback", "--metadata", "--deletion"].includes(process.argv[4]))
 )
   throw new Error(
-    "Usage: node scripts/verify-organization-upgrade.mjs /absolute/old-binary /absolute/current-binary [--playback|--metadata]",
+    "Usage: node scripts/verify-organization-upgrade.mjs /absolute/old-binary /absolute/current-binary [--playback|--metadata|--deletion]",
   );
 const [oldBinary, currentBinary] = process.argv
   .slice(2, 4)
   .map((path) => resolve(path));
 const metadata = process.argv[4] === "--metadata";
-const playback = metadata || process.argv[4] === "--playback";
+const deletion = process.argv[4] === "--deletion";
+const stateful = metadata || deletion;
+const playback = stateful || process.argv[4] === "--playback";
 let streamPath = "";
 const root = mkdtempSync(join(tmpdir(), "reelnest-upgrade-"));
 const media = join(root, "media");
@@ -146,19 +151,29 @@ try {
   const before = await request("/api/library");
   assert.equal(before.items.length, 3);
   assert.ok(
-    metadata
-      ? "PASS: real pre-TMDB playback application → offline-source metadata migration → restored source → restart; account, IDs, hierarchy, saved progress and original stream credential preserved."
-      : playback
-        ? before.series?.length === 1
-        : !before.series || before.series.length === 0,
+    playback
+      ? before.series?.length === 1
+      : !before.series || before.series.length === 0,
     "old binary must match the requested pre-03/pre-04 baseline",
   );
-  if (metadata) {
-    assert.equal(
-      before.items[0].match,
-      undefined,
-      "old binary must predate TMDB support",
-    );
+  if (stateful) {
+    if (metadata)
+      assert.equal(
+        before.items[0].match,
+        undefined,
+        "old binary must predate TMDB support",
+      );
+    if (deletion) {
+      assert.ok(
+        before.items[0].match,
+        "old binary must include metadata support",
+      );
+      await request(
+        `/api/media/${before.items[0].id}/deletion-preview`,
+        {},
+        404,
+      );
+    }
     const id = before.items[0].id;
     await request(`/api/media/${id}/progress`, {
       position: 12.5,
@@ -188,7 +203,7 @@ try {
   );
   if (playback) {
     const id = after.items[0].id;
-    if (metadata) {
+    if (stateful) {
       assert.equal((await request(`/api/media/${id}/progress`)).position, 12.5);
       assert.equal((await request("/api/metadata/status")).configured, false);
       assert.equal(after.items[0].match.metadata, null);
@@ -202,7 +217,7 @@ try {
     });
     const newStreamPath = (await request(`/api/media/${id}/stream-link`, {}))
       .path;
-    if (metadata)
+    if (stateful)
       assert.equal(
         newStreamPath,
         streamPath,
@@ -236,12 +251,40 @@ try {
       detail,
     );
   }
+  if (deletion) {
+    const id = after.items[0].id;
+    const preview = await request(`/api/media/${id}/deletion-preview`, {});
+    assert.equal(preview.path, after.items[0].path);
+    const result = await request(`/api/media/${id}/delete`, {
+      confirmation: preview.confirmation,
+      confirmed: true,
+    });
+    assert.equal(result.deleted, true);
+    assert.equal(result.indexUpdated, true);
+    assert.equal(existsSync(preview.path), false);
+    for (const file of after.items.slice(1))
+      assert.equal(
+        readFileSync(file.path, "utf8"),
+        "isolated pre-upgrade fixture",
+      );
+    assert.equal((await fetch(baseURL + streamPath)).status, 410);
+    after = await request("/api/library");
+    assert.equal(after.items.find((file) => file.id === id).available, false);
+    await stop();
+    await start(currentBinary, false);
+    await request("/api/login", { username: "family", password });
+    assert.deepEqual(await request("/api/library"), after);
+    assert.equal((await request(`/api/media/${id}/progress`)).position, 12.5);
+    assert.equal((await fetch(baseURL + streamPath)).status, 410);
+  }
   console.log(
-    metadata
-      ? "PASS: real pre-TMDB playback application → offline-source metadata migration → restored source → restart; account, IDs, hierarchy, saved progress and original stream credential preserved."
-      : playback
-        ? "PASS: real pre-04 application → offline-source upgrade → shared progress and independent stream → repeated restart; account, IDs, organization, progress and stream key preserved."
-        : "PASS: real pre-03 application → offline-source upgrade → repeated restart; account, file IDs and series organization preserved.",
+    deletion
+      ? "PASS: real metadata version → offline-source upgrade → preserved account, IDs, hierarchy, progress and stream → single-file permanent deletion → restart with correct unavailable state."
+      : metadata
+        ? "PASS: real pre-TMDB playback application → offline-source metadata migration → restored source → restart; account, IDs, hierarchy, saved progress and original stream credential preserved."
+        : playback
+          ? "PASS: real pre-04 application → offline-source upgrade → shared progress and independent stream → repeated restart; account, IDs, organization, progress and stream key preserved."
+          : "PASS: real pre-03 application → offline-source upgrade → repeated restart; account, file IDs and series organization preserved.",
   );
 } finally {
   await stop();

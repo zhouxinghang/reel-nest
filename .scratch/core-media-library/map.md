@@ -1,6 +1,6 @@
 # 核心家庭媒体管理系统：Ticket 索引
 
-发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–08；Docker 校验按用户要求跳过。
+发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–09；Docker 校验按用户要求跳过。
 
 ## 执行依据
 
@@ -10,7 +10,7 @@
 - [ADR 0002：以宿主机挂载目录作为媒体接入边界](/Users/bytedance/workspace/reel-nest/docs/adr/0002-host-mounted-media-directories.md)。
 - [ADR 0003：外部播放器使用不过期的单文件只读链接](/Users/bytedance/workspace/reel-nest/docs/adr/0003-non-expiring-read-only-stream-links.md)。
 
-正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–08，不新增技术锁定 ADR。
+正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–09，不新增技术锁定 ADR。
 
 ## Tickets 与依赖
 
@@ -24,14 +24,14 @@
 | 06 | [网页外挂字幕选择与关闭](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/06-browser-sidecar-subtitles.md) | 04 | resolved |
 | 07 | [TMDB 影片资料与故障降级](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/07-tmdb-metadata-and-fallback.md) | 03, 04 | resolved |
 | 08 | [手动修正影片资料匹配](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/08-manual-metadata-matching.md) | 07 | resolved |
-| 09 | [安全地永久删除单个源文件](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/09-single-file-permanent-deletion.md) | 02 | ready-for-agent |
+| 09 | [安全地永久删除单个源文件](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/09-single-file-permanent-deletion.md) | 02 | resolved |
 
 所有依赖均指向更早编号，且只列真正阻塞本项的能力。每项交付自身必要的持久化、接口、界面、测试及使用说明，不拆出横向“后端/前端/测试”任务。
 
 ## Frontier
 
-- 已完成：**01–08**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
-- 下一顺序 frontier：**09**（ready-for-agent），02 依赖已满足；本轮未领取。当前无 claimed ticket。
+- 已完成：**01–09**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
+- 当前 frontier：**无**。9 个 implementation tickets 均已 resolved，无 claimed ticket；父规格保持原 ready-for-agent 状态，Docker/实机未验证项不伪报通过。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -95,3 +95,9 @@
 - 通过 25 个 Go 应用级用例（另有进程辅助入口）、全量 race/vet、7 个 Chrome 流程和资料流程 3×3 次重复；构建/格式/依赖审计/Linux 交叉编译及真实旧播放版本→资料版本离线升级通过。人工检查桌面海报墙与窄屏季集/匹配对话框。
 - 无 TMDB 凭据、可选凭据文件缺失及服务失败时均通过实际浏览器视频解码验证；测试只替换外部 TMDB，不冒充真实联通。不操作用户媒体，父规格 SHA-256 与发布时一致，ADR 未修改。
 - Docker 继续明确跳过；真实 TMDB API、NAS/跨设备和 IINA/PotPlayer 实机仍未验证。09 安全永久删除保留 ready-for-agent，是剩余唯一未完成切片。
+
+
+- 2026-10-01：完成最后的 09，回填全部验收状态和 Answer；两步路径确认、单视频永久删除、目标复核、账号/只读凭证隔离及真实索引失败反馈已交付。默认媒体挂载仍只读，可按说明显式启用写入；无批量或连带删除。
+- 31 个 Go 应用级测试、全量 race/vet、10 个 Chrome 流程、3 个新增删除流程×3 次重复、构建/格式/依赖审计/Linux 交叉编译均通过。真实旧资料版本→删除版本的离线升级、状态保留、单文件实际删除及重启通过。浏览器测试已隔离到各自应用/数据库，旧空库验收完整保留。
+- 所有删除/故障测试仅使用隔离临时文件和真实 SQLite；覆盖文件已删但数据库写锁阻止更新以及扫描修复。没有操作用户现有媒体。Docker 继续按要求跳过；真实 NAS、只读挂载 EROFS、TMDB 和 IINA/PotPlayer 实机仍未验证。最终核对与 POSIX unlink 的外部写入竞态边界见 README。
+- 01–09 全部 resolved，当前无 frontier。父规格 SHA-256 与发布时一致，领域术语及 ADR 不变；本轮完整记录见 [验证记录](/Users/bytedance/workspace/reel-nest/docs/verification.md)。
