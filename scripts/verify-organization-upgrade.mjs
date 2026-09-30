@@ -1,4 +1,4 @@
-// Supply a pre-03 binary and the current binary. All state is created through
+// Supply a pre-03 binary (or pre-04 with --playback) and the current binary. State is created through
 // public HTTP, so the migration test never fabricates or queries private SQL.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -15,13 +15,18 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 
-if (process.argv.length !== 4)
+if (
+  ![4, 5].includes(process.argv.length) ||
+  (process.argv[4] && process.argv[4] !== "--playback")
+)
   throw new Error(
-    "Usage: node scripts/verify-organization-upgrade.mjs /absolute/old-binary /absolute/current-binary",
+    "Usage: node scripts/verify-organization-upgrade.mjs /absolute/old-binary /absolute/current-binary [--playback]",
   );
 const [oldBinary, currentBinary] = process.argv
-  .slice(2)
+  .slice(2, 4)
   .map((path) => resolve(path));
+const playback = process.argv[4] === "--playback";
+let streamPath = "";
 const root = mkdtempSync(join(tmpdir(), "reelnest-upgrade-"));
 const media = join(root, "media");
 const data = join(root, "data");
@@ -138,14 +143,16 @@ try {
   const before = await request("/api/library");
   assert.equal(before.items.length, 3);
   assert.ok(
-    !before.series || before.series.length === 0,
-    "old binary must predate series organization",
+    playback
+      ? before.series?.length === 1
+      : !before.series || before.series.length === 0,
+    "old binary must match the requested pre-03/pre-04 baseline",
   );
   await stop();
   renameSync(media, media + "-offline");
   await start(currentBinary, false);
   await request("/api/login", { username: "family", password });
-  const after = await request("/api/library");
+  let after = await request("/api/library");
   assert.deepEqual(
     after.items.map((file) => file.id),
     before.items.map((file) => file.id),
@@ -160,13 +167,47 @@ try {
     detail.seasons.map((season) => season.number),
     [1, 2],
   );
+  if (playback) {
+    const id = after.items[0].id;
+    assert.equal((await request(`/api/media/${id}/progress`)).updatedAt, 0);
+    renameSync(media + "-offline", media);
+    await request(`/api/media/${id}/progress`, {
+      position: 12.5,
+      duration: 60,
+      completed: false,
+    });
+    streamPath = (await request(`/api/media/${id}/stream-link`, {})).path;
+    const stream = await fetch(baseURL + streamPath, {
+      headers: { Range: "bytes=0-7" },
+    });
+    assert.equal(stream.status, 206);
+    assert.equal(await stream.text(), "isolated");
+    after = await request("/api/library");
+  }
   await stop();
   await start(currentBinary, false);
   await request("/api/login", { username: "family", password });
   assert.deepEqual(await request("/api/library"), after);
-  assert.deepEqual(await request(`/api/series/${after.series[0].id}`), detail);
+  if (playback) {
+    const id = after.items[0].id;
+    assert.equal((await request(`/api/media/${id}/progress`)).position, 12.5);
+    assert.equal(
+      (await request(`/api/media/${id}/stream-link`, {})).path,
+      streamPath,
+    );
+    const stream = await fetch(baseURL + streamPath);
+    assert.equal(stream.status, 200);
+    assert.equal(await stream.text(), "isolated pre-upgrade fixture");
+  } else {
+    assert.deepEqual(
+      await request(`/api/series/${after.series[0].id}`),
+      detail,
+    );
+  }
   console.log(
-    "PASS: real pre-03 application → offline-source upgrade → repeated restart; account, file IDs and series organization preserved.",
+    playback
+      ? "PASS: real pre-04 application → offline-source upgrade → shared progress and independent stream → repeated restart; account, IDs, organization, progress and stream key preserved."
+      : "PASS: real pre-03 application → offline-source upgrade → repeated restart; account, file IDs and series organization preserved.",
   );
 } finally {
   await stop();

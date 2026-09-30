@@ -3,6 +3,8 @@ import { api, message } from "./api";
 
 import type { MediaFile, SeriesSummary } from "./media";
 import { SeriesCard, seriesURL } from "./series";
+import { Player, clock } from "./player";
+import { ExternalPlayer } from "./external-player";
 
 type Directory = {
   id: string;
@@ -72,6 +74,42 @@ export function Library() {
           ＋ 接入媒体目录
         </a>
       </div>
+      {items.some(
+        (item) =>
+          item.available &&
+          item.progress &&
+          item.progress.position > 0 &&
+          !item.progress.completed,
+      ) && (
+        <section className="continue-watching" aria-label="继续观看">
+          <h2>继续观看</h2>
+          <div className="continue-list">
+            {items
+              .filter(
+                (item) =>
+                  item.available &&
+                  item.progress &&
+                  item.progress.position > 0 &&
+                  !item.progress.completed,
+              )
+              .sort((a, b) => b.progress!.updatedAt - a.progress!.updatedAt)
+              .map((item) => (
+                <a
+                  className="secondary"
+                  key={item.id}
+                  href={`/media/${item.id}?play=1`}
+                >
+                  {item.filename}
+                  <span className="fine">
+                    {" "}
+                    · {clock(item.progress!.position)} /{" "}
+                    {clock(item.progress!.duration)}
+                  </span>
+                </a>
+              ))}
+          </div>
+        </section>
+      )}
       <div className="library-toolbar">
         <div className="filters" role="group" aria-label="媒体分类">
           {[
@@ -349,6 +387,9 @@ export function Directories() {
 }
 
 export function MediaDetails({ id }: { id: string }) {
+  const [play, setPlay] = useState(
+    new URLSearchParams(window.location.search).get("play") === "1",
+  );
   const [file, setFile] = useState<MediaFile | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -401,11 +442,17 @@ export function MediaDetails({ id }: { id: string }) {
             <h1>{file.filename}</h1>
             <span className="pill">未匹配媒体</span>
             <p className="detail-description">
-              尚未关联影片资料，保留原始文件名供浏览。当前支持本地季集组织与单个文件详情；播放和影片资料匹配将由后续切片交付。
+              尚未关联影片资料，保留原始文件名供浏览。未匹配媒体也可以直接尝试播放，不要求
+              TMDB 凭据。
             </p>
             {file.organizationReason && (
               <p className="notice">识别说明：{file.organizationReason}</p>
             )}
+            <div className="media-actions">
+              <button className="primary" onClick={() => setPlay(true)}>
+                网页播放
+              </button>
+            </div>
             <dl>
               {file.episode && (
                 <>
@@ -438,11 +485,13 @@ export function MediaDetails({ id }: { id: string }) {
             <p className="fine">
               文件状态来自最近一次成功扫描；原文件变更后请重新扫描。
               <br />
-              未匹配不代表不支持播放；文件格式是否兼容须由后续播放验证。
+              浏览器兼容性取决于容器与编码；无法直放时可使用外部播放器。
             </p>
           </section>
         </div>
       )}
+      {file && play && <Player key={file.id} file={file} />}
+      {file && <ExternalPlayer key={`external-${file.id}`} id={file.id} />}
     </>
   );
 }

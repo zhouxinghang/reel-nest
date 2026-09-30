@@ -9,6 +9,7 @@ import (
 )
 
 type MediaFile struct {
+	Progress           *WatchProgress    `json:"progress"`
 	DirectoryPath      string            `json:"directoryPath"`
 	Episode            *EpisodeReference `json:"episode"`
 	OrganizationReason string            `json:"organizationReason"`
@@ -24,14 +25,18 @@ type MediaFile struct {
 	Matched            bool              `json:"matched"`
 }
 
-const mediaColumns = `f.id, f.directory_id, f.filename, f.relative_path, d.path, d.kind, f.size, f.modified_at, f.available, COALESCE(s.id,''), COALESCE(s.title,''), COALESCE(o.season_number,0), COALESCE(o.episode_number,0), COALESCE(o.reason,'')`
-const mediaFrom = ` FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series s ON s.id=o.series_id`
+const mediaColumns = `f.id, f.directory_id, f.filename, f.relative_path, d.path, d.kind, f.size, f.modified_at, f.available, COALESCE(s.id,''), COALESCE(s.title,''), COALESCE(o.season_number,0), COALESCE(o.episode_number,0), COALESCE(o.reason,''), COALESCE(p.position,0), COALESCE(p.duration,0), COALESCE(p.completed,0), COALESCE(p.updated_at,0)`
+const mediaFrom = ` FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series s ON s.id=o.series_id LEFT JOIN watch_progress p ON p.media_file_id=f.id`
 
 func scanMedia(row scanner) (MediaFile, error) {
 	var file MediaFile
 	var root string
 	var episode EpisodeReference
-	err := row.Scan(&file.ID, &file.DirectoryID, &file.Filename, &file.RelativePath, &root, &file.Kind, &file.Size, &file.ModifiedAt, &file.Available, &episode.SeriesID, &episode.SeriesTitle, &episode.SeasonNumber, &episode.EpisodeNumber, &file.OrganizationReason)
+	var progress WatchProgress
+	err := row.Scan(&file.ID, &file.DirectoryID, &file.Filename, &file.RelativePath, &root, &file.Kind, &file.Size, &file.ModifiedAt, &file.Available, &episode.SeriesID, &episode.SeriesTitle, &episode.SeasonNumber, &episode.EpisodeNumber, &file.OrganizationReason, &progress.Position, &progress.Duration, &progress.Completed, &progress.UpdatedAt)
+	if progress.UpdatedAt > 0 {
+		file.Progress = &progress
+	}
 	file.Path = filepath.Join(root, file.RelativePath)
 	file.DirectoryPath = root
 	if episode.SeriesID != "" {

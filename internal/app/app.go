@@ -27,6 +27,7 @@ type Config struct {
 }
 
 type App struct {
+	streamKey    []byte
 	db           *sql.DB
 	config       Config
 	ctx          context.Context
@@ -82,6 +83,14 @@ func New(config Config) (*App, error) {
 		a.Close()
 		return nil, err
 	}
+	if err := a.initializePlayback(); err != nil {
+		a.Close()
+		return nil, err
+	}
+	if err := a.initializeStreams(); err != nil {
+		a.Close()
+		return nil, err
+	}
 	return a, nil
 }
 
@@ -129,6 +138,14 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("GET /api/session", a.auth(http.HandlerFunc(a.session)))
 	mux.Handle("GET /api/library", a.auth(http.HandlerFunc(a.library)))
 	mux.Handle("GET /api/media/{id}", a.auth(http.HandlerFunc(a.media)))
+	mux.HandleFunc("GET /stream/{id}", a.stream)
+	mux.Handle("POST /api/media/{id}/stream-link", a.auth(http.HandlerFunc(a.streamLink)))
+	mux.Handle("GET /api/media/{id}/subtitles", a.auth(http.HandlerFunc(a.subtitles)))
+	mux.Handle("GET /api/media/{id}/subtitles/{subtitle}", a.auth(http.HandlerFunc(a.subtitles)))
+	mux.Handle("GET /api/media/{id}/content", a.auth(http.HandlerFunc(a.content)))
+	mux.Handle("GET /api/media/{id}/playback", a.auth(http.HandlerFunc(a.playbackStatus)))
+	mux.Handle("GET /api/media/{id}/progress", a.auth(http.HandlerFunc(a.progress)))
+	mux.Handle("POST /api/media/{id}/progress", a.auth(http.HandlerFunc(a.progress)))
 	mux.Handle("GET /api/series/{id}", a.auth(http.HandlerFunc(a.series)))
 	mux.Handle("GET /api/directories", a.auth(http.HandlerFunc(a.directories)))
 	mux.Handle("POST /api/directories", a.auth(http.HandlerFunc(a.addDirectory)))

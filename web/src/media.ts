@@ -1,3 +1,10 @@
+export type WatchProgress = {
+  position: number;
+  duration: number;
+  completed: boolean;
+  updatedAt: number;
+};
+
 export type EpisodeReference = {
   seriesId: string;
   seriesTitle: string;
@@ -6,6 +13,7 @@ export type EpisodeReference = {
 };
 
 export type MediaFile = {
+  progress: WatchProgress | null;
   id: string;
   directoryId: string;
   directoryPath: string;

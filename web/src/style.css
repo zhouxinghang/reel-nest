@@ -1010,3 +1010,81 @@ footer span {
     margin-bottom: 0;
   }
 }
+
+.player {
+  margin-top: 32px;
+  padding: 24px;
+  border: 1px solid #394235;
+  border-radius: 12px;
+  background: #181e17;
+}
+.player video {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  background: #000;
+  border-radius: 8px;
+}
+.player-controls,
+.media-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin: 20px 0;
+}
+.player-controls span,
+.player label {
+  font-size: 12px;
+  color: #b2bca6;
+}
+.player input[type="range"] {
+  padding: 0;
+  accent-color: #d9b47f;
+}
+.continue-watching {
+  margin-bottom: 30px;
+}
+.continue-watching h2 {
+  font-size: 18px;
+}
+.continue-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.continue-list a {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+@media (max-width: 650px) {
+  .player {
+    padding: 15px;
+  }
+}
+
+.external-player {
+  margin-top: 26px;
+  border-top: 1px solid #394235;
+  padding-top: 24px;
+}
+.external-player h2 {
+  font-size: 18px;
+}
+.external-player label {
+  font-size: 12px;
+}
+.stream-url {
+  margin: 10px 0;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.subtitle-controls {
+  margin: 20px 0;
+}
+.subtitle-controls select {
+  margin-top: 6px;
+  font-size: 13px;
+}

@@ -1,0 +1,19 @@
+# Playback fixture
+
+`playback.webm` is an original synthetic Reel Nest animation, generated locally
+using Chrome WebCodecs and the repository's small EBML/WebM muxer. No downloaded
+media, private media, external film footage, FFmpeg or server-side transcoding.
+
+- 60 seconds, 640 × 360, 12 fps, 720 VP8 frames, **no audio track**.
+- Duration, one-second keyframes and seek cues are included for real seeking.
+- Source: `scripts/generate-playback-fixture.mjs`.
+- Regenerate from the repo root: `node scripts/generate-playback-fixture.mjs`.
+  Uses `CHROME_BIN`, installed macOS Chrome, or Playwright Chromium. Exact encoded
+  bytes may differ with browser codec versions. Normal tests use the committed
+  binary and do not regenerate it.
+- Browser tests use original file bytes through the running application's HTTP
+  boundary, inspect decoded frames and currentTime, and drag the real seek UI.
+  Network throttling ensures post-seek byte-range requests reach the real server.
+- SRT/VTT fixtures are created in temporary media directories by tests; they are
+  never placed beside user media. This silent fixture does not validate audio
+  codecs or general container compatibility.

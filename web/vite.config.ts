@@ -5,5 +5,10 @@ export default defineConfig({
   root: "web",
   plugins: [react()],
   build: { outDir: "../internal/web/dist", emptyOutDir: true },
-  server: { proxy: { "/api": "http://localhost:8090" } },
+  server: {
+    proxy: {
+      "/api": "http://localhost:8090",
+      "/stream": "http://localhost:8090",
+    },
+  },
 });
