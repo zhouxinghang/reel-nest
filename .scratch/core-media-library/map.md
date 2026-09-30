@@ -32,6 +32,7 @@
 
 - 已完成：**01–09**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
 - 当前 frontier：**无**。9 个 implementation tickets 均已 resolved，无 claimed ticket；父规格保持原 ready-for-agent 状态，Docker/实机未验证项不伪报通过。
+- 最新复核（2026-10-01，基线 `75ab30c`）：9 个 ticket 与索引状态一致，非 Docker 全量回归通过，未发现需要重开的事项；各 ticket 已追加复核记录。01 的 Docker 实测验收继续保留未勾选。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -101,3 +102,6 @@
 - 31 个 Go 应用级测试、全量 race/vet、10 个 Chrome 流程、3 个新增删除流程×3 次重复、构建/格式/依赖审计/Linux 交叉编译均通过。真实旧资料版本→删除版本的离线升级、状态保留、单文件实际删除及重启通过。浏览器测试已隔离到各自应用/数据库，旧空库验收完整保留。
 - 所有删除/故障测试仅使用隔离临时文件和真实 SQLite；覆盖文件已删但数据库写锁阻止更新以及扫描修复。没有操作用户现有媒体。Docker 继续按要求跳过；真实 NAS、只读挂载 EROFS、TMDB 和 IINA/PotPlayer 实机仍未验证。最终核对与 POSIX unlink 的外部写入竞态边界见 README。
 - 01–09 全部 resolved，当前无 frontier。父规格 SHA-256 与发布时一致，领域术语及 ADR 不变；本轮完整记录见 [验证记录](/Users/bytedance/workspace/reel-nest/docs/verification.md)。
+
+- 2026-10-01（收尾复核）：本轮开始时 01–09 已全部 resolved，不重复领取或扩大功能范围。重新通过禁用缓存的 31 个 Go 应用用例、全量 race/vet、10 个 Chrome 流程、生产构建/格式/依赖审计、Linux 交叉编译及真实旧资料版本→当前版本升级/删除/重启验证，未发现回归问题。
+- 本轮仅更新验证与各 issue 的复核记录，状态仍全部为 resolved；Docker 按用户要求跳过，其他实机未验证项保持原样。父规格及领域/ADR 文档未修改，当前仍无 frontier；详情见验证记录的「01–09 收尾复核」节。

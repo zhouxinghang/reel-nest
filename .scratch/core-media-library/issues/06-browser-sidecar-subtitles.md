@@ -29,6 +29,8 @@
 
 - 2026-09-30：04 的读取和真实浏览器播放闭环已通过，领取本项；Docker 继续按用户要求跳过，外部播放器实机兼容性单独记录。
 
+- 2026-10-01（收尾复核，基线 `75ab30c`）：真实 SRT/VTT 显示、切换、定位、关闭和错误隔离回归通过。状态保持 resolved；全量非 Docker 验证与未验证边界见 [验证记录](/Users/bytedance/workspace/reel-nest/docs/verification.md) 的「01–09 收尾复核」节。
+
 ## Answer
 
 - 2026-09-30：交付同目录/同基本名及可选语言标记字幕发现、绑定文件指纹的候选标识、会话保护的字幕获取与真正 SRT→WebVTT 转换；严格校验 UTF-8、BOM/换行、时间/结构/位置和 2 MiB 限制。具体支持子集与不支持的 STYLE/REGION/ASS/SSA 等已写入 README。

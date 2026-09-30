@@ -30,6 +30,8 @@
 
 - 2026-09-30：已领取。按用户要求跳过 Docker 构建及容器运行测试；交付部署配置，使用本机真实应用 HTTP 与浏览器测试验证其余行为。
 
+- 2026-10-01（收尾复核，基线 `75ab30c`）：登录、退出和持久化重启回归通过；Docker 实测按用户要求跳过，对应验收继续未勾选。状态保持 resolved；全量非 Docker 验证与未验证边界见 [验证记录](/Users/bytedance/workspace/reel-nest/docs/verification.md) 的「01–09 收尾复核」节。
+
 ## Answer
 
 - 2026-09-30：已交付 Go + SQLite 应用、React/TypeScript 登录与空媒体库、独立持久化账号/会话、退出撤销、Dockerfile/Compose、配置示例及 README。无注册/个人档案等范围外功能。

@@ -7,11 +7,11 @@
 | 项目 | 结果 |
 | --- | --- |
 | `npm run build` | 通过；TypeScript 检查与生产静态资源构建 |
-| `go test ./...` | 通过；31 个应用级用例（包含子用例，另有进程辅助测试入口），真实 HTTP / SQLite / 临时文件系统 |
-| `go test -race ./...` | 通过；没有检测到数据竞争 |
+| `go test -count=1 ./...` | 通过；禁用结果缓存，31 个应用级用例（包含子用例，另有进程辅助测试入口），真实 HTTP / SQLite / 临时文件系统 |
+| `go test -race -count=1 ./...` | 通过；禁用结果缓存，没有检测到数据竞争 |
 | `go vet ./...` | 通过 |
 | `npm run format:check` | 通过；同时完成 Compose YAML 的静态语法解析，不等于 Docker 配置实测 |
-| `npm run test:browser` | 通过；10 个真实 Chrome 端到端流程 |
+| `npm run build` 后执行 `npx playwright test` | 通过；10 个真实 Chrome 端到端流程 |
 | 真实旧版 → 新版升级脚本 | 通过；本次验证 07–08 资料版本 → 09 删除版本：离线升级、恢复挂载、保留旧进度/串流链接，再实际删除单文件及重启后状态一致 |
 | Linux/amd64 `CGO_ENABLED=0 go build` | 交叉编译通过；不是容器运行验证 |
 | `npm audit --audit-level=high` | 通过；当次报告 0 个已知漏洞，不代表全面安全审计 |
@@ -132,6 +132,18 @@ node scripts/verify-organization-upgrade.mjs /absolute/pre-delete-reelnest /abso
 - 使用本轮开始时从旧源码构建并保留的真实二进制；确认旧版已有资料字段、但没有删除预览路由。全部通过 HTTP 创建账号/目录/文件索引/季集/进度及串流链接。
 - 停止旧版、将临时媒体目录改为离线，再用新版和原应用数据启动，不提供首次账号凭据；媒体 ID、组织、进度均保留。恢复目录后旧凭证仍独立读取，正常重启结果不变。
 - 然后由新版预览并实际删除一个旧版收录视频；检查另外两个文件内容不变、被删文件缺失、旧链接不可用，再次重启保留结果和原进度。该脚本不直接读写私有 SQL；升级字节样本为文本占位文件，真实播放由浏览器流程单独验证。
+
+## 01–09 收尾复核（2026-10-01）
+
+本轮起始基线为 `75ab30c`，工作区干净，9 个 implementation tickets 已全部 resolved。没有待领取的 frontier，因此不重复领取或新增范围；重新执行非 Docker 回归并补充各 ticket 的状态复核记录，未发现需要重开的问题。本轮仅更新验证与 issue 文档，不修改应用实现。
+
+- `npm run build && go test -count=1 ./... && npx playwright test` 通过：Go 应用测试耗时 29.943 秒，10 个 Chrome 流程耗时 46.8 秒；覆盖登录、扫描、季集、真实播放/续播/字幕、只读串流、资料/手动匹配及单文件删除。
+- `go test -race -count=1 ./...` 通过，应用测试耗时 102.856 秒；`go vet ./...`、`npm run format:check`、Go 源码 `gofmt` 检查和 `git diff --check` 通过。
+- `npm audit --audit-level=high` 通过，当次报告 0 个已知漏洞。Node 的弃用提示和终端颜色提示未影响测试结果，不将此结论扩展为全面安全或未来兼容性保证。
+- 在独立临时构建目录重新完成本机应用构建和 Linux/amd64 无 CGO 交叉编译；使用已有 `bin/pre-delete-reelnest` 与本次新构建二进制运行 `scripts/verify-organization-upgrade.mjs ... --deletion`，旧资料版本的离线升级、账号/身份/季集/进度/旧串流保留、单文件实际删除和重启验证通过。未覆盖或替换原有旧版二进制。
+- 目视检查本轮新生成的窄屏删除确认框和桌面资料海报墙截图；长路径、不可恢复提示、独立取消/确认按钮和资料展示可见。全部媒体操作只使用隔离测试样本。
+- 自动核对 9 个 ticket 的 resolved 状态、Answer 和索引行一致；唯一未勾选项仍为 01 的 Docker 实测验收。父规格按原约定保持 ready-for-agent，SHA-256 仍为 `b59d28b65b485cead460fbf863830c6b99ee371a9666d57d8ca33cadc85747ff`；领域文档和 ADR 不变。
+- Docker 校验继续按用户明确要求跳过，没有执行 Docker 命令。真实 TMDB、NAS/跨设备、IINA/PotPlayer 等实机缺口继续保持下节的未验证状态，不因本轮本机回归改为通过。
 
 ## 跳过或尚未验证
 
