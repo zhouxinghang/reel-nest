@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Icon } from "./icons";
 import { api, message } from "./api";
 import type { MetadataAssociation, TitleMetadata } from "./media";
 
@@ -6,14 +7,22 @@ export function Poster({
   metadata,
   title,
   detail = false,
+  children,
 }: {
   metadata?: TitleMetadata | null;
   title: string;
   detail?: boolean;
+  children?: ReactNode;
 }) {
   const [failed, setFailed] = useState("");
   return (
-    <div className={`poster-placeholder${detail ? " detail-poster" : ""}`}>
+    <div
+      className={`poster-placeholder${detail ? " detail-poster" : ""}`}
+      data-tone={
+        Array.from(title).reduce((sum, char) => sum + char.codePointAt(0)!, 0) %
+        5
+      }
+    >
       {metadata?.posterUrl && failed !== metadata.posterUrl ? (
         <img
           className="poster-image"
@@ -24,14 +33,15 @@ export function Poster({
         />
       ) : (
         <>
-          <span className="poster-top">REEL NEST / LOCAL COLLECTION</span>
+          <span className="poster-top">REEL NEST</span>
           <span className="poster-symbol" aria-hidden="true">
-            ▥
+            <Icon name="film" />
           </span>
           <span className="poster-title">{title}</span>
           <span className="poster-bottom">本地收藏</span>
         </>
       )}
+      {children}
     </div>
   );
 }

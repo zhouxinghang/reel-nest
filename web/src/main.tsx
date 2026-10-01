@@ -2,8 +2,15 @@ import React, { useEffect, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { api, message } from "./api";
 import "./style.css";
-import { Library, Directories, MediaDetails } from "./library";
+import {
+  Library,
+  Directories,
+  MediaDetails,
+  readLibraryFilter,
+  type LibraryFilter,
+} from "./library";
 import { SeriesDetails } from "./series";
+import { Icon } from "./icons";
 
 import { MetadataStatus, TMDBCredits } from "./metadata";
 
@@ -13,10 +20,11 @@ function Brand() {
   return (
     <a className="brand" href="/library">
       <span className="brand-mark" aria-hidden="true">
-        ▥
+        <Icon name="play" />
       </span>
       <span>
-        reel nest<span className="brand-sub">家庭媒体库</span>
+        reel<span className="brand-accent">nest</span>
+        <span className="brand-sub">你的私人家庭影院</span>
       </span>
     </a>
   );
@@ -69,6 +77,9 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
       </section>
       <section className="login-panel">
         <form onSubmit={submit} className="login-form">
+          <div className="login-mobile-brand">
+            <Brand />
+          </div>
           <p className="eyebrow">WELCOME HOME</p>
           <h2>欢迎回家</h2>
           <p className="muted">使用家庭共享账号，进入同一个媒体库。</p>
@@ -115,6 +126,23 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
+  const [libraryFilter, setLibraryFilter] =
+    useState<LibraryFilter>(readLibraryFilter);
+  useEffect(() => {
+    if (!navOpen) return;
+    document
+      .querySelector<HTMLAnchorElement>("#main-navigation nav a")
+      ?.focus();
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setNavOpen(false);
+        document.getElementById("navigation-toggle")?.focus();
+      }
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [navOpen]);
   useEffect(() => {
     api<Session>("/api/session")
       .then(setSession)
@@ -128,6 +156,8 @@ function App() {
     try {
       await api("/api/logout", {});
       window.history.replaceState(null, "", "/login");
+      setLibraryFilter("all");
+      setNavOpen(false);
       setSession(null);
     } catch (error) {
       setError(message(error));
@@ -159,44 +189,112 @@ function App() {
     ? path.slice("/media/".length)
     : null;
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className={`app-shell${navOpen ? " navigation-open" : ""}`}>
+      <a className="skip-link" href="#main-content">
+        跳到主要内容
+      </a>
+      <aside className="sidebar" id="main-navigation">
         <Brand />
-        <p className="nav-label">浏览</p>
-        <nav>
+        <p className="nav-label">我的媒体</p>
+        <nav aria-label="主导航">
           <a
-            className={`nav-item ${!directoryPage ? "active" : ""}`}
+            className={`nav-item ${!directoryPage && libraryFilter === "all" ? "active" : ""}`}
             href="/library"
+            title="媒体库"
+            aria-current={
+              !directoryPage && libraryFilter === "all" ? "page" : undefined
+            }
           >
-            <span aria-hidden="true">▦</span> 媒体库
+            <Icon name="library" /> 媒体库
           </a>
+          {(
+            [
+              ["movie", "电影", "film"],
+              ["series", "电视剧", "tv"],
+              ["unmatched", "未匹配媒体", "unmatched"],
+            ] as const
+          ).map(([value, label, icon]) => (
+            <a
+              key={value}
+              title={label}
+              href={`/library?type=${value}`}
+              className={`nav-item ${!directoryPage && !mediaId && !seriesId && libraryFilter === value ? "active" : ""}`}
+              aria-current={
+                !directoryPage &&
+                !mediaId &&
+                !seriesId &&
+                libraryFilter === value
+                  ? "page"
+                  : undefined
+              }
+            >
+              <Icon name={icon} />
+              {label}
+            </a>
+          ))}
+          <p className="nav-label">管理</p>
           <a
             className={`nav-item ${directoryPage ? "active" : ""}`}
             href="/directories"
+            title="媒体目录"
+            aria-current={directoryPage ? "page" : undefined}
           >
-            <span aria-hidden="true">▱</span> 媒体目录
+            <Icon name="folder" /> 媒体目录
           </a>
         </nav>
         <div className="sidebar-foot">
-          <span className="status-dot" /> 私享家庭放映室
-          <p>原始媒体留在你的设备上</p>
+          <Icon name="server" />
+          <div>
+            私享家庭放映室<p>媒体与进度，全家共享</p>
+          </div>
         </div>
       </aside>
       <div className="app-main">
-        <header>
-          <span className="header-title">属于全家的好时光</span>
+        <header className="app-header">
+          <div className="header-start">
+            <button
+              id="navigation-toggle"
+              className="icon-button navigation-toggle"
+              aria-label={navOpen ? "收起导航" : "打开导航"}
+              aria-expanded={navOpen}
+              aria-controls="main-navigation"
+              onClick={() => setNavOpen(!navOpen)}
+            >
+              <Icon name={navOpen ? "close" : "menu"} />
+            </button>
+            <span className="header-title">
+              {directoryPage
+                ? "媒体目录管理"
+                : mediaId || seriesId
+                  ? "我的媒体 / 详情"
+                  : "我的家庭影院"}
+            </span>
+          </div>
           <div className="account">
+            <a
+              className="icon-button"
+              href="/library?focus=search"
+              aria-label="搜索媒体"
+              title="搜索媒体"
+            >
+              <Icon name="search" />
+            </a>
+            <span className="account-divider" aria-hidden="true" />
             <span className="avatar" aria-hidden="true">
               家
             </span>
-            <span>{session.username}</span>
-            <button className="text-button" onClick={logout}>
-              退出登录
+            <span className="account-name">{session.username}</span>
+            <button
+              className="icon-button"
+              onClick={logout}
+              aria-label="退出登录"
+              title="退出登录"
+            >
+              <Icon name="logout" />
             </button>
           </div>
         </header>
-        <main className="content">
-          <MetadataStatus />
+        <main className="content" id="main-content" tabIndex={-1}>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -210,9 +308,19 @@ function App() {
             ) : mediaId ? (
               <MediaDetails id={mediaId} />
             ) : (
-              <Library />
+              <Library
+                filter={libraryFilter}
+                onFilterChange={(value) => {
+                  setLibraryFilter(value);
+                  const url = new URL(window.location.href);
+                  if (value === "all") url.searchParams.delete("type");
+                  else url.searchParams.set("type", value);
+                  window.history.replaceState(null, "", url);
+                }}
+              />
             )}
           </>
+          <MetadataStatus />
         </main>
         <footer>
           <div>

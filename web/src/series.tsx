@@ -4,6 +4,7 @@ import type { SeriesDetail, SeriesSummary } from "./media";
 
 import { Matching } from "./matching";
 import { Poster, MetadataInfo } from "./metadata";
+import { Icon } from "./icons";
 
 export function seriesURL(id: string, season?: number): string {
   return `/series/${encodeURIComponent(id)}${season === undefined ? "" : `?season=${season}`}`;
@@ -11,11 +12,27 @@ export function seriesURL(id: string, season?: number): string {
 
 export function SeriesCard({ series }: { series: SeriesSummary }) {
   return (
-    <a href={seriesURL(series.id)} className="media-card series-card">
+    <a
+      href={seriesURL(series.id)}
+      className="media-card series-card"
+      title={`${series.match.metadata?.title || series.title} · ${series.directoryPath}`}
+    >
       <Poster
         metadata={series.match.metadata}
         title={series.match.metadata?.title || series.title}
-      />
+      >
+        <span
+          className="poster-badge"
+          role="img"
+          aria-label={`${series.episodeCount} 集`}
+        >
+          {series.episodeCount}
+        </span>
+        <span className="poster-hover" aria-hidden="true">
+          <Icon name="arrow" />
+          <span>查看详情</span>
+        </span>
+      </Poster>
       <div className="card-heading">
         <h2>{series.match.metadata?.title || series.title}</h2>
         {series.availableFileCount === 0 && (

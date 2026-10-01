@@ -9,6 +9,7 @@ import { ExternalPlayer } from "./external-player";
 
 import { Matching } from "./matching";
 import { Poster, MetadataInfo } from "./metadata";
+import { Icon } from "./icons";
 
 type Directory = {
   id: string;
@@ -28,36 +29,102 @@ const scanLabels = {
   interrupted: "扫描已中断",
 };
 
-export function Library() {
+export type LibraryFilter = "all" | "movie" | "series" | "unmatched";
+
+export function readLibraryFilter(): LibraryFilter {
+  const value = new URLSearchParams(window.location.search).get("type");
+  return value === "movie" || value === "series" || value === "unmatched"
+    ? value
+    : "all";
+}
+
+function MediaCard({ item }: { item: MediaFile }) {
+  const title = item.match.metadata?.title || item.filename;
+  return (
+    <a href={`/media/${item.id}`} className="media-card" title={title}>
+      <Poster
+        metadata={item.match.metadata}
+        title={
+          item.match.metadata?.title || item.filename.replace(/\.[^.]+$/, "")
+        }
+      >
+        {item.progress?.completed && (
+          <span className="poster-badge watched" role="img" aria-label="已看完">
+            <Icon name="check" />
+          </span>
+        )}
+        <span className="poster-hover" aria-hidden="true">
+          <Icon name="arrow" />
+          <span>查看详情</span>
+        </span>
+      </Poster>
+      <div className="card-heading">
+        <h2>{title}</h2>
+        {!item.available && <span className="unavailable">不可用</span>}
+      </div>
+      <p>
+        {item.kind === "movie"
+          ? "电影"
+          : item.episode
+            ? `第 ${item.episode.seasonNumber} 季 · 第 ${item.episode.episodeNumber} 集`
+            : "未组织的电视剧文件"}
+        <span>
+          {" "}
+          · {item.matched ? item.match.metadata?.year || "TMDB" : "未匹配媒体"}
+        </span>
+      </p>
+    </a>
+  );
+}
+
+export function Library({
+  filter,
+  onFilterChange,
+}: {
+  filter: LibraryFilter;
+  onFilterChange: (value: LibraryFilter) => void;
+}) {
   const [items, setItems] = useState<MediaFile[]>([]);
   const [series, setSeries] = useState<SeriesSummary[]>([]);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [view, setView] = useState<"poster" | "list">("poster");
+  const [sort, setSort] = useState("recent");
   useEffect(() => {
+    let active = true;
     const refresh = () => {
       void api<{ items: MediaFile[]; series: SeriesSummary[] }>("/api/library")
         .then((result) => {
+          if (!active) return;
           setItems(result.items);
           setSeries(result.series);
+          setError("");
           setLoaded(true);
         })
-        .catch((error) => setError(message(error)));
+        .catch((error) => {
+          if (active) setError(message(error));
+        });
     };
     refresh();
     window.addEventListener("metadata-updated", refresh);
-    return () => window.removeEventListener("metadata-updated", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("metadata-updated", refresh);
+    };
   }, []);
+  const search = query.trim().toLocaleLowerCase();
+  const seriesTitles = new Map(
+    series.map((show) => [show.id, show.match.metadata?.title || show.title]),
+  );
   const shown = items.filter(
     (item) =>
-      (item.match.metadata?.title
-        .toLocaleLowerCase()
-        .includes(query.toLocaleLowerCase()) ||
-        item.filename.toLocaleLowerCase().includes(query.toLocaleLowerCase()) ||
-        item.episode?.seriesTitle
-          .toLocaleLowerCase()
-          .includes(query.toLocaleLowerCase())) &&
+      [
+        item.match.metadata?.title,
+        item.filename,
+        item.episode?.seriesTitle,
+        item.episode && seriesTitles.get(item.episode.seriesId),
+      ].some((title) => title?.toLocaleLowerCase().includes(search)) &&
       (filter === "all" ||
         filter === item.kind ||
         (filter === "unmatched" && !item.matched)),
@@ -71,153 +138,283 @@ export function Library() {
   const standalone = shown.filter(
     (item) => !item.episode || !groupedIDs.has(item.episode.seriesId),
   );
+  const seriesModified = new Map<string, number>();
+  for (const item of items) {
+    if (item.episode)
+      seriesModified.set(
+        item.episode.seriesId,
+        Math.max(
+          seriesModified.get(item.episode.seriesId) || 0,
+          item.modifiedAt,
+        ),
+      );
+  }
+  const entries = [
+    ...visibleSeries.map((show) => ({
+      id: show.id,
+      title: show.match.metadata?.title || show.title,
+      modifiedAt: seriesModified.get(show.id) || 0,
+      content: <SeriesCard key={show.id} series={show} />,
+    })),
+    ...standalone.map((item) => ({
+      id: item.id,
+      title: item.match.metadata?.title || item.filename,
+      modifiedAt: item.modifiedAt,
+      content: <MediaCard key={item.id} item={item} />,
+    })),
+  ].sort(
+    (a, b) =>
+      (sort === "recent" ? b.modifiedAt - a.modifiedAt : 0) ||
+      a.title.localeCompare(b.title, "zh-CN", { numeric: true }) ||
+      a.id.localeCompare(b.id),
+  );
+  const continuing = items
+    .filter(
+      (item) =>
+        item.available &&
+        item.progress &&
+        item.progress.position > 0 &&
+        !item.progress.completed,
+    )
+    .sort((a, b) => b.progress!.updatedAt - a.progress!.updatedAt);
+  const filterLabels = {
+    all: "全部收藏",
+    movie: "电影",
+    series: "电视剧",
+    unmatched: "未匹配媒体",
+  };
+  const chooseFilter = (value: LibraryFilter) => {
+    onFilterChange(value);
+    setQuery("");
+  };
   return (
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">OUR COLLECTION</p>
+          <p className="eyebrow">YOUR HOME CINEMA</p>
           <h1>媒体库</h1>
           <p className="muted">
-            喜欢的故事，都在这里。
-            <span className="count">{items.length} 个媒体文件</span>
+            好故事，随时开场。
+            <span className="count">
+              {loaded ? `${items.length} 个媒体文件` : "正在读取收藏"}
+            </span>
           </p>
         </div>
         <a className="secondary" href="/directories">
-          ＋ 接入媒体目录
+          <Icon name="plus" /> 接入媒体目录
         </a>
       </div>
-      {items.some(
-        (item) =>
-          item.available &&
-          item.progress &&
-          item.progress.position > 0 &&
-          !item.progress.completed,
-      ) && (
+      {loaded && items.length > 0 && (
+        <section className="library-hubs" aria-label="我的媒体">
+          {(
+            [
+              [
+                "movie",
+                "电影",
+                "film",
+                `${items.filter((item) => item.kind === "movie").length} 个媒体文件`,
+              ],
+              [
+                "series",
+                "电视剧",
+                "tv",
+                `${series.length} 部电视剧 · ${items.filter((item) => item.kind === "series").length} 个文件`,
+              ],
+              [
+                "unmatched",
+                "未匹配媒体",
+                "unmatched",
+                `${items.filter((item) => !item.matched).length} 个待完善资料的文件`,
+              ],
+            ] as const
+          ).map(([value, label, icon, count]) => (
+            <button
+              key={value}
+              className={`library-hub hub-${value}`}
+              aria-label={`浏览${label}`}
+              aria-pressed={filter === value}
+              onClick={() => chooseFilter(value)}
+            >
+              <span className="hub-icon">
+                <Icon name={icon} />
+              </span>
+              <span>
+                <strong>{label}</strong>
+                <small>{count}</small>
+              </span>
+              <Icon name="chevron" className="hub-arrow" />
+            </button>
+          ))}
+        </section>
+      )}
+      {continuing.length > 0 && filter === "all" && !search && (
         <section className="continue-watching" aria-label="继续观看">
-          <h2>继续观看</h2>
+          <div className="section-heading">
+            <h2>继续观看</h2>
+            <span className="fine">
+              <Icon name="clock" /> 家庭共享进度
+            </span>
+          </div>
           <div className="continue-list">
-            {items
-              .filter(
-                (item) =>
-                  item.available &&
-                  item.progress &&
-                  item.progress.position > 0 &&
-                  !item.progress.completed,
-              )
-              .sort((a, b) => b.progress!.updatedAt - a.progress!.updatedAt)
-              .map((item) => (
-                <a
-                  className="secondary"
-                  key={item.id}
-                  href={`/media/${item.id}?play=1`}
-                >
-                  {item.filename}
-                  <span className="fine">
-                    {" "}
-                    · {clock(item.progress!.position)} /{" "}
+            {continuing.map((item) => (
+              <a
+                className="continue-card"
+                key={item.id}
+                href={`/media/${item.id}?play=1`}
+                title={item.filename}
+              >
+                <div className="continue-art">
+                  <Poster
+                    metadata={item.match.metadata}
+                    title={
+                      item.match.metadata?.title ||
+                      item.filename.replace(/\.[^.]+$/, "")
+                    }
+                  />
+                  <span className="continue-play" aria-hidden="true">
+                    <Icon name="play" />
+                  </span>
+                  <span className="continue-time">
+                    {clock(item.progress!.position)} /{" "}
                     {clock(item.progress!.duration)}
                   </span>
-                </a>
-              ))}
+                  <progress
+                    className="watch-progress"
+                    aria-label={`${item.filename} 观看进度`}
+                    max={Math.max(1, item.progress!.duration)}
+                    value={item.progress!.position}
+                  />
+                </div>
+                <strong>{item.match.metadata?.title || item.filename}</strong>
+                <span className="fine">
+                  {item.episode
+                    ? `第 ${item.episode.seasonNumber} 季 · 第 ${item.episode.episodeNumber} 集`
+                    : "电影"}{" "}
+                  · 继续上次的故事
+                </span>
+              </a>
+            ))}
           </div>
         </section>
       )}
       <div className="library-toolbar">
         <div className="filters" role="group" aria-label="媒体分类">
-          {[
-            ["all", "全部"],
-            ["movie", "电影"],
-            ["series", "电视剧"],
-            ["unmatched", "未匹配媒体"],
-          ].map(([value, label]) => (
+          {(
+            [
+              ["all", "全部"],
+              ["movie", "电影"],
+              ["series", "电视剧"],
+              ["unmatched", "未匹配媒体"],
+            ] as const
+          ).map(([value, label]) => (
             <button
               key={value}
               aria-pressed={value === filter}
               className={value === filter ? "selected" : ""}
-              onClick={() => setFilter(value)}
+              onClick={() => onFilterChange(value)}
             >
               {label}
             </button>
           ))}
         </div>
-        <input
-          aria-label="搜索文件名"
-          className="search"
-          placeholder="搜索标题或文件名…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="search-field">
+          <Icon name="search" />
+          <input
+            id="library-search"
+            aria-label="搜索文件名"
+            type="search"
+            placeholder="搜索标题或文件名"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            autoFocus={
+              new URLSearchParams(window.location.search).get("focus") ===
+              "search"
+            }
+          />
+        </div>
       </div>
       {error ? (
         <p role="alert" className="error">
           {error}
         </p>
       ) : !loaded ? (
-        <p role="status">正在加载媒体库…</p>
+        <div className="library-loading" role="status">
+          <span className="loading-spinner" />
+          正在加载媒体库…
+        </div>
       ) : items.length === 0 ? (
         <section className="empty">
-          <span className="empty-icon" aria-hidden="true">
-            ▥
+          <span className="empty-icon">
+            <Icon name="film" />
           </span>
+          <p className="eyebrow">A COLLECTION OF YOUR OWN</p>
           <h2>给好故事留一个位置</h2>
           <p>媒体库还是空的，接入媒体目录后即可扫描收录。</p>
           <a className="primary" href="/directories">
-            接入第一个媒体目录 →
+            <Icon name="plus" /> 接入第一个媒体目录
           </a>
           <p className="fine">无需 TMDB 凭据，也可以浏览本地媒体。</p>
         </section>
       ) : shown.length === 0 ? (
-        <section className="empty">
+        <section className="empty search-empty">
+          <span className="empty-icon">
+            <Icon name="search" />
+          </span>
           <h2>没有找到对应的媒体</h2>
           <p>换个文件名或分类试试。</p>
+          <button className="secondary" onClick={() => chooseFilter("all")}>
+            查看全部媒体
+          </button>
         </section>
       ) : (
-        <>
-          <p className="collection-note">
-            {filter === "unmatched"
-              ? "尚未关联影片资料的全部文件，已组织的单集仍会保留在这里"
-              : "电影按文件浏览，电视剧按季集组织；无法识别的文件仍独立保留"}
-          </p>
-          <div className="poster-grid">
-            {visibleSeries.map((show) => (
-              <SeriesCard key={show.id} series={show} />
-            ))}
-            {standalone.map((item) => (
-              <a
-                href={`/media/${item.id}`}
-                key={item.id}
-                className="media-card"
+        <section aria-label="媒体收藏">
+          <div className="section-heading collection-heading">
+            <div>
+              <h2>{filterLabels[filter]}</h2>
+              <span className="count" aria-live="polite">
+                {entries.length} {filter === "unmatched" ? "个文件" : "项收藏"}
+              </span>
+            </div>
+            <div className="collection-controls">
+              <select
+                aria-label="排序方式"
+                value={sort}
+                onChange={(event) => setSort(event.target.value)}
               >
-                <Poster
-                  metadata={item.match.metadata}
-                  title={
-                    item.match.metadata?.title ||
-                    item.filename.replace(/\.[^.]+$/, "")
-                  }
-                />
-                <div className="card-heading">
-                  <h2>{item.match.metadata?.title || item.filename}</h2>
-                  {!item.available && (
-                    <span className="unavailable">不可用</span>
-                  )}
-                </div>
-                <p>
-                  {item.kind === "movie"
-                    ? "电影"
-                    : item.episode
-                      ? `第 ${item.episode.seasonNumber} 季 · 第 ${item.episode.episodeNumber} 集`
-                      : "未组织的电视剧文件"}{" "}
-                  <span>
-                    ·{" "}
-                    {item.matched
-                      ? item.match.metadata?.year || "TMDB"
-                      : "未匹配媒体"}
-                  </span>
-                </p>
-              </a>
-            ))}
+                <option value="recent">最近更新</option>
+                <option value="title">标题排序</option>
+              </select>
+              <div className="view-switch" role="group" aria-label="显示方式">
+                <button
+                  className="icon-button"
+                  aria-label="海报视图"
+                  title="海报视图"
+                  aria-pressed={view === "poster"}
+                  onClick={() => setView("poster")}
+                >
+                  <Icon name="library" />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="列表视图"
+                  title="列表视图"
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  <Icon name="list" />
+                </button>
+              </div>
+            </div>
           </div>
-        </>
+          {filter === "unmatched" && (
+            <p className="collection-note">
+              尚未关联影片资料的全部文件，已组织的单集仍会保留在这里。
+            </p>
+          )}
+          <div className={`poster-grid${view === "list" ? " is-list" : ""}`}>
+            {entries.map((entry) => entry.content)}
+          </div>
+        </section>
       )}
     </>
   );
@@ -360,7 +557,7 @@ export function Directories() {
           <article className="directory-row" key={dir.id}>
             <div className="directory-row-main">
               <span className="directory-icon" aria-hidden="true">
-                ▱
+                <Icon name="folder" />
               </span>
               <div>
                 <h3>{dir.path}</h3>
@@ -446,7 +643,10 @@ export function MediaDetails({ id }: { id: string }) {
           <Poster
             detail
             metadata={file.match.metadata}
-            title={file.match.metadata?.title || file.filename}
+            title={
+              file.match.metadata?.title ||
+              file.filename.replace(/\.[^.]+$/, "")
+            }
           />
           <section className="detail-info">
             <p className="eyebrow">
@@ -476,7 +676,7 @@ export function MediaDetails({ id }: { id: string }) {
                 disabled={deleted}
                 onClick={() => setPlay(true)}
               >
-                网页播放
+                <Icon name="play" /> 网页播放
               </button>
             </div>
             <dl>
