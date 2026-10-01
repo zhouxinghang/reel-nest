@@ -122,11 +122,12 @@ func (a *App) scanFiles(d Directory) error {
 	if _, err = tx.ExecContext(a.ctx, "UPDATE media_files SET available=0 WHERE directory_id=?", d.ID); err != nil {
 		return err
 	}
+	addedAt := time.Now().UnixMilli()
 	for _, file := range files {
 		var mediaID string
-		err = tx.QueryRowContext(a.ctx, `INSERT INTO media_files(id,directory_id,relative_path,filename,size,modified_at,fingerprint,available)
-   VALUES(?,?,?,?,?,?,?,1) ON CONFLICT(directory_id,relative_path,fingerprint) DO UPDATE SET available=1 RETURNING id`,
-			newID(), d.ID, file.relative, file.info.Name(), file.info.Size(), file.info.ModTime().Unix(), fileFingerprint(file.info)).Scan(&mediaID)
+		err = tx.QueryRowContext(a.ctx, `INSERT INTO media_files(id,directory_id,relative_path,filename,size,modified_at,fingerprint,available,added_at)
+   VALUES(?,?,?,?,?,?,?,1,?) ON CONFLICT(directory_id,relative_path,fingerprint) DO UPDATE SET available=1 RETURNING id`,
+			newID(), d.ID, file.relative, file.info.Name(), file.info.Size(), file.info.ModTime().Unix(), fileFingerprint(file.info), addedAt).Scan(&mediaID)
 		if err != nil {
 			return err
 		}

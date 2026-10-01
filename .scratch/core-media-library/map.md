@@ -1,6 +1,6 @@
 # 核心家庭媒体管理系统：Ticket 索引
 
-发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–09；Docker 校验按用户要求跳过。
+发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–09 及追加的 11（首页、收藏与最近添加）；Docker 校验按用户要求跳过。
 
 ## 执行依据
 
@@ -10,7 +10,7 @@
 - [ADR 0002：以宿主机挂载目录作为媒体接入边界](/Users/bytedance/workspace/reel-nest/docs/adr/0002-host-mounted-media-directories.md)。
 - [ADR 0003：外部播放器使用不过期的单文件只读链接](/Users/bytedance/workspace/reel-nest/docs/adr/0003-non-expiring-read-only-stream-links.md)。
 
-正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–09，不新增技术锁定 ADR。
+正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–09 及 11，不新增技术锁定 ADR。
 
 ## Tickets 与依赖
 
@@ -25,14 +25,15 @@
 | 07 | [TMDB 影片资料与故障降级](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/07-tmdb-metadata-and-fallback.md) | 03, 04 | resolved |
 | 08 | [手动修正影片资料匹配](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/08-manual-metadata-matching.md) | 07 | resolved |
 | 09 | [安全地永久删除单个源文件](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/09-single-file-permanent-deletion.md) | 02 | resolved |
+| 11 | [Emby 首页、家庭收藏与最近添加](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/11-emby-home-favorites-recent.md) | 02, 03, 04 | resolved |
 
 所有依赖均指向更早编号，且只列真正阻塞本项的能力。每项交付自身必要的持久化、接口、界面、测试及使用说明，不拆出横向“后端/前端/测试”任务。
 
 ## Frontier
 
-- 已完成：**01–09**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
-- 当前 frontier：**无**。9 个 implementation tickets 均已 resolved，无 claimed ticket；父规格保持原 ready-for-agent 状态，Docker/实机未验证项不伪报通过。
-- 最新复核（2026-10-01，基线 `75ab30c`）：9 个 ticket 与索引状态一致，非 Docker 全量回归通过，未发现需要重开的事项；各 ticket 已追加复核记录。01 的 Docker 实测验收继续保留未勾选。
+- 已完成：**01–09、11**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
+- 当前 frontier：**无**。10 个 implementation tickets 均已 resolved，无 claimed ticket；父规格保持原 ready-for-agent 状态，Docker/实机未验证项不伪报通过。
+- 最新变更（2026-10-01）：11 新增 Emby 风格首页、共享收藏与最近添加；10 的扫描同步/数字单集变更保留在工作区，未纳入本次独立提交。01 的 Docker 实测验收仍未勾选。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -105,3 +106,5 @@
 
 - 2026-10-01（收尾复核）：本轮开始时 01–09 已全部 resolved，不重复领取或扩大功能范围。重新通过禁用缓存的 31 个 Go 应用用例、全量 race/vet、10 个 Chrome 流程、生产构建/格式/依赖审计、Linux 交叉编译及真实旧资料版本→当前版本升级/删除/重启验证，未发现回归问题。
 - 本轮仅更新验证与各 issue 的复核记录，状态仍全部为 resolved；Docker 按用户要求跳过，其他实机未验证项保持原样。父规格及领域/ADR 文档未修改，当前仍无 frontier；详情见验证记录的「01–09 收尾复核」节。
+
+- 2026-10-01：完成 11，新增 Emby 风格全宽首页、家庭收藏和真实最近添加；旧库收录日期保持未知，收藏与观看进度独立，串流凭证不能修改收藏。验证与参考限制见验证记录；此前扫描同步/数字单集改动未纳入此次提交。

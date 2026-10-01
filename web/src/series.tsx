@@ -6,6 +6,7 @@ import { Matching } from "./matching";
 import { Poster } from "./metadata";
 import { DetailHero } from "./detail";
 import { Icon } from "./icons";
+import { FavoriteButton } from "./favorite";
 
 export function seriesURL(id: string, season?: number): string {
   return `/series/${encodeURIComponent(id)}${season === undefined ? "" : `?season=${season}`}`;
@@ -97,6 +98,17 @@ export function SeriesDetails({ id }: { id: string }) {
               <a className="primary detail-play" href="#seasons">
                 <Icon name="list" /> 浏览单集
               </a>
+              <FavoriteButton
+                kind="series"
+                id={series.id}
+                title={series.match.metadata?.title || series.title}
+                value={series.favorite}
+                onChange={(state) =>
+                  setSeries((current) =>
+                    current ? { ...current, ...state } : current,
+                  )
+                }
+              />
               <Matching
                 compact
                 target={{

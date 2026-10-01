@@ -19,7 +19,7 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
     page.getByRole("heading", { name: "媒体库", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("媒体库还是空的，接入媒体目录后即可扫描收录。"),
+    page.getByRole("heading", { name: "媒体库还是空的", exact: true }),
   ).toBeVisible();
 
   const root = process.env.REELNEST_TEST_ROOT!;
@@ -37,6 +37,7 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
   await expect(
     page.getByRole("heading", { name: "家庭电影 (2026).mp4" }),
   ).toBeVisible();
+  await page.getByRole("link", { name: "搜索媒体", exact: true }).click();
   await page.getByLabel("搜索文件名").fill("找不到的文件");
   await expect(
     page.getByRole("heading", { name: "没有找到对应的媒体" }),
@@ -122,10 +123,15 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
       .getByRole("status"),
   ).toHaveText("扫描完成");
   await page.getByRole("link", { name: "返回媒体库" }).click();
-  await page.getByRole("button", { name: "电视剧", exact: true }).click();
+  await page.getByRole("button", { name: "浏览电视剧", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "家庭电影 (2026).mp4" }),
   ).toHaveCount(0);
+  await page.getByLabel("搜索文件名").fill("星河.S2E10.mp4");
+  await expect(
+    page.getByRole("heading", { name: "星河", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("搜索文件名").fill("");
   await page
     .getByRole("link")
     .filter({ has: page.getByRole("heading", { name: "星河", exact: true }) })
@@ -177,7 +183,8 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
     page.getByRole("heading", { name: "第 1 集", exact: true }),
   ).toBeVisible();
   await page.goto("/library");
-  await page.getByRole("button", { name: "未匹配媒体", exact: true }).click();
+  await page.getByRole("button", { name: "打开导航", exact: true }).click();
+  await page.getByRole("link", { name: "未匹配媒体", exact: true }).click();
   await page
     .getByRole("link")
     .filter({

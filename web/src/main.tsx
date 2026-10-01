@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { api, message } from "./api";
 import "./style.css";
 import "./detail.css";
+import "./home.css";
 import {
   Library,
   Directories,
@@ -190,9 +191,10 @@ function App() {
     ? path.slice("/media/".length)
     : null;
   const detailPage = Boolean(mediaId || seriesId);
+  const libraryPage = !detailPage && !directoryPage;
   return (
     <div
-      className={`app-shell${detailPage ? " detail-page" : ""}${navOpen ? " navigation-open" : ""}`}
+      className={`app-shell${detailPage ? " detail-page" : ""}${libraryPage ? " home-page" : ""}${navOpen ? " navigation-open" : ""}`}
     >
       <a className="skip-link" href="#main-content">
         跳到主要内容
@@ -216,6 +218,8 @@ function App() {
               ["movie", "电影", "film"],
               ["series", "电视剧", "tv"],
               ["unmatched", "未匹配媒体", "unmatched"],
+              ["favorites", "收藏", "heart"],
+              ["recent", "最近添加", "clock"],
             ] as const
           ).map(([value, label, icon]) => (
             <a
@@ -253,7 +257,7 @@ function App() {
           </div>
         </div>
       </aside>
-      {detailPage && navOpen && (
+      {(detailPage || libraryPage) && navOpen && (
         <button
           className="navigation-scrim"
           aria-label="关闭导航"
@@ -296,13 +300,19 @@ function App() {
             >
               <Icon name={navOpen ? "close" : "menu"} />
             </button>
-            <span className="header-title">
-              {directoryPage
-                ? "媒体目录管理"
-                : detailPage
-                  ? "reelnest"
-                  : "我的家庭影院"}
-            </span>
+            {libraryPage ? (
+              <a className="home-wordmark" href="/library" aria-label="首页">
+                reel<span>nest</span>
+              </a>
+            ) : (
+              <span className="header-title">
+                {directoryPage
+                  ? "媒体目录管理"
+                  : detailPage
+                    ? "reelnest"
+                    : "我的家庭影院"}
+              </span>
+            )}
           </div>
           <div className="account">
             <a
@@ -326,7 +336,36 @@ function App() {
             >
               <Icon name="logout" />
             </button>
+            {libraryPage && (
+              <a
+                className="icon-button"
+                href="/directories"
+                aria-label="管理媒体目录"
+                title="管理媒体目录"
+              >
+                <Icon name="settings" />
+              </a>
+            )}
           </div>
+          {libraryPage && (
+            <nav className="home-tabs" aria-label="首页导航">
+              {(
+                [
+                  ["all", "首页"],
+                  ["favorites", "收藏"],
+                  ["recent", "最近添加"],
+                ] as const
+              ).map(([value, label]) => (
+                <a
+                  key={value}
+                  href={value === "all" ? "/library" : `/library?type=${value}`}
+                  aria-current={libraryFilter === value ? "page" : undefined}
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
+          )}
         </header>
         <main className="content" id="main-content" tabIndex={-1}>
           {error && (
@@ -354,7 +393,14 @@ function App() {
               />
             )}
           </>
-          <MetadataStatus />
+          {libraryPage ? (
+            <details className="home-server-status">
+              <summary>服务器状态</summary>
+              <MetadataStatus />
+            </details>
+          ) : (
+            <MetadataStatus />
+          )}
         </main>
         <footer>
           <div>

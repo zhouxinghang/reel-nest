@@ -1,4 +1,4 @@
-# 当前应用 HTTP 契约（01–09）
+# 当前应用 HTTP 契约（01–09、11）
 
 应用与网页同源。所有写入请求为 `application/json`，无参数 POST 发送 `{}`；错误返回 `{"error":"可显示的错误说明"}`。对跨站浏览器写入请求返回 403。除健康检查和登录外，API 均要求家庭共享账号会话；独立的 `/stream/{id}` 使用单文件只读串流凭证，不能代替网页会话。
 
@@ -11,7 +11,8 @@
 | `GET /api/directories` | 200 `{directories, allowedRoots}`；只暴露已配置允许根目录和已接入目录，不提供服务器目录树枚举 |
 | `POST /api/directories` | 输入 `{path, kind}`，kind 为 `movie` 或 `series`；201 返回已接入目录并启动首次扫描；越界/符号链接/非目录 400，重复或重叠目录 409 |
 | `POST /api/directories/{id}/scan` | 202 `{"scanStatus":"running"}`，异步重新扫描；已在扫描时 409，不存在 404 |
-| `GET /api/library` | 200 `{items:[媒体文件...], series:[电视剧摘要...]}`；支持 `q` 文件名/本地电视剧名子串搜索、`kind=movie/series` 分类；未知分类 400 |
+| `GET /api/library` | 200 `{items:[媒体文件...], series:[电视剧摘要...]}`；支持 `q` 文件名/本地电视剧名/资料标题子串搜索、`kind=movie/series` 分类、`sort=recent` 按实际收录时间降序；未指定排序沿用文件名排序，未知分类/排序 400 |
+| `POST /api/favorites/{kind}/{id}` | 家庭共享账号添加/取消收藏；kind 为 `media`（电影或单集文件）或 `series`（整部电视剧），输入 `{"favorite":true/false}`，200 返回 `{favorite,favoritedAt}`；非法类型/缺失或无效字段 400，对象不存在 404 |
 | `GET /api/media/{id}` | 200 返回单个媒体文件详情，包含可空的季集关联；不存在 404；标识不是服务器文件路径 |
 | `GET /api/series/{id}` | 200 返回电视剧摘要及按季号/集号排序的 `seasons` 层级；不存在 404；媒体文件标识不能充当电视剧标识 |
 
@@ -22,6 +23,10 @@
 `episode` 为 `null`（电影或未组织文件），或 `{seriesId, seriesTitle, seasonNumber, episodeNumber}`。无法识别的电视剧文件通过 `organizationReason` 解释原因；识别成功时为空字符串。`matched` 表示影片资料匹配，不能用 `episode != null` 代替它。
 
 电视剧摘要字段：`id / title / directoryId / directoryPath / seasonCount / episodeCount / fileCount / availableFileCount / matched / match`。季/集数量按逻辑季集去重，文件数量不合并版本；来源目录区分跨目录的同名作品。`/api/library` 的摘要对应本次筛选出的文件；`items` 始终保留每个文件，不被电视剧摘要替代。
+
+媒体文件与电视剧摘要还包含 `addedAt / favorite / favoritedAt`。`addedAt` 为首次完整成功扫描收录该文件的 Unix 毫秒；整部电视剧取当前所有单集文件的最大值，新单集入库会更新电视剧的最近添加排序。旧版未记录历史日期，升级时保留为 0（未知），不使用文件修改时间或升级时间伪造；普通重扫不改写。`sort=recent` 以时间降序、相同时间按稳定标识排序，历史未知项在后。
+
+`favorite` 为家庭共享收藏状态；`favoritedAt` 为首次设置本次收藏的 Unix 毫秒，未收藏为 0。重复设置 true 保留原时间，设置 false 删除收藏，重复 false 仍返回 false/0。文件与整部电视剧独立收藏，不改写观看进度、资料或源文件；数据库持久化，目标记录删除时级联清理。收藏写入不接受额外 JSON 字段，须使用会话且通过同源检查；只读串流凭证不能授权。网页「收藏」按此状态筛选，按 `favoritedAt` 降序展示。
 
 `GET /api/series/{id}` 在摘要之外返回：
 

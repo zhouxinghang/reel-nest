@@ -52,6 +52,7 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
   );
   copyFileSync("tests/fixtures/playback.webm", join(root, "missing.webm"));
   await login(page);
+  await page.getByText("服务器状态", { exact: true }).click();
   await expect(
     page.getByRole("region", { name: "TMDB 设置与状态" }),
   ).toContainText("未配置 TMDB 凭据");

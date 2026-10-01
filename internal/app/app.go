@@ -94,6 +94,10 @@ func New(config Config) (*App, error) {
 		a.Close()
 		return nil, err
 	}
+	if err := a.initializeDiscovery(); err != nil {
+		a.Close()
+		return nil, err
+	}
 	if err := a.initializePlayback(); err != nil {
 		a.Close()
 		return nil, err
@@ -157,6 +161,7 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("POST /api/metadata/refresh", a.auth(http.HandlerFunc(a.refreshMetadata)))
 	mux.Handle("GET /api/metadata/posters/{kind}/{id}", a.auth(http.HandlerFunc(a.metadataPoster)))
 	mux.Handle("GET /api/library", a.auth(http.HandlerFunc(a.library)))
+	mux.Handle("POST /api/favorites/{kind}/{id}", a.auth(http.HandlerFunc(a.favorite)))
 	mux.Handle("GET /api/media/{id}", a.auth(http.HandlerFunc(a.media)))
 	mux.Handle("POST /api/media/{id}/deletion-preview", a.auth(http.HandlerFunc(a.deletionPreview)))
 	mux.Handle("POST /api/media/{id}/delete", a.auth(http.HandlerFunc(a.deleteMedia)))

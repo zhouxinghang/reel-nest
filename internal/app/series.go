@@ -7,6 +7,9 @@ import (
 )
 
 type SeriesSummary struct {
+	AddedAt            int64               `json:"addedAt"`
+	Favorite           bool                `json:"favorite"`
+	FavoritedAt        int64               `json:"favoritedAt"`
 	Match              metadataAssociation `json:"match"`
 	DirectoryPath      string              `json:"directoryPath"`
 	ID                 string              `json:"id"`
@@ -51,6 +54,9 @@ func seriesSummaries(files []MediaFile) []SeriesSummary {
 			groups[ref.SeriesID] = group
 		}
 		group.summary.FileCount++
+		group.summary.AddedAt = max(group.summary.AddedAt, file.AddedAt)
+		group.summary.FavoritedAt = file.SeriesFavoritedAt
+		group.summary.Favorite = file.SeriesFavoritedAt > 0
 		if file.Available {
 			group.summary.AvailableFileCount++
 		}

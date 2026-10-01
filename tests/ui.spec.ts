@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { copyFileSync, mkdirSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import type { MediaFile, SeriesSummary } from "../web/src/media";
 
 test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动端导航", async ({
   page,
@@ -100,19 +101,28 @@ test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动
 
   await page.getByRole("button", { name: "浏览电影", exact: true }).click();
   await expect(page).toHaveURL(/type=movie/);
+  await page.getByRole("button", { name: "打开导航", exact: true }).click();
   await expect(
     page
       .getByRole("navigation", { name: "主导航" })
       .getByRole("link", { name: "电影", exact: true }),
   ).toHaveAttribute("aria-current", "page");
+  await page.keyboard.press("Escape");
   await page.getByLabel("搜索文件名").fill("UI ");
   const cards = page.getByRole("region", { name: "媒体收藏" });
   await expect(
     cards.getByRole("heading", { level: 2 }).filter({ hasText: /^UI / }),
   ).toHaveCount(6);
-  await expect(cards.locator(".media-card h2").first()).toHaveText(
-    "UI Zulu.webm",
-  );
+  const expectedRecent = items
+    .filter((item: { filename: string }) => names.includes(item.filename))
+    .sort(
+      (
+        a: { addedAt: number; id: string },
+        b: { addedAt: number; id: string },
+      ) => b.addedAt - a.addedAt || a.id.localeCompare(b.id),
+    )
+    .map((item: { filename: string }) => item.filename);
+  await expect(cards.locator(".media-card h2")).toHaveText(expectedRecent);
   await page.getByLabel("排序方式").selectOption("title");
   await expect(cards.locator(".media-card h2")).toHaveText(names);
   await page.screenshot({
@@ -124,7 +134,7 @@ test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动
   await expect(
     page.getByRole("button", { name: "列表视图", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(cards.locator(".poster-grid")).toHaveClass(/is-list/);
+  await expect(cards.locator(".home-card-grid")).toHaveClass(/home-card-list/);
   await page.screenshot({
     path: testInfo.outputPath("library-list.png"),
     fullPage: true,
@@ -136,8 +146,8 @@ test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动
   // Reload after the desktop/mobile compositor resize and verify URL state.
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "电影", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("heading", { name: "电影", exact: true }),
+  ).toBeVisible();
   await page.getByLabel("搜索文件名").fill("UI ");
   await page.getByLabel("排序方式").selectOption("title");
   await expect(cards.locator(".media-card h2")).toHaveText(names);
@@ -179,15 +189,19 @@ test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动
   await expect(
     page.getByRole("heading", { name: "没有找到对应的媒体" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "查看全部媒体", exact: true }).click();
+  await page.getByRole("link", { name: "返回首页", exact: true }).click();
   await page.setViewportSize({ width: 320, height: 900 });
-  await page.getByRole("button", { name: "未匹配媒体", exact: true }).click();
+  await page.getByRole("button", { name: "打开导航", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("link", { name: "未匹配媒体", exact: true })
+    .click();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "全部", exact: true }).click();
+  await page.getByRole("link", { name: "搜索媒体", exact: true }).click();
   await page.getByLabel("搜索文件名").fill("UI ");
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -449,4 +463,250 @@ test("Emby 详情页：全宽布局、续播与从头播放、图标操作、季
     page.getByRole("link", { name: "返回第 2 季", exact: true }),
   ).toHaveAttribute("href", `/series/${episode.episode.seriesId}?season=2`);
   expect(errors).toEqual([]);
+});
+
+test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添加排序", async ({
+  page,
+  context,
+  browser,
+}, testInfo) => {
+  const root = join(
+    process.env.REELNEST_TEST_ROOT!,
+    "media",
+    `home-${randomUUID()}`,
+  );
+  const movies = join(root, "movies");
+  const shows = join(root, "shows");
+  mkdirSync(movies, { recursive: true });
+  mkdirSync(shows, { recursive: true });
+  const firstName = "Home first.webm";
+  const lastName = "Home newly added.webm";
+  copyFileSync("tests/fixtures/playback.webm", join(movies, firstName));
+  utimesSync(join(movies, firstName), 2000000000, 2000000000);
+  copyFileSync(
+    "tests/fixtures/playback.webm",
+    join(shows, "Home show.S01E01.webm"),
+  );
+  await page.goto("/login");
+  await page.getByLabel("家庭共享账号", { exact: true }).fill("family");
+  await page.getByLabel("密码", { exact: true }).fill("browser-test-password");
+  await page.getByRole("button", { name: "进入媒体库" }).click();
+  await expect(
+    page.getByRole("heading", { name: "媒体库", exact: true }),
+  ).toBeVisible();
+  async function awaitScan(id: string) {
+    await expect
+      .poll(
+        async () =>
+          (
+            await (await context.request.get("/api/directories")).json()
+          ).directories.find((dir: { id: string }) => dir.id === id)
+            ?.scanStatus,
+      )
+      .toBe("completed");
+  }
+  const movieDir = await (
+    await context.request.post("/api/directories", {
+      data: { path: movies, kind: "movie" },
+    })
+  ).json();
+  await awaitScan(movieDir.id);
+  const showDir = await (
+    await context.request.post("/api/directories", {
+      data: { path: shows, kind: "series" },
+    })
+  ).json();
+  await awaitScan(showDir.id);
+  copyFileSync("tests/fixtures/playback.webm", join(movies, lastName));
+  utimesSync(join(movies, lastName), 1000000000, 1000000000);
+  await context.request.post(`/api/directories/${movieDir.id}/scan`, {
+    data: {},
+  });
+  await awaitScan(movieDir.id);
+  const data = await (
+    await context.request.get("/api/library?sort=recent")
+  ).json();
+  const first = data.items.find(
+    (item: MediaFile) => item.filename === firstName,
+  ) as MediaFile;
+  const last = data.items.find(
+    (item: MediaFile) => item.filename === lastName,
+  ) as MediaFile;
+  const show = data.series.find(
+    (item: SeriesSummary) => item.directoryId === showDir.id,
+  ) as SeriesSummary;
+  expect(last.addedAt).toBeGreaterThan(first.addedAt);
+  expect(last.modifiedAt).toBeLessThan(first.modifiedAt);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/library?type=favorites");
+  await expect(page.getByRole("heading", { name: "还没有收藏" })).toBeVisible();
+  await page.goto("/library");
+  const nav = page.getByRole("navigation", { name: "首页导航" });
+  await expect(
+    nav.getByRole("link", { name: "首页", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("navigation", { name: "主导航" }),
+  ).not.toBeVisible();
+  const libraryBox = (await page
+    .getByRole("region", { name: "我的媒体" })
+    .boundingBox())!;
+  expect(libraryBox.x).toBeLessThan(60);
+  expect(libraryBox.width).toBeGreaterThan(1300);
+  expect(
+    await page
+      .locator(".home-page")
+      .evaluate((el) => getComputedStyle(el).backgroundColor),
+  ).toBe("rgb(20, 20, 20)");
+  const recentMovies = page.getByRole("region", {
+    name: "最近添加的电影",
+    exact: true,
+  });
+  await expect(recentMovies.locator(".media-card h2").first()).toHaveText(
+    lastName,
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("emby-home-desktop.png"),
+    fullPage: true,
+  });
+  await recentMovies
+    .getByRole("button", { name: `添加收藏：${lastName}`, exact: true })
+    .click();
+  await expect(
+    recentMovies.getByRole("button", {
+      name: `取消收藏：${lastName}`,
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await nav.getByRole("link", { name: "收藏", exact: true }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "媒体收藏" })
+      .getByRole("heading", { name: lastName, exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: `取消收藏：${lastName}`, exact: true }),
+  ).toBeVisible();
+  await page.goto(`/series/${show.id}`);
+  await page
+    .getByRole("button", { name: "添加收藏：Home show", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "取消收藏：Home show", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  const other = await browser.newContext();
+  try {
+    const otherPage = await other.newPage();
+    await otherPage.goto("/login");
+    await otherPage.getByLabel("家庭共享账号", { exact: true }).fill("family");
+    await otherPage
+      .getByLabel("密码", { exact: true })
+      .fill("browser-test-password");
+    await otherPage.getByRole("button", { name: "进入媒体库" }).click();
+    await expect(
+      otherPage.getByRole("heading", { name: "媒体库", exact: true }),
+    ).toBeVisible();
+    await otherPage.goto("/library?type=favorites");
+    const favorites = otherPage.getByRole("region", { name: "媒体收藏" });
+    await expect(
+      favorites.getByRole("heading", { name: lastName, exact: true }),
+    ).toBeVisible();
+    await expect(
+      favorites.getByRole("heading", { name: "Home show", exact: true }),
+    ).toBeVisible();
+    await favorites
+      .getByRole("button", { name: `取消收藏：${lastName}`, exact: true })
+      .click();
+    await expect(
+      favorites.getByRole("heading", { name: lastName, exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await other.close();
+  }
+  await page.goto(`/media/${first.id}`);
+  let fail = true;
+  let releaseFavorite!: () => void;
+  const pendingFavorite = new Promise<void>((resolve) => {
+    releaseFavorite = resolve;
+  });
+  await page.route(`**/api/favorites/media/${first.id}`, async (route) => {
+    if (fail) {
+      await pendingFavorite;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "收藏测试暂不可用" }),
+      });
+    } else await route.continue();
+  });
+  await page
+    .getByRole("button", { name: `添加收藏：${firstName}`, exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: `添加收藏：${firstName}`, exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: `添加收藏：${firstName}`, exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  releaseFavorite();
+  await expect(page.getByRole("alert")).toContainText("收藏测试暂不可用");
+  await expect(
+    page.getByRole("button", { name: `添加收藏：${firstName}`, exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  fail = false;
+  await page
+    .getByRole("button", { name: `添加收藏：${firstName}`, exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: `取消收藏：${firstName}`, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/library?type=recent");
+  await page.getByLabel("搜索文件名").fill("Home ");
+  await expect(
+    page.locator(".home-card-grid .media-card h2").first(),
+  ).toHaveText(lastName);
+  await context.request.post(`/api/directories/${movieDir.id}/scan`, {
+    data: {},
+  });
+  await awaitScan(movieDir.id);
+  expect(
+    (await (await context.request.get(`/api/media/${first.id}`)).json())
+      .addedAt,
+  ).toBe(first.addedAt);
+  await page.goto("/library?type=favorites");
+  await page.screenshot({
+    path: testInfo.outputPath("emby-favorites-desktop.png"),
+    fullPage: true,
+  });
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/library");
+    await expect(
+      page.getByRole("region", { name: "最近添加的电影" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (width === 390)
+      await page.screenshot({
+        path: testInfo.outputPath("emby-home-mobile.png"),
+        fullPage: true,
+      });
+  }
+  expect(
+    (await (await context.request.get(`/api/media/${last.id}/progress`)).json())
+      .position,
+  ).toBe(0);
+  await page.goto("/library?type=favorites");
+  for (const title of [firstName, "Home show"]) {
+    await page
+      .getByRole("button", { name: `取消收藏：${title}`, exact: true })
+      .click();
+  }
+  await expect(page.getByRole("heading", { name: "还没有收藏" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "还没有收藏" })).toBeVisible();
 });

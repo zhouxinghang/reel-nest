@@ -128,6 +128,7 @@ test("TMDB 成功匹配的海报墙、中文详情、电视剧与真实播放", 
       has: page.getByRole("heading", { name: "降临", exact: true }),
     }),
   ).toBeVisible();
+  await page.getByRole("link", { name: "搜索媒体", exact: true }).click();
   await page.getByLabel("搜索文件名").fill("降临");
   await expect(
     page.getByRole("heading", { name: "降临", exact: true }),

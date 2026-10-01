@@ -13,6 +13,9 @@ export type EpisodeReference = {
 };
 
 export type MediaFile = {
+  addedAt: number;
+  favorite: boolean;
+  favoritedAt: number;
   match: MetadataAssociation;
   progress: WatchProgress | null;
   id: string;
@@ -31,6 +34,9 @@ export type MediaFile = {
 };
 
 export type SeriesSummary = {
+  addedAt: number;
+  favorite: boolean;
+  favoritedAt: number;
   match: MetadataAssociation;
   id: string;
   title: string;
