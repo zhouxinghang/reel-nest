@@ -2,6 +2,7 @@ import React, { useEffect, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { api, message } from "./api";
 import "./style.css";
+import "./detail.css";
 import {
   Library,
   Directories,
@@ -188,8 +189,11 @@ function App() {
   const mediaId = path.startsWith("/media/")
     ? path.slice("/media/".length)
     : null;
+  const detailPage = Boolean(mediaId || seriesId);
   return (
-    <div className={`app-shell${navOpen ? " navigation-open" : ""}`}>
+    <div
+      className={`app-shell${detailPage ? " detail-page" : ""}${navOpen ? " navigation-open" : ""}`}
+    >
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
@@ -249,9 +253,39 @@ function App() {
           </div>
         </div>
       </aside>
+      {detailPage && navOpen && (
+        <button
+          className="navigation-scrim"
+          aria-label="关闭导航"
+          onClick={() => {
+            setNavOpen(false);
+            document.getElementById("navigation-toggle")?.focus();
+          }}
+        />
+      )}
       <div className="app-main">
         <header className="app-header">
           <div className="header-start">
+            {detailPage && (
+              <>
+                <a
+                  className="icon-button"
+                  href="/library"
+                  aria-label="返回媒体库"
+                  title="返回媒体库"
+                >
+                  <Icon name="back" />
+                </a>
+                <a
+                  className="icon-button"
+                  href="/library"
+                  aria-label="首页"
+                  title="首页"
+                >
+                  <Icon name="home" />
+                </a>
+              </>
+            )}
             <button
               id="navigation-toggle"
               className="icon-button navigation-toggle"
@@ -265,8 +299,8 @@ function App() {
             <span className="header-title">
               {directoryPage
                 ? "媒体目录管理"
-                : mediaId || seriesId
-                  ? "我的媒体 / 详情"
+                : detailPage
+                  ? "reelnest"
                   : "我的家庭影院"}
             </span>
           </div>

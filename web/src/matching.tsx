@@ -1,21 +1,35 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, message } from "./api";
 import type { TitleMetadata } from "./media";
+import { Icon } from "./icons";
 
 type Target = { kind: "movie" | "series"; id: string; title: string };
-export function Matching({ target }: { target: Target }) {
+export function Matching({
+  target,
+  compact = false,
+}: {
+  target: Target;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (open) return () => trigger.current?.focus();
+  }, [open]);
   return (
     <div className="matching-entry">
       <button
-        className="secondary"
+        ref={trigger}
+        className={compact ? "detail-icon-action" : "secondary"}
+        aria-label="手动匹配影片资料"
+        title="手动匹配影片资料"
         onClick={() => {
           setOpen(true);
           setSaved(false);
         }}
       >
-        手动匹配影片资料
+        {compact ? <Icon name="edit" /> : "手动匹配影片资料"}
       </button>
       {saved && (
         <p className="fine" role="status">

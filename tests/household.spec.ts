@@ -53,6 +53,7 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
     page.getByText(join(media, "家庭电影 (2026).mp4"), { exact: true }),
   ).toBeVisible();
   const detailURL = page.url();
+  await page.getByRole("button", { name: "打开导航", exact: true }).click();
   await page.getByRole("link", { name: "媒体目录", exact: true }).click();
   writeFileSync(join(media, "另一个版本.webm"), "another isolated fixture");
   await page.getByRole("button", { name: "重新扫描" }).click();

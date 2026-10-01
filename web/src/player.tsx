@@ -2,12 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { api, message } from "./api";
 import type { MediaFile, WatchProgress } from "./media";
 import { Subtitles } from "./subtitles";
+import { Icon } from "./icons";
+import "./player.css";
 
 export function clock(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 }
 
-export function Player({ file }: { file: MediaFile }) {
+export function Player({
+  file,
+  fromStart = false,
+  onClose,
+}: {
+  file: MediaFile;
+  fromStart?: boolean;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const initial = useRef<WatchProgress | null>(null);
   const started = useRef(false);
@@ -20,7 +31,20 @@ export function Player({ file }: { file: MediaFile }) {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const closingRef = useRef(false);
   const base = `/api/media/${encodeURIComponent(file.id)}`;
+
+  useEffect(() => {
+    const element = dialog.current!;
+    element.showModal();
+    document.documentElement.classList.add("web-player-open");
+    return () => {
+      element.close();
+      document.documentElement.classList.remove("web-player-open");
+    };
+  }, []);
 
   function snapshot() {
     const element = video.current;
@@ -39,7 +63,7 @@ export function Player({ file }: { file: MediaFile }) {
   }
   function save() {
     const progress = snapshot();
-    if (!progress) return;
+    if (!progress) return queue.current;
     lastSave.current = Date.now();
     // Serialize this player's writes so a slow previous request cannot overwrite
     // a more recent seek/ended event. Other browsers use last-received semantics.
@@ -56,13 +80,23 @@ export function Player({ file }: { file: MediaFile }) {
         setSaveError(`进度未保存：${message(error)}`);
       }
     });
+    return queue.current;
+  }
+  async function close() {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    video.current?.pause();
+    await save();
+    dialog.current?.close();
+    onClose();
   }
   useEffect(() => {
     let active = true;
     api<WatchProgress>(`${base}/playback`)
       .then((progress) => {
         if (active) {
-          initial.current = progress;
+          initial.current = fromStart ? null : progress;
           setReady(true);
         }
       })
@@ -72,7 +106,7 @@ export function Player({ file }: { file: MediaFile }) {
     return () => {
       active = false;
     };
-  }, [base]);
+  }, [base, fromStart]);
   useEffect(() => {
     // A best-effort final snapshot; abrupt process termination can still lose
     // the last interval. Never rely on unload as the only persistence point.
@@ -100,30 +134,65 @@ export function Player({ file }: { file: MediaFile }) {
       setError(message(error));
     }
   }
-  async function toggle() {
+  async function start() {
     const element = video.current;
     if (!element) return;
-    if (element.paused) {
-      try {
-        await element.play();
-      } catch (error) {
-        if (element.error) await diagnose();
-        else
-          setError(`无法开始播放：${message(error)}；请重试或使用外部播放器。`);
-      }
-    } else element.pause();
+    try {
+      await element.play();
+    } catch (error) {
+      if (!element.isConnected || closingRef.current) return;
+      if (element.error) await diagnose();
+      else if (
+        error instanceof DOMException &&
+        error.name === "NotAllowedError"
+      )
+        setAutoplayBlocked(true);
+      else if (!(error instanceof DOMException && error.name === "AbortError"))
+        setError(`无法开始播放：${message(error)}；请重试或使用外部播放器。`);
+    }
+  }
+  function toggle() {
+    if (video.current?.paused) void start();
+    else video.current?.pause();
   }
   return (
-    <section className="player" aria-label="网页播放器">
-      <h2>家庭放映室</h2>
-      <p className="muted small">原始视频直放 · 不转码 · 观看进度全家共用</p>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {ready && (
-        <>
+    <dialog
+      ref={dialog}
+      className="player web-player"
+      aria-label="网页播放器"
+      onCancel={(event) => {
+        event.preventDefault();
+        void close();
+      }}
+    >
+      <header className="web-player-header">
+        <div>
+          <h2>{file.match.metadata?.title || file.filename}</h2>
+          <span>网页全屏 · 原始视频直放 · 观看进度全家共用</span>
+        </div>
+        <button
+          className="icon-button"
+          aria-label="关闭播放器"
+          title="返回详情（Esc）"
+          disabled={closing}
+          onClick={() => void close()}
+        >
+          <Icon name="close" />
+        </button>
+      </header>
+      <div className="web-player-stage">
+        {error && (
+          <p role="alert" className="error web-player-notice">
+            {error}
+          </p>
+        )}
+        {autoplayBlocked && (
+          <p role="status" className="notice web-player-notice">
+            浏览器阻止了自动播放，请点击下方“开始播放”。
+          </p>
+        )}
+        {!ready && !error && <p role="status">正在检查文件与观看进度…</p>}
+        {ready && (
           <video
             ref={video}
             controls
@@ -140,11 +209,15 @@ export function Player({ file }: { file: MediaFile }) {
                 progress.position < element.duration
               )
                 element.currentTime = progress.position;
+              setPosition(element.currentTime);
+              // Start only after the saved position has been restored.
+              void start();
             }}
             onPlaying={() => {
               started.current = true;
               setPlaying(true);
               setError("");
+              setAutoplayBlocked(false);
             }}
             onPause={() => {
               setPlaying(false);
@@ -161,54 +234,62 @@ export function Player({ file }: { file: MediaFile }) {
             }}
             onError={() => void diagnose()}
           />
-          <Subtitles id={file.id} video={video} />
-          <div className="player-controls">
-            <button className="primary" onClick={() => void toggle()}>
-              {playing ? "暂停" : "开始播放"}
-            </button>
-            <span>
-              {clock(position)} /{" "}
-              {clock(Number.isFinite(duration) ? duration : 0)}
-            </span>
-          </div>
-          <label htmlFor="playback-position">播放位置</label>
-          <input
-            id="playback-position"
-            type="range"
-            min={0}
-            max={Number.isFinite(duration) ? duration : 0}
-            step={0.1}
-            value={position}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              setPosition(value);
-              if (video.current) video.current.currentTime = value;
-            }}
-          />
-          {initial.current &&
-            initial.current.position > 0 &&
-            !initial.current.completed && (
-              <p className="fine">
-                从家庭共用进度 {clock(initial.current.position)} 继续。
-              </p>
-            )}
-        </>
-      )}
-      {!ready && !error && <p role="status">正在检查文件与观看进度…</p>}
-      {saved && (
-        <p role="status" className="fine">
-          {saved}
-        </p>
-      )}
-      {saveError && (
-        <p role="alert" className="error">
-          {saveError}
-        </p>
-      )}
-      <p className="fine">
-        每 10
-        秒及暂停、定位完成、播放结束时保存。异常关闭可能丢失最后一小段进度；多处观看以最后收到的有效更新为准。
-      </p>
-    </section>
+        )}
+      </div>
+      <div className="web-player-console">
+        {ready && (
+          <>
+            <div className="web-player-toolbar">
+              <div className="player-controls">
+                <button className="primary" disabled={closing} onClick={toggle}>
+                  {playing ? "暂停" : "开始播放"}
+                </button>
+                <span>
+                  {clock(position)} /{" "}
+                  {clock(Number.isFinite(duration) ? duration : 0)}
+                </span>
+              </div>
+              <Subtitles id={file.id} video={video} />
+            </div>
+            <label htmlFor="playback-position">播放位置</label>
+            <input
+              id="playback-position"
+              type="range"
+              min={0}
+              max={Number.isFinite(duration) ? duration : 0}
+              step={0.1}
+              value={position}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                setPosition(value);
+                if (video.current) video.current.currentTime = value;
+              }}
+            />
+            {initial.current &&
+              initial.current.position > 0 &&
+              !initial.current.completed && (
+                <p className="fine">
+                  从家庭共用进度 {clock(initial.current.position)} 继续。
+                </p>
+              )}
+          </>
+        )}
+        {saved && (
+          <p role="status" className="fine">
+            {saved}
+          </p>
+        )}
+        {saveError && (
+          <p role="alert" className="error">
+            {saveError}
+          </p>
+        )}
+        {closing && (
+          <p role="status" className="fine">
+            正在保存进度并返回详情…
+          </p>
+        )}
+      </div>
+    </dialog>
   );
 }

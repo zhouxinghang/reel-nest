@@ -133,7 +133,9 @@ test("单文件删除：真实播放、取消/Escape、路径风险二次确认�
   await page.goto("/library");
   await page.getByRole("link", { name: new RegExp(name) }).click();
   await page.getByRole("button", { name: "网页播放", exact: true }).click();
-  await page.getByRole("button", { name: "开始播放", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "暂停", exact: true }),
+  ).toBeVisible();
   await expect
     .poll(() =>
       page
@@ -143,6 +145,10 @@ test("单文件删除：真实播放、取消/Escape、路径风险二次确认�
         ),
     )
     .toBeGreaterThan(1);
+  await page.getByRole("button", { name: "关闭播放器", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "网页播放器" }),
+  ).not.toBeVisible();
   const stream = await (
     await context.request.post(`/api/media/${file.id}/stream-link`, {
       data: {},
@@ -291,6 +297,8 @@ test("文件已删除但真实 SQLite 写锁阻止索引更新：明确反馈并
   expect(detail.available).toBe(false);
   await page.reload();
   await expect(
-    page.getByText("文件不可用：已删除或完整扫描未发现此版本", { exact: true }),
+    page
+      .getByRole("region", { name: "媒体信息", exact: true })
+      .getByText("文件不可用：已删除或源文件发生变化", { exact: true }),
   ).toBeVisible();
 });

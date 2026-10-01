@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, APIError, message } from "./api";
+import { Icon } from "./icons";
 
 type Preview = { path: string; confirmation: string; expiresAt: number };
 type Outcome = { deleted: boolean; indexUpdated: boolean; message: string };
@@ -7,17 +8,31 @@ type Outcome = { deleted: boolean; indexUpdated: boolean; message: string };
 export function DeleteSourceFile({
   id,
   onDeleted,
+  compact = false,
 }: {
   id: string;
   onDeleted: () => void;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (open) return () => trigger.current?.focus();
+  }, [open]);
   return (
     <section className="deletion-entry" aria-label="单文件永久删除">
       {!outcome ? (
-        <button className="danger secondary" onClick={() => setOpen(true)}>
-          删除源文件
+        <button
+          ref={trigger}
+          className={
+            compact ? "detail-icon-action detail-delete" : "danger secondary"
+          }
+          aria-label="删除源文件"
+          title="删除源文件"
+          onClick={() => setOpen(true)}
+        >
+          {compact ? <Icon name="trash" /> : "删除源文件"}
         </button>
       ) : (
         <p

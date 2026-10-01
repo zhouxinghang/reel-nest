@@ -34,6 +34,30 @@ const paths = {
   play: <path d="m9 5 11 7-11 7Z" fill="currentColor" stroke="none" />,
   arrow: <path d="M4 12h16m-6-6 6 6-6 6" />,
   chevron: <path d="m9 5 7 7-7 7" />,
+  back: <path d="M20 12H4m6-6-6 6 6 6" />,
+  home: (
+    <>
+      <path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9" />
+    </>
+  ),
+  edit: (
+    <>
+      <path d="m16 3 5 5-12 12-6 1 1-6L16 3Zm-3 3 5 5" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
+    </>
+  ),
+  link: (
+    <>
+      <path
+        d="m10 13 4-4M8 16l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m2 1 2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0"
+        transform="translate(1 0)"
+      />
+    </>
+  ),
   check: <path d="m5 12 4 4L19 6" />,
   list: (
     <>

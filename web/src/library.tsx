@@ -8,7 +8,8 @@ import { Player, clock } from "./player";
 import { ExternalPlayer } from "./external-player";
 
 import { Matching } from "./matching";
-import { Poster, MetadataInfo } from "./metadata";
+import { Poster } from "./metadata";
+import { DetailHero, fileSize } from "./detail";
 import { Icon } from "./icons";
 
 type Directory = {
@@ -600,6 +601,7 @@ export function MediaDetails({ id }: { id: string }) {
   const [play, setPlay] = useState(
     new URLSearchParams(window.location.search).get("play") === "1",
   );
+  const [fromStart, setFromStart] = useState(false);
   const [file, setFile] = useState<MediaFile | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -612,26 +614,28 @@ export function MediaDetails({ id }: { id: string }) {
     window.addEventListener("metadata-updated", refresh);
     return () => window.removeEventListener("metadata-updated", refresh);
   }, [id]);
+  const playerVisible = Boolean(file && play && !deleted);
+  const progress = file?.progress;
+  const resume = progress && !progress.completed && progress.position > 0;
+  const format = file?.filename.includes(".")
+    ? file.filename.split(".").pop()?.toUpperCase()
+    : null;
   return (
     <>
-      <nav className="detail-breadcrumbs" aria-label="媒体文件导航">
-        <a className="back-link" href="/library">
-          ← 返回媒体库
-        </a>
-        {file?.episode && (
-          <>
-            <a className="back-link" href={seriesURL(file.episode.seriesId)}>
-              {file.episode.seriesTitle}
-            </a>
-            <a
-              className="back-link"
-              href={seriesURL(file.episode.seriesId, file.episode.seasonNumber)}
-            >
-              返回第 {file.episode.seasonNumber} 季
-            </a>
-          </>
-        )}
-      </nav>
+      {file?.episode && (
+        <nav className="detail-breadcrumbs" aria-label="媒体文件导航">
+          <a className="back-link" href={seriesURL(file.episode.seriesId)}>
+            {file.episode.seriesTitle}
+          </a>
+          <Icon name="chevron" />
+          <a
+            className="back-link"
+            href={seriesURL(file.episode.seriesId, file.episode.seasonNumber)}
+          >
+            返回第 {file.episode.seasonNumber} 季
+          </a>
+        </nav>
+      )}
       {error ? (
         <p role="alert" className="error">
           {error}
@@ -639,99 +643,197 @@ export function MediaDetails({ id }: { id: string }) {
       ) : !file ? (
         <p role="status">正在加载媒体文件…</p>
       ) : (
-        <div className="detail-layout">
-          <Poster
-            detail
-            metadata={file.match.metadata}
-            title={
+        <>
+          <DetailHero
+            title={file.match.metadata?.title || file.filename}
+            posterTitle={
               file.match.metadata?.title ||
               file.filename.replace(/\.[^.]+$/, "")
             }
-          />
-          <section className="detail-info">
-            <p className="eyebrow">
-              {file.kind === "movie" ? "MOVIE" : "SERIES FILE"}
-            </p>
-            <h1>{file.match.metadata?.title || file.filename}</h1>
-            {file.matched && (
-              <p className="fine file-path">原始文件：{file.filename}</p>
+            match={file.match}
+            kind={file.kind === "movie" ? "电影" : "电视剧文件"}
+            facts={
+              <>
+                {file.episode && (
+                  <span>
+                    第 {file.episode.seasonNumber} 季 · 第{" "}
+                    {file.episode.episodeNumber} 集
+                  </span>
+                )}
+                {format && <span className="detail-tag">{format}</span>}
+                <span>{fileSize(file.size)}</span>
+                {progress?.duration ? (
+                  <span>{clock(progress.duration)}</span>
+                ) : null}
+              </>
+            }
+          >
+            {!deleted && (
+              <ExternalPlayer
+                compact
+                key={`external-${file.id}`}
+                id={file.id}
+              />
             )}
-            <MetadataInfo match={file.match} />
-            <Matching
-              target={{
-                kind: file.kind,
-                id: file.episode?.seriesId || file.id,
-                title:
-                  file.match.metadata?.title ||
-                  file.episode?.seriesTitle ||
-                  file.filename.replace(/\.[^.]+$/, ""),
-              }}
-            />
-            {file.organizationReason && (
-              <p className="notice">识别说明：{file.organizationReason}</p>
-            )}
-            <div className="media-actions">
+            <div className="detail-actions">
               <button
-                className="primary"
+                className="primary detail-play"
                 disabled={deleted}
-                onClick={() => setPlay(true)}
+                onClick={() => {
+                  setFromStart(false);
+                  setPlay(true);
+                }}
               >
                 <Icon name="play" /> 网页播放
               </button>
-            </div>
-            <dl>
-              {file.episode && (
-                <>
-                  <dt>所属电视剧</dt>
-                  <dd>{file.episode.seriesTitle}</dd>
-                  <dt>季与单集</dt>
-                  <dd>
-                    第 {file.episode.seasonNumber} 季 · 第{" "}
-                    {file.episode.episodeNumber} 集
-                  </dd>
-                </>
+              {resume && (
+                <button
+                  className="secondary"
+                  disabled={deleted}
+                  onClick={() => {
+                    setFromStart(true);
+                    setPlay(true);
+                  }}
+                >
+                  <Icon name="play" /> 从头开始
+                </button>
               )}
-              <dt>媒体类型</dt>
-              <dd>{file.kind === "movie" ? "电影" : "电视剧文件"}</dd>
-              <dt>文件状态</dt>
-              <dd>
-                {file.available && !deleted
-                  ? "上次完整扫描时可用"
-                  : "文件不可用：已删除或完整扫描未发现此版本"}
-              </dd>
-              <dt>文件大小</dt>
-              <dd>{file.size.toLocaleString()} 字节</dd>
-              <dt>修改时间</dt>
-              <dd>{new Date(file.modifiedAt * 1000).toLocaleString()}</dd>
-              <dt>源文件路径</dt>
-              <dd className="file-path">{file.path}</dd>
-              <dt>媒体文件标识</dt>
-              <dd className="file-path">{file.id}</dd>
-            </dl>
-            <p className="fine">
+              {progress?.completed && (
+                <span className="detail-watched">
+                  <Icon name="check" /> 已看完
+                </span>
+              )}
+              <Matching
+                compact
+                target={{
+                  kind: file.kind,
+                  id: file.episode?.seriesId || file.id,
+                  title:
+                    file.match.metadata?.title ||
+                    file.episode?.seriesTitle ||
+                    file.filename.replace(/\.[^.]+$/, ""),
+                }}
+              />
+              <DeleteSourceFile
+                compact
+                key={`delete-${file.id}`}
+                id={file.id}
+                onDeleted={() => {
+                  setDeleted(true);
+                  setPlay(false);
+                  setFile((current) =>
+                    current ? { ...current, available: false } : current,
+                  );
+                }}
+              />
+            </div>
+            {resume && (
+              <div className="detail-progress">
+                {progress.duration > 0 && (
+                  <progress
+                    aria-label="观看进度"
+                    max={progress.duration}
+                    value={Math.min(progress.position, progress.duration)}
+                  />
+                )}
+                <span>
+                  从 {clock(progress.position)} 继续
+                  {progress.duration > progress.position &&
+                    ` · 剩余 ${clock(progress.duration - progress.position)}`}
+                </span>
+              </div>
+            )}
+            {!file.available && (
+              <p role="status" className="notice">
+                文件不可用：已删除或源文件发生变化
+              </p>
+            )}
+          </DetailHero>
+          {playerVisible && (
+            <Player
+              key={`${file.id}-${fromStart}`}
+              file={file}
+              fromStart={fromStart}
+              onClose={() => {
+                setPlay(false);
+                const url = new URL(window.location.href);
+                url.searchParams.delete("play");
+                window.history.replaceState(null, "", url);
+                void api<MediaFile>(`/api/media/${encodeURIComponent(id)}`)
+                  .then(setFile)
+                  .catch((error) => setError(message(error)));
+              }}
+            />
+          )}
+          <section className="detail-section" aria-label="媒体信息">
+            <h2>媒体信息</h2>
+            <p className="detail-source-path">{file.path}</p>
+            <div className="detail-file-tags">
+              {format && <span className="detail-tag">{format}</span>}
+              <span>{fileSize(file.size)}</span>
+              <span>
+                修改于 {new Date(file.modifiedAt * 1000).toLocaleString()}
+              </span>
+            </div>
+            <div className="media-info-grid">
+              <section className="media-info-block">
+                <h3>
+                  <Icon name="film" /> 文件
+                </h3>
+                <dl>
+                  <dt>媒体类型</dt>
+                  <dd>{file.kind === "movie" ? "电影" : "电视剧文件"}</dd>
+                  <dt>文件状态</dt>
+                  <dd>
+                    {file.available && !deleted
+                      ? "上次完整扫描时可用"
+                      : "文件不可用：已删除或源文件发生变化"}
+                  </dd>
+                  <dt>文件大小</dt>
+                  <dd>{file.size.toLocaleString()} 字节</dd>
+                  <dt>播放方式</dt>
+                  <dd>原始视频直放 · 不转码</dd>
+                </dl>
+              </section>
+              <section className="media-info-block">
+                <h3>
+                  <Icon name="folder" /> 来源
+                </h3>
+                <dl>
+                  <dt>原始文件</dt>
+                  <dd>{file.filename}</dd>
+                  {file.episode && (
+                    <>
+                      <dt>所属电视剧</dt>
+                      <dd>
+                        <a href={seriesURL(file.episode.seriesId)}>
+                          {file.episode.seriesTitle}
+                        </a>
+                      </dd>
+                      <dt>季与单集</dt>
+                      <dd>
+                        第 {file.episode.seasonNumber} 季 · 第{" "}
+                        {file.episode.episodeNumber} 集
+                      </dd>
+                    </>
+                  )}
+                  <dt>媒体目录</dt>
+                  <dd className="file-path">{file.directoryPath}</dd>
+                  <dt>媒体文件标识</dt>
+                  <dd className="file-path">{file.id}</dd>
+                </dl>
+              </section>
+            </div>
+            {file.organizationReason && (
+              <p className="notice">识别说明：{file.organizationReason}</p>
+            )}
+            <p className="fine detail-file-note">
               文件状态来自最近一次成功扫描或删除更新；原文件变更后请重新扫描。
               <br />
               浏览器兼容性取决于容器与编码；无法直放时可使用外部播放器。
             </p>
           </section>
-        </div>
-      )}
-      {file && (
-        <DeleteSourceFile
-          key={`delete-${file.id}`}
-          id={file.id}
-          onDeleted={() => {
-            setDeleted(true);
-            setPlay(false);
-            setFile((current) =>
-              current ? { ...current, available: false } : current,
-            );
-          }}
-        />
-      )}
-      {file && play && !deleted && <Player key={file.id} file={file} />}
-      {file && !deleted && (
-        <ExternalPlayer key={`external-${file.id}`} id={file.id} />
+        </>
       )}
     </>
   );

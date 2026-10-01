@@ -81,7 +81,9 @@ async function decodeVideo(page: Page) {
       page.locator("video").evaluate((v: HTMLVideoElement) => v.duration),
     )
     .toBe(60);
-  await page.getByRole("button", { name: "开始播放", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "暂停", exact: true }),
+  ).toBeVisible();
   await expect
     .poll(() =>
       page

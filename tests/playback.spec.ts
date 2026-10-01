@@ -103,7 +103,9 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
       page.locator("video").evaluate((v: HTMLVideoElement) => v.duration),
     )
     .toBe(60);
-  await page.getByRole("button", { name: "开始播放", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "暂停", exact: true }),
+  ).toBeVisible();
   await expect
     .poll(() =>
       page.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime),
@@ -169,8 +171,10 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
       .poll(() =>
         other.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime),
       )
-      .toBeCloseTo(saved, 0);
-    await other.getByRole("button", { name: "开始播放", exact: true }).click();
+      .toBeGreaterThanOrEqual(saved);
+    await expect(
+      other.getByRole("button", { name: "暂停", exact: true }),
+    ).toBeVisible();
     await expect
       .poll(() =>
         other.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime),
@@ -200,7 +204,7 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
     await page
       .locator("video")
       .evaluate((v: HTMLVideoElement) => v.currentTime),
-  ).toBe(0);
+  ).toBeLessThan(3);
   await expect(
     page.getByText("未发现同目录匹配的 UTF-8 SRT/VTT 外挂字幕。", {
       exact: true,
@@ -231,7 +235,9 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
   );
   unlinkSync(join(root, "missing.webm"));
   await page.goto(`/media/${missing.id}?play=1`);
-  await expect(page.getByRole("alert")).toContainText("媒体文件已缺失");
+  await expect(
+    page.getByRole("dialog", { name: "网页播放器" }).getByRole("alert"),
+  ).toContainText("媒体文件已缺失");
 });
 
 test("外部播放器协议编码、可复制兜底与无会话只读串流", async ({
@@ -268,7 +274,7 @@ test("外部播放器协议编码、可复制兜底与无会话只读串流", as
   const base = `/api/media/${file.id}`;
   const before = await (await context.request.get(`${base}/progress`)).json();
   await page.goto(`/media/${file.id}`);
-  await page.getByRole("button", { name: "获取串流地址", exact: true }).click();
+  await page.getByRole("button", { name: "复制链接", exact: true }).click();
   const address = page.getByLabel("串流地址（可手动复制）");
   await expect(address).toHaveValue(
     /^http:\/\/127\.0\.0\.1:18090\/stream\/[a-f0-9]+\?token=[a-f0-9]{64}$/,
@@ -282,7 +288,7 @@ test("外部播放器协议编码、可复制兜底与无会话只读串流", as
   ).toHaveAttribute("href", `potplayer://${url}`);
   await expect(page.getByText(/链接不会随时间自动失效/)).toBeVisible();
   await expect(page.getByText(/当前地址仅供本机使用/)).toBeVisible();
-  await page.getByRole("button", { name: "复制串流地址", exact: true }).click();
+  await page.getByRole("button", { name: "复制链接", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
     /已复制串流地址|手动复制/,
   );
@@ -359,7 +365,9 @@ test("真实字幕渲染、SRT/VTT 切换、时间轴定位、关闭与错误不
   const select = page.getByLabel("外挂字幕", { exact: true });
   await expect(select).toBeEnabled();
   await select.selectOption({ label: "字幕测试.zh.srt · SRT" });
-  await page.getByRole("button", { name: "开始播放", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "暂停", exact: true }),
+  ).toBeVisible();
   const active = () =>
     page.locator("video").evaluate((video: HTMLVideoElement) =>
       Array.from(video.textTracks)
@@ -408,4 +416,158 @@ test("真实字幕渲染、SRT/VTT 切换、时间轴定位、关闭与错误不
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("自动播放拦截可重试、退出保存进度、串流失败重试和剪贴板兜底", async ({
+  page,
+  context,
+}) => {
+  const root = join(
+    process.env.REELNEST_TEST_ROOT!,
+    "media",
+    `playback-ui-${randomUUID()}`,
+  );
+  mkdirSync(root, { recursive: true });
+  copyFileSync("tests/fixtures/playback.webm", join(root, "播放交互.webm"));
+  await login(page);
+  const directory = await (
+    await context.request.post("/api/directories", {
+      data: { path: root, kind: "movie" },
+    })
+  ).json();
+  await expect
+    .poll(
+      async () =>
+        (
+          await (await context.request.get("/api/directories")).json()
+        ).directories.find((d: { id: string }) => d.id === directory.id)
+          ?.scanStatus,
+    )
+    .toBe("completed");
+  const file = (
+    await (await context.request.get("/api/library")).json()
+  ).items.find((f: { directoryId: string }) => f.directoryId === directory.id);
+  const base = `/api/media/${file.id}`;
+  await context.request.post(`${base}/progress`, {
+    data: { position: 18, duration: 60, completed: false },
+  });
+  await page.addInitScript(() => {
+    const play = HTMLMediaElement.prototype.play;
+    let denied = false;
+    HTMLMediaElement.prototype.play = function () {
+      if (!denied) {
+        denied = true;
+        return Promise.reject(
+          new DOMException("Autoplay blocked for test", "NotAllowedError"),
+        );
+      }
+      return play.call(this);
+    };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () =>
+          Promise.reject(
+            new DOMException("Clipboard denied for test", "NotAllowedError"),
+          ),
+      },
+    });
+  });
+  let failed = false;
+  await page.route(`**${base}/stream-link`, async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "测试串流暂不可用" }),
+      });
+    } else await route.continue();
+  });
+  await page.goto(`/media/${file.id}`);
+  await expect(page.getByRole("alert")).toContainText("测试串流暂不可用");
+  await expect(
+    page.getByRole("button", { name: "复制链接", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "重试串流地址", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "用 VLC 打开", exact: true }),
+  ).toHaveAttribute("href", /^vlc:\/\/http/);
+  await page.getByRole("button", { name: "复制链接", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("剪贴板不可用");
+  const address = page.getByLabel("串流地址（可手动复制）");
+  await expect(address).toBeFocused();
+  const url = await address.inputValue();
+  expect(
+    await address.evaluate(
+      (element: HTMLInputElement) =>
+        element.selectionEnd! - element.selectionStart!,
+    ),
+  ).toBe(url.length);
+  // Exercise all actual link controls without launching apps on the test host.
+  await page.evaluate(() => {
+    document
+      .querySelectorAll<HTMLAnchorElement>(".external-apps a")
+      .forEach((link) => {
+        link.addEventListener("click", (event) => event.preventDefault());
+      });
+  });
+  for (const name of ["PotPlayer", "VLC", "IINA"]) {
+    await page
+      .getByRole("link", { name: `用 ${name} 打开`, exact: true })
+      .click();
+    await expect(page.getByRole("status")).toContainText(
+      `已请求用 ${name} 打开`,
+    );
+  }
+  await page.getByRole("button", { name: "网页播放", exact: true }).click();
+  const player = page.getByRole("dialog", { name: "网页播放器", exact: true });
+  await expect(player).toBeVisible();
+  await expect(
+    player.getByRole("status").filter({ hasText: "浏览器阻止了自动播放" }),
+  ).toBeVisible();
+  expect(
+    await page
+      .locator("video")
+      .evaluate((video: HTMLVideoElement) => video.paused),
+  ).toBe(true);
+  expect(
+    (await (await context.request.get(`${base}/progress`)).json()).position,
+  ).toBe(18);
+  await page.getByRole("button", { name: "开始播放", exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .locator("video")
+        .evaluate((video: HTMLVideoElement) => video.currentTime),
+    )
+    .toBeGreaterThan(18.2);
+  await page.getByRole("button", { name: "关闭播放器", exact: true }).click();
+  await expect(player).not.toBeVisible();
+  expect(
+    (await (await context.request.get(`${base}/progress`)).json()).position,
+  ).toBeGreaterThan(18);
+  await expect(
+    page.getByRole("button", { name: "网页播放", exact: true }),
+  ).toBeFocused();
+
+  // Closing during the playback check must not start video in the background.
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(`**${base}/playback`, async (route) => {
+    await gate;
+    await route.continue();
+  });
+  const requested = page.waitForRequest(`**${base}/playback`);
+  await page.getByRole("button", { name: "网页播放", exact: true }).click();
+  await requested;
+  await page.getByRole("button", { name: "关闭播放器", exact: true }).click();
+  await expect(player).not.toBeVisible();
+  const checked = page.waitForResponse(`**${base}/playback`);
+  release();
+  await checked;
+  await expect(page.locator("video")).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveClass(/web-player-open/);
 });

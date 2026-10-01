@@ -48,19 +48,27 @@ export function Poster({
 
 export function MetadataInfo({ match }: { match: MetadataAssociation }) {
   const metadata = match.metadata;
+  const [expanded, setExpanded] = useState(false);
+  const longOverview = (metadata?.overview.length || 0) > 160;
   return (
     <div className="metadata-info">
-      <span className="pill">
-        {metadata
-          ? `${metadata.year || "年份未知"} · ${match.selection === "manual" ? "手动匹配" : "TMDB 影片资料"}`
-          : "未匹配媒体"}
-      </span>
-      <p className="detail-description">
+      <p
+        className={`detail-description${longOverview && !expanded ? " is-collapsed" : ""}`}
+      >
         {metadata?.overview ||
           (metadata
             ? "暂无可用简介。"
             : "尚未关联影片资料，保留原始文件名供浏览。未匹配媒体也可以直接尝试播放，不要求 TMDB 凭据。")}
       </p>
+      {longOverview && (
+        <button
+          className="text-button overview-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "收起简介" : "更多简介"}
+        </button>
+      )}
       {match.error && (
         <p className="notice" role="status">
           {match.error}
@@ -71,8 +79,8 @@ export function MetadataInfo({ match }: { match: MetadataAssociation }) {
           <a href={metadata.sourceUrl} target="_blank" rel="noreferrer">
             资料来源：TMDB ↗
           </a>{" "}
-          · 缓存有效至{" "}
-          {new Date(metadata.expiresAt * 1000).toLocaleDateString()}
+          · {match.selection === "manual" ? "手动匹配" : "TMDB 影片资料"} ·
+          缓存有效至 {new Date(metadata.expiresAt * 1000).toLocaleDateString()}
         </p>
       )}
     </div>
