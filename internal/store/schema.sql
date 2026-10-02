@@ -128,6 +128,20 @@ CREATE TABLE scan_entries (
     FOREIGN KEY (scan_id, library_id) REFERENCES scan_runs(id, library_id) ON DELETE CASCADE
 ) STRICT;
 
+-- Pure filename organization staged with the discovered file, never published
+-- independently of the complete scan. No full in-memory file manifest.
+CREATE TABLE scan_organization (
+    scan_id TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    title_key TEXT NOT NULL,
+    local_title TEXT NOT NULL,
+    season_number INTEGER NOT NULL,
+    episode_number INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    PRIMARY KEY (scan_id, relative_path),
+    FOREIGN KEY (scan_id, relative_path) REFERENCES scan_entries(scan_id, relative_path) ON DELETE CASCADE
+) STRICT;
+
 CREATE TABLE provider_catalogs (
     id TEXT PRIMARY KEY NOT NULL CHECK (length(id) > 0),
     source TEXT NOT NULL CHECK (source IN ('tmdb', 'tvdb', 'metatube')),

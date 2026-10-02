@@ -608,6 +608,8 @@ export interface components {
       | "RATE_LIMITED"
       | "REVISION_CONFLICT"
       | "LIBRARY_BUSY"
+      | "SCAN_FAILED"
+      | "SCAN_INTERRUPTED"
       | "LIBRARY_OVERLAP"
       | "INVALID_MEDIA_PATH"
       | "CURSOR_STALE"
