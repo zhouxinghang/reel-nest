@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/unix"
 	"reelnest/internal/mediafs"
@@ -358,4 +359,30 @@ func TestSidecarEnumerationRejectsMovedParentAndCancellation(t *testing.T) {
 	if !errors.Is(e, mediafs.ErrChanged) {
 		t.Fatal(e)
 	}
+}
+
+// Opt-in large real-filesystem check; never collects the returned file list.
+func TestLargeWalkRemainsBounded(t *testing.T) {
+	if os.Getenv("REELNEST_LARGE_WALK") != "1" {
+		t.Skip("opt-in REELNEST_LARGE_WALK=1")
+	}
+	fs, root, dir := setup(t)
+	for n := 0; n < 50000; n++ {
+		write(t, filepath.Join(dir, fmt.Sprintf("%05d.mp4", n)), "v")
+	}
+	count, calls, maximum := 0, 0, 0
+	started := time.Now()
+	err := fs.Walk(context.Background(), root, func(entries []mediafs.Entry) error {
+		count += len(entries)
+		calls++
+		maximum = max(maximum, len(entries))
+		if len(entries) > 256 {
+			t.Fatal("unbounded file batch", len(entries))
+		}
+		return nil
+	})
+	if err != nil || count != 50000 || maximum != 256 {
+		t.Fatal(count, maximum, err)
+	}
+	t.Logf("50000 real temporary files: callbacks=%d max_batch=%d walk=%s", calls, maximum, time.Since(started))
 }

@@ -12,7 +12,7 @@ media, private media, external film footage, FFmpeg or server-side transcoding.
   bytes may differ with browser codec versions. Normal tests use the committed
   binary and do not regenerate it.
 - Browser tests use original file bytes through the running application's HTTP
-  boundary, inspect decoded frames and currentTime, and drag the real seek UI.
+  boundary, inspect decoded frames and currentTime, and seek the real video element.
   Network throttling ensures post-seek byte-range requests reach the real server.
 - SRT/VTT fixtures are created in temporary media directories by tests; they are
   never placed beside user media. This silent fixture does not validate audio
@@ -24,6 +24,7 @@ media, private media, external film footage, FFmpeg or server-side transcoding.
 artwork or real TMDB content. The controlled external-service fixture serves it
 so browser tests verify actual image decoding through the authenticated cache
 endpoint, separately from real TMDB connectivity. Each metadata browser flow
-starts a fresh real app process/SQLite database; only the external TMDB is faked.
+starts a fresh real app process/SQLite database; only external TMDB/TVDB/MetaTube HTTP origins are replaced. The harness uses
+the same runtime and embedded frontend as production and rejects other outbound origins.
 
 `tmdb-thumb.png` / `tmdb-backdrop.png` 为本地程序生成的 640×360 几何风景图片，分别用于横版封面及详情背景的真实图片解码/比例测试。不是远程下载的媒体，也不代表真实 TMDB/TVDB 资料。

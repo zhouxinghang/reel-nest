@@ -8,7 +8,7 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import type { components } from "../../web/src/generated/api";
 type Schema = components["schemas"];
 const origin = "http://127.0.0.1:18096";
@@ -47,7 +47,6 @@ test.beforeAll(async () => {
       ...process.env,
       DATA_DIR: join(run, "data"),
       MEDIA_ROOTS: media,
-      RUNTIME_WEB_DIR: resolve(".reelnest-test/runtime-web"),
     },
     stdio: "inherit",
   });

@@ -1,29 +1,26 @@
-// Isolated browser harness for the new runtime. The native <video> consumer is
-// test-only: it verifies real codec/Range/subtitle HTTP behavior, not the pending
-// React player (which has its own tests). No provider, database, auth or filesystem operation is mocked.
+// Isolated harness for the production runtime/assets. Only external provider
+// origins are replaced; native video is a test-only consumer of the same API.
 package main
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 
 	"syscall"
 	"time"
 
 	"reelnest/internal/app"
+	"reelnest/internal/web"
 )
 
 func main() {
-	var assets fs.FS
-	if root := os.Getenv("RUNTIME_WEB_DIR"); root != "" {
-		assets = os.DirFS(root)
-	}
-	runtime, e := app.NewRuntime(context.Background(), app.RuntimeConfig{DataDir: os.Getenv("DATA_DIR"), MediaRoots: []string{os.Getenv("MEDIA_ROOTS")}, Username: "family", Password: "browser-test-password", Assets: assets})
+	runtime, e := app.NewRuntime(context.Background(), app.RuntimeConfig{DataDir: os.Getenv("DATA_DIR"), MediaRoots: []string{os.Getenv("MEDIA_ROOTS")}, Username: "family", Password: "browser-test-password", Assets: web.Assets(), ProviderTransport: fixtureTransport{}})
 	if e != nil {
 		log.Fatal(e)
 	}
@@ -49,4 +46,39 @@ func main() {
 	if e := server.Shutdown(ctx); e != nil {
 		server.Close()
 	}
+}
+
+// Fail closed: browser fixtures must never call real providers or arbitrary hosts.
+type fixtureTransport struct{}
+
+func (fixtureTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	next := r.Clone(r.Context())
+	u := *r.URL
+	next.URL = &u
+	switch r.URL.Host {
+	case "api.themoviedb.org":
+		next.URL.Host = "127.0.0.1:18092"
+		next.URL.Path = strings.TrimPrefix(r.URL.Path, "/3")
+	case "image.tmdb.org":
+		next.URL.Host = "127.0.0.1:18092"
+		parts := strings.SplitN(strings.TrimPrefix(r.URL.Path, "/t/p/"), "/", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid fixture image")
+		}
+		next.URL.Path = "/images/" + parts[1]
+	case "api4.thetvdb.com":
+		next.URL.Host = "127.0.0.1:18094"
+		next.URL.Path = strings.TrimPrefix(r.URL.Path, "/v4")
+	case "artworks.thetvdb.com":
+		next.URL.Host = "127.0.0.1:18094"
+		next.URL.Path = "/artwork/" + strings.TrimPrefix(r.URL.Path, "/banners/")
+	case "127.0.0.1:18095":
+	default:
+		return nil, fmt.Errorf("outbound origin is not a browser fixture")
+	}
+	next.URL.Scheme = "http"
+	if next.URL.Path != r.URL.Path {
+		next.URL.RawPath = ""
+	}
+	return http.DefaultTransport.RoundTrip(next)
 }

@@ -43,8 +43,8 @@ func request(method, path, body string) *http.Request {
 func jsonHeaders() http.Header { return http.Header{"Content-Type": {"application/json"}} }
 
 // Every declared operation must have a real reviewed fixture; missing/new DTOs
-// fail until examples are supplied. These are contract fixtures, not proof that
-// the legacy application already serves the new interface.
+// fail until examples are supplied. These fixtures do not prove authentication
+// or business behavior; real transport tests cover those separately.
 func TestEveryOperationHasValidRequestAndResponseFixture(t *testing.T) {
 	c := loadContract(t)
 	examples := exampleData(t)

@@ -1,0 +1,845 @@
+{
+  "datasets": [
+    {
+      "catalogRows": 2000,
+      "creditsPerSubject": 150,
+      "files": 1000,
+      "generationMs": 2464,
+      "libraries": 10,
+      "queryPlans": {
+        "continue": {
+          "matchingRowsBeforePage": 10,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SCAN p",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,printf('%020d',9223372036854775807-p.updated_at) AS sort_key FROM catalog_entries e JOIN watch_progress p ON p.media_file_id=e.media_file_id WHERE 1=1 AND p.completed=0 AND p.position\u003e0 AND e.available_file_count\u003e0) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "detail": {
+          "selectCount": 7,
+          "statements": [
+            {
+              "plan": [
+                "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_1 (entry_key=?)",
+                "LIST SUBQUERY 4",
+                "SCAN json_each VIRTUAL TABLE INDEX 1:",
+                "CREATE BLOOM FILTER",
+                "SEARCH f USING INDEX sqlite_autoindex_media_files_3 (id=?) LEFT-JOIN",
+                "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH se USING INDEX sqlite_autoindex_series_3 (id=?) LEFT-JOIN",
+                "SEARCH mf USING INDEX sqlite_autoindex_media_favorites_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH sf USING INDEX sqlite_autoindex_series_favorites_1 (series_id=?) LEFT-JOIN",
+                "SEARCH p USING INDEX sqlite_autoindex_watch_progress_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+                "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+                "SEARCH rt USING COVERING INDEX sqlite_autoindex_remote_titles_4 (id=?) LEFT-JOIN",
+                "SCAN pc LEFT-JOIN",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)",
+                "CORRELATED SCALAR SUBQUERY 2",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)",
+                "CORRELATED SCALAR SUBQUERY 3",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)"
+              ],
+              "sql": "SELECT e.entry_key,e.library_id,coalesce(e.media_file_id,''),coalesce(e.series_id,''),coalesce(e.subject_id,''),e.kind,coalesce(sn.title,e.local_title),e.added_at,e.season_count,e.episode_count,e.file_count,e.available_file_count,\n coalesce(f.relative_path,''),coalesce(f.state,''),coalesce(o.series_id,''),coalesce(se.local_title,''),coalesce(o.season_number,0),coalesce(o.episode_number,0),coalesce(mf.favorited_at,sf.favorited_at),p.position,p.duration,p.completed,p.updated_at,\n coalesce(sn.remote_title_id,''),coalesce(sn.title,''),coalesce(sn.original_title,''),sn.year,coalesce(sn.expires_at,0),coalesce(pc.source,''),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='primary'),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='thumb'),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='backdrop')\n FROM catalog_entries e LEFT JOIN media_files f ON f.id=e.media_file_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series se ON se.id=o.series_id\n LEFT JOIN media_favorites mf ON mf.media_file_id=e.media_file_id LEFT JOIN series_favorites sf ON sf.series_id=e.series_id LEFT JOIN watch_progress p ON p.media_file_id=e.media_file_id\n LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e?\n LEFT JOIN remote_titles rt ON rt.id=sn.remote_title_id LEFT JOIN provider_catalogs pc ON pc.id=rt.catalog_id\n WHERE e.entry_key IN(SELECT value FROM json_each(?))"
+            },
+            {
+              "plan": [
+                "SEARCH f USING INDEX sqlite_autoindex_media_files_3 (id=?)",
+                "SEARCH l USING INDEX sqlite_autoindex_libraries_1 (id=?)",
+                "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH se USING INDEX sqlite_autoindex_series_3 (id=?) LEFT-JOIN",
+                "SCAN ms LEFT-JOIN"
+              ],
+              "sql": "SELECT f.id,f.library_id,f.relative_path,f.fingerprint,f.state,f.organization_reason,l.root_path,l.root_identity,l.kind,f.size,f.modified_at,f.added_at,coalesce(o.series_id,''),coalesce(se.local_title,''),coalesce(o.season_number,0),coalesce(o.episode_number,0),coalesce(ms.id,'') FROM media_files f JOIN libraries l ON l.id=f.library_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series se ON se.id=o.series_id LEFT JOIN metadata_subjects ms ON ms.media_file_id=f.id OR ms.series_id=o.series_id  WHERE f.id=?"
+            },
+            {
+              "plan": [
+                "SEARCH s USING INDEX sqlite_autoindex_metadata_subjects_5 (id=?)",
+                "SEARCH l USING INDEX sqlite_autoindex_libraries_1 (id=?)",
+                "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+                "SEARCH r USING INDEX sqlite_autoindex_remote_titles_4 (id=?) LEFT-JOIN",
+                "SEARCH c USING COVERING INDEX sqlite_autoindex_provider_catalogs_3 (id=?) LEFT-JOIN",
+                "SCAN p LEFT-JOIN",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH catalog_entries USING INDEX entries_subject (subject_id=?)",
+                "USE TEMP B-TREE FOR ORDER BY",
+                "CORRELATED SCALAR SUBQUERY 3",
+                "CO-ROUTINE (subquery-2)",
+                "SEARCH library_sources USING INDEX sqlite_autoindex_library_sources_2 (library_id=?)",
+                "SCAN (subquery-2)"
+              ],
+              "sql": "SELECT s.id,s.library_id,s.expected_kind,s.revision,l.policy_revision,\n coalesce(b.revision,0),coalesce(b.selection,''),coalesce(b.remote_title_id,''),\n coalesce(r.catalog_id,''),coalesce(c.source,''),coalesce(r.namespace,''),coalesce(r.remote_id,''),coalesce(p.revision,1),\n coalesce((SELECT local_title FROM catalog_entries WHERE subject_id=s.id ORDER BY series_id IS NULL LIMIT 1),''),\n coalesce((SELECT group_concat(source,',') FROM (SELECT source FROM library_sources WHERE library_id=s.library_id ORDER BY priority)),'')\n FROM metadata_subjects s JOIN libraries l ON l.id=s.library_id\n LEFT JOIN metadata_bindings b ON b.subject_id=s.id LEFT JOIN remote_titles r ON r.id=b.remote_title_id\n LEFT JOIN provider_catalogs c ON c.id=r.catalog_id LEFT JOIN provider_settings p ON p.source=c.source\n WHERE s.id=?"
+            },
+            {
+              "plan": [
+                "SEARCH metadata_bindings USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?)"
+              ],
+              "sql": "SELECT attempt_state,attempted_at,error_code FROM metadata_bindings WHERE subject_id=?"
+            },
+            {
+              "plan": [
+                "SEARCH metadata_snapshots USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?)"
+              ],
+              "sql": "SELECT title,original_title,identifier,year,overview,source_url,fetched_at,expires_at,revision,credits_state,artwork_state,credits_retry_at,artwork_retry_at FROM metadata_snapshots WHERE remote_title_id=?"
+            },
+            {
+              "plan": [
+                "SEARCH c USING INDEX sqlite_autoindex_title_credits_2 (remote_title_id=?)",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH a USING INDEX assets_credit_photo (credit_id=?)"
+              ],
+              "sql": "SELECT c.id,c.person_id,c.name,c.role,c.characters,(SELECT a.id FROM assets a WHERE a.credit_id=c.id) FROM title_credits c WHERE c.remote_title_id=? ORDER BY c.role,c.ordinal LIMIT 150"
+            },
+            {
+              "plan": [
+                "SEARCH assets USING INDEX assets_title_kind (remote_title_id=?)"
+              ],
+              "sql": "SELECT kind,id FROM assets WHERE remote_title_id=? AND credit_id IS NULL"
+            }
+          ],
+          "targetCreditsReturned": 150,
+          "unrelatedCreditsParsed": 0
+        },
+        "global-recent": {
+          "matchingRowsBeforePage": 1000,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SCAN e",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,printf('%020d',9223372036854775807-e.added_at) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id WHERE 1=1 AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL)) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "library-title": {
+          "matchingRowsBeforePage": 100,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SEARCH e USING INDEX entries_library_recent (library_id=?)",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,coalesce(sn.title_sort_key,e.title_sort_key) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e? WHERE 1=1 AND e.library_id=? AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL)) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "person-detail": {
+          "plan": [
+            "SEARCH p USING COVERING INDEX sqlite_autoindex_people_3 (id=?)",
+            "SEARCH pc USING COVERING INDEX sqlite_autoindex_provider_catalogs_3 (id=?)",
+            "SEARCH sn USING COVERING INDEX snapshots_expiry (expires_at\u003e?)",
+            "SEARCH c USING INDEX credits_person_works (catalog_id=? AND person_id=? AND remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_5 (id=?)",
+            "MULTI-INDEX OR",
+            "INDEX 1",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "INDEX 2",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_3 (series_id=?)",
+            "CORRELATED SCALAR SUBQUERY 1",
+            "SEARCH a USING INDEX assets_credit_photo (credit_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "SELECT p.id,c.name,pc.source,p.catalog_id,(SELECT a.id FROM assets a WHERE a.credit_id=c.id) FROM title_credits c JOIN people p ON p.id=c.person_id AND p.catalog_id=c.catalog_id JOIN provider_catalogs pc ON pc.id=p.catalog_id\n JOIN metadata_snapshots sn ON sn.remote_title_id=c.remote_title_id AND sn.expires_at\u003e?\n JOIN metadata_bindings b ON b.remote_title_id=c.remote_title_id JOIN metadata_subjects sub ON sub.id=b.subject_id\n JOIN catalog_entries e ON e.media_file_id=sub.media_file_id OR e.series_id=sub.series_id WHERE p.id=? ORDER BY e.available_file_count\u003e0 DESC,c.remote_title_id,c.role,c.ordinal,e.entry_key LIMIT 1"
+        },
+        "person-works": {
+          "plan": [
+            "CO-ROUTINE ranked",
+            "CO-ROUTINE (subquery-4)",
+            "CO-ROUTINE candidates",
+            "SEARCH p USING COVERING INDEX sqlite_autoindex_people_3 (id=?)",
+            "SEARCH pc USING COVERING INDEX sqlite_autoindex_provider_catalogs_1 (id=?)",
+            "SEARCH sn USING COVERING INDEX snapshots_expiry (expires_at\u003e?)",
+            "SEARCH c USING COVERING INDEX credits_person_works (catalog_id=? AND person_id=? AND remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_5 (id=?)",
+            "MULTI-INDEX OR",
+            "INDEX 1",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "INDEX 2",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_3 (series_id=?)",
+            "USE TEMP B-TREE FOR DISTINCT",
+            "SCAN candidates",
+            "USE TEMP B-TREE FOR ORDER BY",
+            "SCAN (subquery-4)",
+            "SCAN ranked",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH candidates AS (SELECT DISTINCT c.remote_title_id,e.entry_key,e.available_file_count FROM title_credits c JOIN people p ON p.id=c.person_id AND p.catalog_id=c.catalog_id JOIN provider_catalogs pc ON pc.id=p.catalog_id\n JOIN metadata_snapshots sn ON sn.remote_title_id=c.remote_title_id AND sn.expires_at\u003e?\n JOIN metadata_bindings b ON b.remote_title_id=c.remote_title_id JOIN metadata_subjects sub ON sub.id=b.subject_id\n JOIN catalog_entries e ON e.media_file_id=sub.media_file_id OR e.series_id=sub.series_id WHERE p.id=?), ranked AS (SELECT *,row_number() OVER(PARTITION BY remote_title_id ORDER BY available_file_count\u003e0 DESC,entry_key) AS n FROM candidates)\n SELECT remote_title_id,entry_key FROM ranked WHERE n=1 AND remote_title_id\u003e? ORDER BY remote_title_id LIMIT ?"
+        },
+        "substring": {
+          "matchingRowsBeforePage": 10,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SEARCH e USING INDEX entries_library_recent (library_id=?)",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+            "CORRELATED SCALAR SUBQUERY 1",
+            "SEARCH child USING INDEX entries_subject (subject_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,coalesce(sn.title_sort_key,e.title_sort_key) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e? WHERE 1=1 AND e.library_id=? AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL) AND (instr(e.local_search_key,?)\u003e0 OR instr(sn.search_key,?)\u003e0 OR (e.series_id IS NOT NULL AND EXISTS(SELECT 1 FROM catalog_entries child WHERE child.subject_id=e.subject_id AND child.media_file_id IS NOT NULL AND instr(child.local_search_key,?)\u003e0)))) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        }
+      },
+      "results": [
+        {
+          "firstReadMs": 6.199,
+          "path": "/api/home",
+          "responseBytes": 47521,
+          "returnedRows": {
+            "continueWatching": 10,
+            "libraries": 10,
+            "recent": 20
+          },
+          "warmP50Ms": 4.797,
+          "warmP95Ms": 5.36
+        },
+        {
+          "firstReadMs": 1.82,
+          "path": "/api/catalog?libraryId=lib-00",
+          "responseBytes": 25333,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 1.117,
+          "warmP95Ms": 1.44
+        },
+        {
+          "firstReadMs": 6.151,
+          "path": "/api/catalog/groups",
+          "responseBytes": 3535,
+          "returnedRows": {
+            "items": 10
+          },
+          "warmP50Ms": 4.538,
+          "warmP95Ms": 5.314
+        },
+        {
+          "firstReadMs": 2.19,
+          "path": "/api/catalog?view=recent",
+          "responseBytes": 25287,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 1.624,
+          "warmP95Ms": 1.901
+        },
+        {
+          "firstReadMs": 1.371,
+          "path": "/api/catalog?libraryId=lib-00\u0026q=000",
+          "responseBytes": 5046,
+          "returnedRows": {
+            "items": 10
+          },
+          "warmP50Ms": 0.691,
+          "warmP95Ms": 0.917
+        },
+        {
+          "firstReadMs": 0.949,
+          "path": "/api/media/file-00000",
+          "responseBytes": 19781,
+          "returnedRows": {},
+          "warmP50Ms": 0.588,
+          "warmP95Ms": 1.063
+        },
+        {
+          "firstReadMs": 1.034,
+          "path": "/api/series/series-00000",
+          "responseBytes": 19535,
+          "returnedRows": {
+            "seasons": 1
+          },
+          "warmP50Ms": 0.573,
+          "warmP95Ms": 0.988
+        },
+        {
+          "firstReadMs": 4.87,
+          "path": "/api/people/person-000/works",
+          "responseBytes": 27750,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 3.92,
+          "warmP95Ms": 4.289
+        },
+        {
+          "firstReadMs": 3.838,
+          "path": "/api/people/person-000",
+          "responseBytes": 101,
+          "returnedRows": {},
+          "warmP50Ms": 3.057,
+          "warmP95Ms": 3.409
+        }
+      ],
+      "subjects": 1000
+    },
+    {
+      "catalogRows": 15000,
+      "creditsPerSubject": 150,
+      "files": 10000,
+      "generationMs": 14460,
+      "libraries": 10,
+      "queryPlans": {
+        "continue": {
+          "matchingRowsBeforePage": 100,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SCAN p",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,printf('%020d',9223372036854775807-p.updated_at) AS sort_key FROM catalog_entries e JOIN watch_progress p ON p.media_file_id=e.media_file_id WHERE 1=1 AND p.completed=0 AND p.position\u003e0 AND e.available_file_count\u003e0) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "detail": {
+          "selectCount": 7,
+          "statements": [
+            {
+              "plan": [
+                "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_1 (entry_key=?)",
+                "LIST SUBQUERY 4",
+                "SCAN json_each VIRTUAL TABLE INDEX 1:",
+                "CREATE BLOOM FILTER",
+                "SEARCH f USING INDEX sqlite_autoindex_media_files_3 (id=?) LEFT-JOIN",
+                "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH se USING INDEX sqlite_autoindex_series_1 (id=?) LEFT-JOIN",
+                "SEARCH mf USING INDEX sqlite_autoindex_media_favorites_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH sf USING INDEX sqlite_autoindex_series_favorites_1 (series_id=?) LEFT-JOIN",
+                "SEARCH p USING INDEX sqlite_autoindex_watch_progress_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+                "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+                "SEARCH rt USING COVERING INDEX sqlite_autoindex_remote_titles_4 (id=?) LEFT-JOIN",
+                "SCAN pc LEFT-JOIN",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)",
+                "CORRELATED SCALAR SUBQUERY 2",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)",
+                "CORRELATED SCALAR SUBQUERY 3",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)"
+              ],
+              "sql": "SELECT e.entry_key,e.library_id,coalesce(e.media_file_id,''),coalesce(e.series_id,''),coalesce(e.subject_id,''),e.kind,coalesce(sn.title,e.local_title),e.added_at,e.season_count,e.episode_count,e.file_count,e.available_file_count,\n coalesce(f.relative_path,''),coalesce(f.state,''),coalesce(o.series_id,''),coalesce(se.local_title,''),coalesce(o.season_number,0),coalesce(o.episode_number,0),coalesce(mf.favorited_at,sf.favorited_at),p.position,p.duration,p.completed,p.updated_at,\n coalesce(sn.remote_title_id,''),coalesce(sn.title,''),coalesce(sn.original_title,''),sn.year,coalesce(sn.expires_at,0),coalesce(pc.source,''),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='primary'),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='thumb'),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='backdrop')\n FROM catalog_entries e LEFT JOIN media_files f ON f.id=e.media_file_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series se ON se.id=o.series_id\n LEFT JOIN media_favorites mf ON mf.media_file_id=e.media_file_id LEFT JOIN series_favorites sf ON sf.series_id=e.series_id LEFT JOIN watch_progress p ON p.media_file_id=e.media_file_id\n LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e?\n LEFT JOIN remote_titles rt ON rt.id=sn.remote_title_id LEFT JOIN provider_catalogs pc ON pc.id=rt.catalog_id\n WHERE e.entry_key IN(SELECT value FROM json_each(?))"
+            },
+            {
+              "plan": [
+                "SEARCH f USING INDEX sqlite_autoindex_media_files_3 (id=?)",
+                "SEARCH l USING INDEX sqlite_autoindex_libraries_1 (id=?)",
+                "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH se USING INDEX sqlite_autoindex_series_1 (id=?) LEFT-JOIN",
+                "SCAN ms LEFT-JOIN"
+              ],
+              "sql": "SELECT f.id,f.library_id,f.relative_path,f.fingerprint,f.state,f.organization_reason,l.root_path,l.root_identity,l.kind,f.size,f.modified_at,f.added_at,coalesce(o.series_id,''),coalesce(se.local_title,''),coalesce(o.season_number,0),coalesce(o.episode_number,0),coalesce(ms.id,'') FROM media_files f JOIN libraries l ON l.id=f.library_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series se ON se.id=o.series_id LEFT JOIN metadata_subjects ms ON ms.media_file_id=f.id OR ms.series_id=o.series_id  WHERE f.id=?"
+            },
+            {
+              "plan": [
+                "SEARCH s USING INDEX sqlite_autoindex_metadata_subjects_5 (id=?)",
+                "SEARCH l USING INDEX sqlite_autoindex_libraries_1 (id=?)",
+                "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+                "SEARCH r USING INDEX sqlite_autoindex_remote_titles_1 (id=?) LEFT-JOIN",
+                "SEARCH c USING COVERING INDEX sqlite_autoindex_provider_catalogs_3 (id=?) LEFT-JOIN",
+                "SEARCH p USING INDEX sqlite_autoindex_provider_settings_1 (source=?) LEFT-JOIN",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH catalog_entries USING INDEX entries_subject (subject_id=?)",
+                "USE TEMP B-TREE FOR ORDER BY",
+                "CORRELATED SCALAR SUBQUERY 3",
+                "CO-ROUTINE (subquery-2)",
+                "SEARCH library_sources USING INDEX sqlite_autoindex_library_sources_2 (library_id=?)",
+                "SCAN (subquery-2)"
+              ],
+              "sql": "SELECT s.id,s.library_id,s.expected_kind,s.revision,l.policy_revision,\n coalesce(b.revision,0),coalesce(b.selection,''),coalesce(b.remote_title_id,''),\n coalesce(r.catalog_id,''),coalesce(c.source,''),coalesce(r.namespace,''),coalesce(r.remote_id,''),coalesce(p.revision,1),\n coalesce((SELECT local_title FROM catalog_entries WHERE subject_id=s.id ORDER BY series_id IS NULL LIMIT 1),''),\n coalesce((SELECT group_concat(source,',') FROM (SELECT source FROM library_sources WHERE library_id=s.library_id ORDER BY priority)),'')\n FROM metadata_subjects s JOIN libraries l ON l.id=s.library_id\n LEFT JOIN metadata_bindings b ON b.subject_id=s.id LEFT JOIN remote_titles r ON r.id=b.remote_title_id\n LEFT JOIN provider_catalogs c ON c.id=r.catalog_id LEFT JOIN provider_settings p ON p.source=c.source\n WHERE s.id=?"
+            },
+            {
+              "plan": [
+                "SEARCH metadata_bindings USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?)"
+              ],
+              "sql": "SELECT attempt_state,attempted_at,error_code FROM metadata_bindings WHERE subject_id=?"
+            },
+            {
+              "plan": [
+                "SEARCH metadata_snapshots USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?)"
+              ],
+              "sql": "SELECT title,original_title,identifier,year,overview,source_url,fetched_at,expires_at,revision,credits_state,artwork_state,credits_retry_at,artwork_retry_at FROM metadata_snapshots WHERE remote_title_id=?"
+            },
+            {
+              "plan": [
+                "SEARCH c USING INDEX sqlite_autoindex_title_credits_2 (remote_title_id=?)",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH a USING INDEX assets_credit_photo (credit_id=?)"
+              ],
+              "sql": "SELECT c.id,c.person_id,c.name,c.role,c.characters,(SELECT a.id FROM assets a WHERE a.credit_id=c.id) FROM title_credits c WHERE c.remote_title_id=? ORDER BY c.role,c.ordinal LIMIT 150"
+            },
+            {
+              "plan": [
+                "SEARCH assets USING INDEX assets_title_kind (remote_title_id=?)"
+              ],
+              "sql": "SELECT kind,id FROM assets WHERE remote_title_id=? AND credit_id IS NULL"
+            }
+          ],
+          "targetCreditsReturned": 150,
+          "unrelatedCreditsParsed": 0
+        },
+        "global-recent": {
+          "matchingRowsBeforePage": 5000,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SCAN e",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,printf('%020d',9223372036854775807-e.added_at) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id WHERE 1=1 AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL)) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "library-title": {
+          "matchingRowsBeforePage": 500,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SEARCH e USING INDEX entries_library_recent (library_id=?)",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,coalesce(sn.title_sort_key,e.title_sort_key) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e? WHERE 1=1 AND e.library_id=? AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL)) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "person-detail": {
+          "plan": [
+            "SEARCH p USING COVERING INDEX sqlite_autoindex_people_3 (id=?)",
+            "SEARCH pc USING COVERING INDEX sqlite_autoindex_provider_catalogs_3 (id=?)",
+            "SEARCH sn USING COVERING INDEX snapshots_expiry (expires_at\u003e?)",
+            "SEARCH c USING INDEX credits_person_works (catalog_id=? AND person_id=? AND remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_1 (id=?)",
+            "MULTI-INDEX OR",
+            "INDEX 1",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "INDEX 2",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_3 (series_id=?)",
+            "CORRELATED SCALAR SUBQUERY 1",
+            "SEARCH a USING INDEX assets_credit_photo (credit_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "SELECT p.id,c.name,pc.source,p.catalog_id,(SELECT a.id FROM assets a WHERE a.credit_id=c.id) FROM title_credits c JOIN people p ON p.id=c.person_id AND p.catalog_id=c.catalog_id JOIN provider_catalogs pc ON pc.id=p.catalog_id\n JOIN metadata_snapshots sn ON sn.remote_title_id=c.remote_title_id AND sn.expires_at\u003e?\n JOIN metadata_bindings b ON b.remote_title_id=c.remote_title_id JOIN metadata_subjects sub ON sub.id=b.subject_id\n JOIN catalog_entries e ON e.media_file_id=sub.media_file_id OR e.series_id=sub.series_id WHERE p.id=? ORDER BY e.available_file_count\u003e0 DESC,c.remote_title_id,c.role,c.ordinal,e.entry_key LIMIT 1"
+        },
+        "person-works": {
+          "plan": [
+            "CO-ROUTINE ranked",
+            "CO-ROUTINE (subquery-4)",
+            "CO-ROUTINE candidates",
+            "SEARCH p USING COVERING INDEX sqlite_autoindex_people_3 (id=?)",
+            "SEARCH pc USING COVERING INDEX sqlite_autoindex_provider_catalogs_1 (id=?)",
+            "SEARCH sn USING COVERING INDEX snapshots_expiry (expires_at\u003e?)",
+            "SEARCH c USING COVERING INDEX credits_person_works (catalog_id=? AND person_id=? AND remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_1 (id=?)",
+            "MULTI-INDEX OR",
+            "INDEX 1",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "INDEX 2",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_3 (series_id=?)",
+            "USE TEMP B-TREE FOR DISTINCT",
+            "SCAN candidates",
+            "USE TEMP B-TREE FOR ORDER BY",
+            "SCAN (subquery-4)",
+            "SCAN ranked",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH candidates AS (SELECT DISTINCT c.remote_title_id,e.entry_key,e.available_file_count FROM title_credits c JOIN people p ON p.id=c.person_id AND p.catalog_id=c.catalog_id JOIN provider_catalogs pc ON pc.id=p.catalog_id\n JOIN metadata_snapshots sn ON sn.remote_title_id=c.remote_title_id AND sn.expires_at\u003e?\n JOIN metadata_bindings b ON b.remote_title_id=c.remote_title_id JOIN metadata_subjects sub ON sub.id=b.subject_id\n JOIN catalog_entries e ON e.media_file_id=sub.media_file_id OR e.series_id=sub.series_id WHERE p.id=?), ranked AS (SELECT *,row_number() OVER(PARTITION BY remote_title_id ORDER BY available_file_count\u003e0 DESC,entry_key) AS n FROM candidates)\n SELECT remote_title_id,entry_key FROM ranked WHERE n=1 AND remote_title_id\u003e? ORDER BY remote_title_id LIMIT ?"
+        },
+        "substring": {
+          "matchingRowsBeforePage": 14,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SEARCH e USING INDEX entries_library_recent (library_id=?)",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+            "CORRELATED SCALAR SUBQUERY 1",
+            "SEARCH child USING INDEX entries_subject (subject_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,coalesce(sn.title_sort_key,e.title_sort_key) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e? WHERE 1=1 AND e.library_id=? AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL) AND (instr(e.local_search_key,?)\u003e0 OR instr(sn.search_key,?)\u003e0 OR (e.series_id IS NOT NULL AND EXISTS(SELECT 1 FROM catalog_entries child WHERE child.subject_id=e.subject_id AND child.media_file_id IS NOT NULL AND instr(child.local_search_key,?)\u003e0)))) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        }
+      },
+      "results": [
+        {
+          "firstReadMs": 21.885,
+          "path": "/api/home",
+          "responseBytes": 54211,
+          "returnedRows": {
+            "continueWatching": 20,
+            "libraries": 10,
+            "recent": 20
+          },
+          "warmP50Ms": 20.652,
+          "warmP95Ms": 21.772
+        },
+        {
+          "firstReadMs": 4.162,
+          "path": "/api/catalog?libraryId=lib-00",
+          "responseBytes": 25333,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 3.233,
+          "warmP95Ms": 3.803
+        },
+        {
+          "firstReadMs": 32.601,
+          "path": "/api/catalog/groups",
+          "responseBytes": 3531,
+          "returnedRows": {
+            "items": 10
+          },
+          "warmP50Ms": 29.549,
+          "warmP95Ms": 30.327
+        },
+        {
+          "firstReadMs": 7.634,
+          "path": "/api/catalog?view=recent",
+          "responseBytes": 25287,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 6.924,
+          "warmP95Ms": 7.245
+        },
+        {
+          "firstReadMs": 4.405,
+          "path": "/api/catalog?libraryId=lib-00\u0026q=000",
+          "responseBytes": 7042,
+          "returnedRows": {
+            "items": 14
+          },
+          "warmP50Ms": 3.173,
+          "warmP95Ms": 3.627
+        },
+        {
+          "firstReadMs": 0.908,
+          "path": "/api/media/file-00000",
+          "responseBytes": 19781,
+          "returnedRows": {},
+          "warmP50Ms": 0.628,
+          "warmP95Ms": 0.996
+        },
+        {
+          "firstReadMs": 0.964,
+          "path": "/api/series/series-00000",
+          "responseBytes": 19535,
+          "returnedRows": {
+            "seasons": 1
+          },
+          "warmP50Ms": 0.639,
+          "warmP95Ms": 0.931
+        },
+        {
+          "firstReadMs": 17.216,
+          "path": "/api/people/person-000/works",
+          "responseBytes": 27750,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 16.003,
+          "warmP95Ms": 16.377
+        },
+        {
+          "firstReadMs": 16.48,
+          "path": "/api/people/person-000",
+          "responseBytes": 101,
+          "returnedRows": {},
+          "warmP50Ms": 15.05,
+          "warmP95Ms": 15.612
+        }
+      ],
+      "subjects": 5000
+    },
+    {
+      "catalogRows": 55000,
+      "creditsPerSubject": 150,
+      "files": 50000,
+      "generationMs": 22724,
+      "libraries": 10,
+      "queryPlans": {
+        "continue": {
+          "matchingRowsBeforePage": 500,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SCAN p",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,printf('%020d',9223372036854775807-p.updated_at) AS sort_key FROM catalog_entries e JOIN watch_progress p ON p.media_file_id=e.media_file_id WHERE 1=1 AND p.completed=0 AND p.position\u003e0 AND e.available_file_count\u003e0) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "detail": {
+          "selectCount": 7,
+          "statements": [
+            {
+              "plan": [
+                "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_1 (entry_key=?)",
+                "LIST SUBQUERY 4",
+                "SCAN json_each VIRTUAL TABLE INDEX 1:",
+                "CREATE BLOOM FILTER",
+                "SEARCH f USING INDEX sqlite_autoindex_media_files_3 (id=?) LEFT-JOIN",
+                "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH se USING INDEX sqlite_autoindex_series_1 (id=?) LEFT-JOIN",
+                "SEARCH mf USING INDEX sqlite_autoindex_media_favorites_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH sf USING INDEX sqlite_autoindex_series_favorites_1 (series_id=?) LEFT-JOIN",
+                "SEARCH p USING INDEX sqlite_autoindex_watch_progress_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+                "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+                "SEARCH rt USING COVERING INDEX sqlite_autoindex_remote_titles_4 (id=?) LEFT-JOIN",
+                "SCAN pc LEFT-JOIN",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)",
+                "CORRELATED SCALAR SUBQUERY 2",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)",
+                "CORRELATED SCALAR SUBQUERY 3",
+                "SEARCH a USING INDEX assets_title_kind (remote_title_id=? AND kind=?)"
+              ],
+              "sql": "SELECT e.entry_key,e.library_id,coalesce(e.media_file_id,''),coalesce(e.series_id,''),coalesce(e.subject_id,''),e.kind,coalesce(sn.title,e.local_title),e.added_at,e.season_count,e.episode_count,e.file_count,e.available_file_count,\n coalesce(f.relative_path,''),coalesce(f.state,''),coalesce(o.series_id,''),coalesce(se.local_title,''),coalesce(o.season_number,0),coalesce(o.episode_number,0),coalesce(mf.favorited_at,sf.favorited_at),p.position,p.duration,p.completed,p.updated_at,\n coalesce(sn.remote_title_id,''),coalesce(sn.title,''),coalesce(sn.original_title,''),sn.year,coalesce(sn.expires_at,0),coalesce(pc.source,''),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='primary'),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='thumb'),\n (SELECT id FROM assets a WHERE a.remote_title_id=sn.remote_title_id AND a.credit_id IS NULL AND kind='backdrop')\n FROM catalog_entries e LEFT JOIN media_files f ON f.id=e.media_file_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series se ON se.id=o.series_id\n LEFT JOIN media_favorites mf ON mf.media_file_id=e.media_file_id LEFT JOIN series_favorites sf ON sf.series_id=e.series_id LEFT JOIN watch_progress p ON p.media_file_id=e.media_file_id\n LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e?\n LEFT JOIN remote_titles rt ON rt.id=sn.remote_title_id LEFT JOIN provider_catalogs pc ON pc.id=rt.catalog_id\n WHERE e.entry_key IN(SELECT value FROM json_each(?))"
+            },
+            {
+              "plan": [
+                "SEARCH f USING INDEX sqlite_autoindex_media_files_3 (id=?)",
+                "SEARCH l USING INDEX sqlite_autoindex_libraries_1 (id=?)",
+                "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+                "SEARCH se USING INDEX sqlite_autoindex_series_1 (id=?) LEFT-JOIN",
+                "SCAN ms LEFT-JOIN"
+              ],
+              "sql": "SELECT f.id,f.library_id,f.relative_path,f.fingerprint,f.state,f.organization_reason,l.root_path,l.root_identity,l.kind,f.size,f.modified_at,f.added_at,coalesce(o.series_id,''),coalesce(se.local_title,''),coalesce(o.season_number,0),coalesce(o.episode_number,0),coalesce(ms.id,'') FROM media_files f JOIN libraries l ON l.id=f.library_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series se ON se.id=o.series_id LEFT JOIN metadata_subjects ms ON ms.media_file_id=f.id OR ms.series_id=o.series_id  WHERE f.id=?"
+            },
+            {
+              "plan": [
+                "SEARCH s USING INDEX sqlite_autoindex_metadata_subjects_5 (id=?)",
+                "SEARCH l USING INDEX sqlite_autoindex_libraries_1 (id=?)",
+                "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+                "SEARCH r USING INDEX sqlite_autoindex_remote_titles_1 (id=?) LEFT-JOIN",
+                "SEARCH c USING COVERING INDEX sqlite_autoindex_provider_catalogs_3 (id=?) LEFT-JOIN",
+                "SEARCH p USING INDEX sqlite_autoindex_provider_settings_1 (source=?) LEFT-JOIN",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH catalog_entries USING INDEX entries_subject (subject_id=?)",
+                "USE TEMP B-TREE FOR ORDER BY",
+                "CORRELATED SCALAR SUBQUERY 3",
+                "CO-ROUTINE (subquery-2)",
+                "SEARCH library_sources USING INDEX sqlite_autoindex_library_sources_2 (library_id=?)",
+                "SCAN (subquery-2)"
+              ],
+              "sql": "SELECT s.id,s.library_id,s.expected_kind,s.revision,l.policy_revision,\n coalesce(b.revision,0),coalesce(b.selection,''),coalesce(b.remote_title_id,''),\n coalesce(r.catalog_id,''),coalesce(c.source,''),coalesce(r.namespace,''),coalesce(r.remote_id,''),coalesce(p.revision,1),\n coalesce((SELECT local_title FROM catalog_entries WHERE subject_id=s.id ORDER BY series_id IS NULL LIMIT 1),''),\n coalesce((SELECT group_concat(source,',') FROM (SELECT source FROM library_sources WHERE library_id=s.library_id ORDER BY priority)),'')\n FROM metadata_subjects s JOIN libraries l ON l.id=s.library_id\n LEFT JOIN metadata_bindings b ON b.subject_id=s.id LEFT JOIN remote_titles r ON r.id=b.remote_title_id\n LEFT JOIN provider_catalogs c ON c.id=r.catalog_id LEFT JOIN provider_settings p ON p.source=c.source\n WHERE s.id=?"
+            },
+            {
+              "plan": [
+                "SEARCH metadata_bindings USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?)"
+              ],
+              "sql": "SELECT attempt_state,attempted_at,error_code FROM metadata_bindings WHERE subject_id=?"
+            },
+            {
+              "plan": [
+                "SEARCH metadata_snapshots USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?)"
+              ],
+              "sql": "SELECT title,original_title,identifier,year,overview,source_url,fetched_at,expires_at,revision,credits_state,artwork_state,credits_retry_at,artwork_retry_at FROM metadata_snapshots WHERE remote_title_id=?"
+            },
+            {
+              "plan": [
+                "SEARCH c USING INDEX sqlite_autoindex_title_credits_2 (remote_title_id=?)",
+                "CORRELATED SCALAR SUBQUERY 1",
+                "SEARCH a USING INDEX assets_credit_photo (credit_id=?)"
+              ],
+              "sql": "SELECT c.id,c.person_id,c.name,c.role,c.characters,(SELECT a.id FROM assets a WHERE a.credit_id=c.id) FROM title_credits c WHERE c.remote_title_id=? ORDER BY c.role,c.ordinal LIMIT 150"
+            },
+            {
+              "plan": [
+                "SEARCH assets USING INDEX assets_title_kind (remote_title_id=?)"
+              ],
+              "sql": "SELECT kind,id FROM assets WHERE remote_title_id=? AND credit_id IS NULL"
+            }
+          ],
+          "targetCreditsReturned": 150,
+          "unrelatedCreditsParsed": 0
+        },
+        "global-recent": {
+          "matchingRowsBeforePage": 5000,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SCAN e",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,printf('%020d',9223372036854775807-e.added_at) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id WHERE 1=1 AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL)) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "library-title": {
+          "matchingRowsBeforePage": 500,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SEARCH e USING INDEX entries_library_recent (library_id=?)",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,coalesce(sn.title_sort_key,e.title_sort_key) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e? WHERE 1=1 AND e.library_id=? AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL)) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        },
+        "person-detail": {
+          "plan": [
+            "SEARCH p USING COVERING INDEX sqlite_autoindex_people_3 (id=?)",
+            "SEARCH pc USING COVERING INDEX sqlite_autoindex_provider_catalogs_3 (id=?)",
+            "SEARCH sn USING COVERING INDEX snapshots_expiry (expires_at\u003e?)",
+            "SEARCH c USING INDEX credits_person_works (catalog_id=? AND person_id=? AND remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_1 (id=?)",
+            "MULTI-INDEX OR",
+            "INDEX 1",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "INDEX 2",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_3 (series_id=?)",
+            "CORRELATED SCALAR SUBQUERY 1",
+            "SEARCH a USING INDEX assets_credit_photo (credit_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "SELECT p.id,c.name,pc.source,p.catalog_id,(SELECT a.id FROM assets a WHERE a.credit_id=c.id) FROM title_credits c JOIN people p ON p.id=c.person_id AND p.catalog_id=c.catalog_id JOIN provider_catalogs pc ON pc.id=p.catalog_id\n JOIN metadata_snapshots sn ON sn.remote_title_id=c.remote_title_id AND sn.expires_at\u003e?\n JOIN metadata_bindings b ON b.remote_title_id=c.remote_title_id JOIN metadata_subjects sub ON sub.id=b.subject_id\n JOIN catalog_entries e ON e.media_file_id=sub.media_file_id OR e.series_id=sub.series_id WHERE p.id=? ORDER BY e.available_file_count\u003e0 DESC,c.remote_title_id,c.role,c.ordinal,e.entry_key LIMIT 1"
+        },
+        "person-works": {
+          "plan": [
+            "CO-ROUTINE ranked",
+            "CO-ROUTINE (subquery-4)",
+            "CO-ROUTINE candidates",
+            "SEARCH p USING COVERING INDEX sqlite_autoindex_people_3 (id=?)",
+            "SEARCH pc USING COVERING INDEX sqlite_autoindex_provider_catalogs_1 (id=?)",
+            "SEARCH sn USING COVERING INDEX snapshots_expiry (expires_at\u003e?)",
+            "SEARCH c USING COVERING INDEX credits_person_works (catalog_id=? AND person_id=? AND remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_1 (id=?)",
+            "MULTI-INDEX OR",
+            "INDEX 1",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_2 (media_file_id=?)",
+            "INDEX 2",
+            "SEARCH e USING INDEX sqlite_autoindex_catalog_entries_3 (series_id=?)",
+            "USE TEMP B-TREE FOR DISTINCT",
+            "SCAN candidates",
+            "USE TEMP B-TREE FOR ORDER BY",
+            "SCAN (subquery-4)",
+            "SCAN ranked",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH candidates AS (SELECT DISTINCT c.remote_title_id,e.entry_key,e.available_file_count FROM title_credits c JOIN people p ON p.id=c.person_id AND p.catalog_id=c.catalog_id JOIN provider_catalogs pc ON pc.id=p.catalog_id\n JOIN metadata_snapshots sn ON sn.remote_title_id=c.remote_title_id AND sn.expires_at\u003e?\n JOIN metadata_bindings b ON b.remote_title_id=c.remote_title_id JOIN metadata_subjects sub ON sub.id=b.subject_id\n JOIN catalog_entries e ON e.media_file_id=sub.media_file_id OR e.series_id=sub.series_id WHERE p.id=?), ranked AS (SELECT *,row_number() OVER(PARTITION BY remote_title_id ORDER BY available_file_count\u003e0 DESC,entry_key) AS n FROM candidates)\n SELECT remote_title_id,entry_key FROM ranked WHERE n=1 AND remote_title_id\u003e? ORDER BY remote_title_id LIMIT ?"
+        },
+        "substring": {
+          "matchingRowsBeforePage": 14,
+          "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented",
+          "plan": [
+            "SEARCH e USING INDEX entries_library_recent (library_id=?)",
+            "SEARCH o USING COVERING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?) LEFT-JOIN",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH sn USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN",
+            "CORRELATED SCALAR SUBQUERY 1",
+            "SEARCH child USING INDEX entries_subject (subject_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ],
+          "sql": "WITH matches AS (SELECT e.entry_key,e.library_id,coalesce(sn.title_sort_key,e.title_sort_key) AS sort_key FROM catalog_entries e LEFT JOIN file_organization o ON o.media_file_id=e.media_file_id LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots sn ON sn.remote_title_id=b.remote_title_id AND sn.expires_at\u003e? WHERE 1=1 AND e.library_id=? AND (e.series_id IS NOT NULL OR o.media_file_id IS NULL) AND (instr(e.local_search_key,?)\u003e0 OR instr(sn.search_key,?)\u003e0 OR (e.series_id IS NOT NULL AND EXISTS(SELECT 1 FROM catalog_entries child WHERE child.subject_id=e.subject_id AND child.media_file_id IS NOT NULL AND instr(child.local_search_key,?)\u003e0)))) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)\u003e(?,?) ORDER BY sort_key,entry_key LIMIT ?"
+        }
+      },
+      "results": [
+        {
+          "firstReadMs": 78.899,
+          "path": "/api/home",
+          "responseBytes": 54471,
+          "returnedRows": {
+            "continueWatching": 20,
+            "libraries": 10,
+            "recent": 20
+          },
+          "warmP50Ms": 77.649,
+          "warmP95Ms": 86.301
+        },
+        {
+          "firstReadMs": 8.199,
+          "path": "/api/catalog?libraryId=lib-00",
+          "responseBytes": 25483,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 6.845,
+          "warmP95Ms": 7.193
+        },
+        {
+          "firstReadMs": 65.827,
+          "path": "/api/catalog/groups",
+          "responseBytes": 3526,
+          "returnedRows": {
+            "items": 10
+          },
+          "warmP50Ms": 62.453,
+          "warmP95Ms": 65.567
+        },
+        {
+          "firstReadMs": 25.407,
+          "path": "/api/catalog?view=recent",
+          "responseBytes": 25437,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 24.438,
+          "warmP95Ms": 24.784
+        },
+        {
+          "firstReadMs": 10.98,
+          "path": "/api/catalog?libraryId=lib-00\u0026q=000",
+          "responseBytes": 7084,
+          "returnedRows": {
+            "items": 14
+          },
+          "warmP50Ms": 9.351,
+          "warmP95Ms": 9.851
+        },
+        {
+          "firstReadMs": 0.931,
+          "path": "/api/media/file-00000",
+          "responseBytes": 19781,
+          "returnedRows": {},
+          "warmP50Ms": 0.645,
+          "warmP95Ms": 0.976
+        },
+        {
+          "firstReadMs": 0.917,
+          "path": "/api/series/series-00000",
+          "responseBytes": 19540,
+          "returnedRows": {
+            "seasons": 1
+          },
+          "warmP50Ms": 0.614,
+          "warmP95Ms": 0.947
+        },
+        {
+          "firstReadMs": 17.049,
+          "path": "/api/people/person-000/works",
+          "responseBytes": 27900,
+          "returnedRows": {
+            "items": 50
+          },
+          "warmP50Ms": 16.067,
+          "warmP95Ms": 16.44
+        },
+        {
+          "firstReadMs": 16.273,
+          "path": "/api/people/person-000",
+          "responseBytes": 101,
+          "returnedRows": {},
+          "warmP50Ms": 15.431,
+          "warmP95Ms": 15.847
+        }
+      ],
+      "subjects": 5000
+    }
+  ],
+  "environment": {
+    "arch": "arm64",
+    "coldCondition": "first HTTP request after reopening SQLite separately for every endpoint; OS filesystem cache uncontrolled, not OS-cold IO",
+    "cpuCount": 18,
+    "cpuModel": "Apple M5 Pro",
+    "generatedAt": "2026-10-02T07:48:03Z",
+    "go": "go1.25.12",
+    "memoryBytes": "51539607552",
+    "node": "v26.7.0",
+    "os": "darwin",
+    "samples": 30,
+    "warmCondition": "30 sequential loopback HTTP requests on reused client/store immediately after first request; authentication, contract request validation and JSON serialization included; generation/login/query-plan collection excluded"
+  }
+}

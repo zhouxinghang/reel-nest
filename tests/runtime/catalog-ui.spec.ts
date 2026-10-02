@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import type { components } from "../../web/src/generated/api";
 
 type Schema = components["schemas"];
@@ -61,7 +61,6 @@ test.beforeAll(async ({ browser }) => {
       ...process.env,
       DATA_DIR: join(run, "data"),
       MEDIA_ROOTS: media,
-      RUNTIME_WEB_DIR: resolve(".reelnest-test/runtime-web"),
     },
     stdio: "inherit",
   });

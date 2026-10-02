@@ -99,12 +99,13 @@ export async function startTVDBFixture() {
           name: i === 0 ? "语言学家" : "角色",
           peopleType: "Actor",
           sort: i,
-          personImgURL: i < 2 ? "/person.png" : null,
+          personImgURL:
+            i < 2 ? "https://artworks.thetvdb.com/banners/person.png" : null,
         })),
         {
           peopleId: 201,
           personName: "TVDB 导演",
-          personImgURL: "/director.png",
+          personImgURL: "https://artworks.thetvdb.com/banners/director.png",
           name: "Director",
           peopleType: "Director",
         },
@@ -115,11 +116,20 @@ export async function startTVDBFixture() {
           status: "success",
           data: {
             id: 10,
+            name,
+            year,
+            image: "https://artworks.thetvdb.com/banners/poster.png",
+            translations: {
+              nameTranslations: [{ language: "zho", name: title }],
+              overviewTranslations: [
+                { language: "zho", overview: "TVDB 中文隔离测试资料。" },
+              ],
+            },
             characters: mode === "credits-empty" ? [] : characters,
             artworks: [
               {
                 type: series ? 3 : 8,
-                image: "/thumb.png",
+                image: "https://artworks.thetvdb.com/banners/thumb.png",
                 includesText: true,
                 language: "zho",
                 width: 640,
@@ -128,7 +138,7 @@ export async function startTVDBFixture() {
               },
               {
                 type: series ? 3 : 8,
-                image: "/backdrop.png",
+                image: "https://artworks.thetvdb.com/banners/backdrop.png",
                 includesText: false,
                 language: "",
                 width: 640,
@@ -156,7 +166,7 @@ export async function startTVDBFixture() {
             id: 10,
             name,
             year,
-            image: "http://127.0.0.1:18094/artwork/poster.png",
+            image: "https://artworks.thetvdb.com/banners/poster.png",
             translations: {
               nameTranslations: [{ language: "zho", name: title }],
               overviewTranslations: [

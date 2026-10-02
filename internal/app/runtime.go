@@ -17,12 +17,14 @@ import (
 	"reelnest/internal/web"
 )
 
-// RuntimeConfig is the production assembly for the new schema; no legacy DB fallback.
+// RuntimeConfig assembles the single supported runtime. ProviderTransport is an
+// optional external HTTP seam; production uses the default controlled client.
 type RuntimeConfig struct {
 	DataDir, Username, Password string
 	MediaRoots                  []string
 	CookieSecure                bool
 	Assets                      fs.FS
+	ProviderTransport           http.RoundTripper
 }
 type Runtime struct {
 	handler  http.Handler
@@ -55,7 +57,7 @@ func NewRuntime(ctx context.Context, config RuntimeConfig) (_ *Runtime, err erro
 	if e != nil {
 		return nil, e
 	}
-	r.metadata, e = metadata.New(ctx, s)
+	r.metadata, e = metadata.NewWithOptions(ctx, s, metadata.Options{Transport: config.ProviderTransport})
 	if e != nil {
 		return nil, e
 	}

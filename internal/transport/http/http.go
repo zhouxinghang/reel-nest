@@ -1,7 +1,5 @@
-// Package http provides explicit contract DTOs and authentication adapters.
-// This assembly is not exposed by cmd/reelnest until the remaining routes and
-// UI land. It mounts identity/library/scan, bounded catalog reads, metadata,
-// people, assets and playback/file operations; final UI integration is pending.
+// Package http provides contract DTOs, routes and authentication adapters.
+// Business transactions and checked file operations belong to their modules.
 package http
 
 import (

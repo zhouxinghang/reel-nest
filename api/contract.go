@@ -1,5 +1,5 @@
 // Package api provides the versioned OpenAPI document and reusable HTTP contract
-// checks. It does not authenticate requests and is not yet mounted by the old app.
+// checks. Authentication is enforced by transport before request validation.
 package api
 
 import (

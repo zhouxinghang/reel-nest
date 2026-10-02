@@ -3,9 +3,9 @@
 - 方案：[已通过的技术方案](./spec.md)
 - 审计：[现状与验证基线](./audit.md)
 - 评审：2026-10-02，用户确认“评审通过”。
-- 当前阶段：01–05 已完成；05 新前后端源码入口与完整交互已切换并验证，未部署或切换用户数据；06 清理与最终交付待执行。
-- 最近完成：[05：前端、播放与交互切换](./issues/05-frontend-playback-interactions.md)（resolved，37 unit/hook、39 浏览器、全量 Go race 和新 runtime 三轮复跑通过）。
-- Frontier（下一步）：[06：兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md)（ready-for-agent，前置依赖全部 resolved，尚未认领）。
+- 当前阶段：01–06 全部完成；单一新前后端源码、旧兼容清理、完整回归与性能门禁通过。未部署或切换用户数据。
+- 最近完成：[06：兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md)（resolved，37 unit/hook、16浏览器、三轮48/48、全量Go/race与最终三档性能通过）。
+- Frontier（下一步）：无；01–06 均 resolved。部署或旧数据弃用不在本轮授权范围。
 
 ## 任务与依赖
 
@@ -18,7 +18,7 @@
 | 03 | [资料源、版本提交、人物与图片](./issues/03-metadata-providers-assets.md) | resolved | 01, 02 |
 | 04 | [查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md) | resolved | 02, 03 |
 | 05 | [前端、播放与交互切换](./issues/05-frontend-playback-interactions.md) | resolved | 03, 04 |
-| 06 | [兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md) | ready-for-agent | 02, 03, 04, 05 |
+| 06 | [兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md) | resolved | 02, 03, 04, 05 |
 
 ## 执行约定
 
@@ -47,3 +47,5 @@
 - 2026-10-02：继续 05，新增 Router/Query、生成契约请求、URL/分页、确认式收藏、单一资料任务订阅和冲突保草稿设置页；隔离新 UI 已通过 21 个 unit/hook、5 个浏览器场景三轮、全量 33 个浏览器回归及全量 Go race。详情见 05 本轮 Progress 与前端基础交接。05 仍 claimed（管理/扫描、匹配、播放器和文件操作 UI 待完成），06 仍阻塞；未切换正式入口或部署。
 
 - 2026-10-02：05 完成管理/扫描/任务、CAS 匹配/人物/图片、播放器状态机与有界进度、字幕/外部协议/两步删除，以及新 CLI + 嵌入 UI 源码切换。37 unit/hook、全量 39 浏览器、无缓存全量 Go race、12 个 runtime 场景三轮 36/36 与最终构建/vet/格式通过；完整结果及 06 清单见 05 Answer。05 resolved，06 解除阻塞但未认领。旧路径仅保留在隔离历史 harness 中等待 06 清理；没有部署、推送、操作真实凭据/媒体或现有 DATA_DIR。
+
+- 2026-10-02：06 完成兼容清理与单构建，原97项基线保留审计并追踪93项替代/4项纯迁移退役。37 unit/hook、16浏览器、三轮48/48、全量无缓存Go/race、vet/构建/格式/依赖检查通过；50k首页p95 86.301ms、慢源20秒时设置p95 1.123ms、50k真实文件有界遍历及集合式发布通过。当前态README/API、安全/切换/回退说明及完整R01–R12证据见06 Answer与最终交付记录。01–06全部resolved，无Frontier；Docker/真实来源/实机/NAS未测，未部署、push或操作现有数据。

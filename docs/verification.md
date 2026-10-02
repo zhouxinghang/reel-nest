@@ -322,3 +322,13 @@ node scripts/verify-organization-upgrade.mjs /absolute/pre-delete-reelnest /abso
 - 全量 `npm run test:browser` 的 **27 个 Chrome 流程通过**（1.8 分钟），包含新增页面配置流程；另外该流程已单独通过。验证凭据不回填、失败保留输入、显式清除、双页面冲突/重新加载、地址与 Token 联动及真实 fixture 请求。修复了重新加载时旧表单短暂重新出现的问题，更新旧 MetaTube 用例的环境配置说明断言。
 - 1440px 桌面及 390px 手机截图已目视检查，320/390/1440px 均无横向溢出。截图位于 `/Users/bytedance/workspace/reel-nest/test-results/metadata-页面配置影片资料源：即时生效、凭据隐藏、冲突恢复与窄屏/`。TypeScript/Vite、`go vet ./...`、Prettier、Go 格式及 `git diff --check` 已通过；最终代码的设置专项 race 通过（12.688 秒）。
 - 自动化仅使用隔离的临时媒体/数据库/测试服务，没有安装依赖或修改用户媒体；**真实 TMDB/TVDB/MetaTube 凭据有效性与联通、Docker、NAS 和外部播放器实机不在本次回归范围**。按前述用户要求，提交后备份并重启本地应用，部署核验保存至受限备份目录；不在聊天或提交中记录真实凭据。
+
+
+## 2026-10-02：架构重构 06 最终清理与交付
+
+本节以前的记录是历史版本验证，相关旧路径已退役，不能当作当前接口/升级步骤。当前记录见 [最终交付与R01–R12证据](architecture/final-delivery.md)，原97项回归的替代/退役证据保存在 [inventory](architecture/regression-inventory.json)。
+
+- 单一runtime/嵌入前端、旧迁移/来源Compose/多构建清理完成；README和API改为当前态。保留家庭账号_FILE、安全媒体挂载、正常重启/资料刷新及不可恢复删除边界。
+- 最终37 unit/hook、16浏览器、三轮48/48、全量Go/race、vet、构建、契约、格式、依赖及diff检查通过。50k文件档首页p95 86.301ms，20秒慢源时设置p95 1.123ms，真实50k文件有界遍历及SQL分批发布通过；原始JSON和完整命令在交付记录。
+- 所有验证仅使用临时媒体/DB和受控上游；未部署、未重启旧实例、未操作现有DATA_DIR/真实凭据/用户媒体、未push。Docker不可用，真实三源、NAS/EROFS、跨设备和播放器/音轨兼容性未验证。
+- 01–06全为resolved，Frontier为空。部署需另行授权、完整敏感备份及新空DATA_DIR；回退只恢复旧应用状态，不能恢复已删除源视频。

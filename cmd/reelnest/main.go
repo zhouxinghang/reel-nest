@@ -23,20 +23,6 @@ func env(name, fallback string) string {
 	return fallback
 }
 
-// Legacy migration only. Saved page settings prevent this reader from running.
-// Files take precedence; unreadable optional credentials are never logged.
-func optionalSecret(name string) string {
-	if path := os.Getenv(name + "_FILE"); path != "" {
-		contents, err := os.ReadFile(path)
-		if err != nil {
-			log.Printf("无法读取 %s_FILE；对应凭据不可用，本地媒体仍可使用", name)
-			return ""
-		}
-		return strings.TrimSpace(string(contents))
-	}
-	return strings.TrimSpace(os.Getenv(name))
-}
-
 func run() error {
 	password := os.Getenv("HOUSEHOLD_PASSWORD")
 	if path := os.Getenv("HOUSEHOLD_PASSWORD_FILE"); path != "" {

@@ -1,6 +1,5 @@
 // Package store owns the new SQLite schema and transactional persistence.
 // Callers receive use-case methods, never raw database handles or SQL transactions.
-// This foundation is not wired into the legacy application until its consumers migrate.
 package store
 
 import (

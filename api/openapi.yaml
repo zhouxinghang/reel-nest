@@ -1,20 +1,20 @@
-# Canonical future contract. Edit this file; generated TypeScript is read-only.
+# Canonical served contract. Edit this file; generated TypeScript is read-only.
 openapi: 3.0.3
 info:
-  title: Reel Nest new contract
+  title: Reel Nest HTTP API
   version: 1.0.0
   description: >-
-    Issue 01 foundation, not the currently served legacy interface. R01–R12. No aliases or legacy
+    Current single-runtime interface for R01–R12. No aliases or legacy
     database import. JSON bodies <=16KiB; reject unknown fields, duplicate/unknown query parameters,
     invalid enums and trailing JSON. Mutations require same-origin checks and household session
     (login is same-origin but unauthenticated). All successful JSON is no-store.
     Authentication/authorization and semantic filesystem/provider validation belong to
     handlers/modules; schema validation is not authorization. Error status map: 400
     INVALID_REQUEST/INVALID_MEDIA_PATH; 401 UNAUTHENTICATED; 403 FORBIDDEN; 404
-    NOT_FOUND/ASSET_UNAVAILABLE; 409
+    NOT_FOUND; 409
     REVISION_CONFLICT/LIBRARY_BUSY/LIBRARY_OVERLAP/CURSOR_STALE/FILE_CHANGED/FILE_ACCESS_DENIED/CANDIDATE_STALE/DELETION_TARGET_CHANGED;
     410 FILE_UNAVAILABLE/DELETION_PREVIEW_EXPIRED; 422 SUBTITLE_INVALID; 429 RATE_LIMITED; 503
-    PROVIDER_UNAVAILABLE/METADATA_UNAVAILABLE/DATABASE_UNAVAILABLE/NOT_READY; 500 INTERNAL_ERROR.
+    PROVIDER_UNAVAILABLE/METADATA_UNAVAILABLE/ASSET_UNAVAILABLE/NOT_READY; 500 DATABASE_UNAVAILABLE/INTERNAL_ERROR.
     Deletion after possible unlink always uses DeleteResult and is never auto-retried.
 security:
   - householdSession: []
