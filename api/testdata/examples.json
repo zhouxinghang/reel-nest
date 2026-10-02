@@ -688,5 +688,36 @@
       "retryable": false,
       "requestId": "request-1"
     }
+  },
+  "ActorSearchPage": {
+    "items": [
+      {
+        "id": "actor.signature",
+        "name": "示例演员",
+        "aliases": ["别名"],
+        "provider": "example",
+        "photoId": "photo.signature"
+      }
+    ],
+    "truncated": false
+  },
+  "ActorDetail": {
+    "id": "actor.signature",
+    "name": "示例演员",
+    "aliases": ["别名"],
+    "provider": "example",
+    "photoId": "photo.signature",
+    "summary": "演员简介",
+    "homepage": "",
+    "birthday": "1995-01-01",
+    "debutDate": "",
+    "nationality": "",
+    "height": "170",
+    "bloodType": "",
+    "hobby": "",
+    "skill": "",
+    "measurements": "",
+    "cupSize": "",
+    "wallpapers": ["image.signature"]
   }
 }

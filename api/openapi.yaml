@@ -605,6 +605,108 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SettingsPatch"
+  /api/metadata/actors/search:
+    get:
+      operationId: "actorSearch"
+      tags:
+        - "R08"
+      description: "Search configured MetaTube actor providers by name; read-only, no local people merge. Up to 50 distinct candidates; provider coverage is not guaranteed."
+      x-requirements:
+        - "R08"
+      parameters:
+        - name: "q"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            minLength: 1
+            maxLength: 256
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorSearchPage"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/metadata/actors/{id}:
+    get:
+      operationId: "actorDetail"
+      tags:
+        - "R08"
+      description: "Fetch a searched actor by signed identity. References expire after one hour; changing provider settings invalidates them. Does not alter local title credits."
+      x-requirements:
+        - "R08"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            $ref: "#/components/schemas/ActorToken"
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDetail"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/metadata/actor-images/{id}:
+    get:
+      operationId: "actorImage"
+      tags:
+        - "R08"
+      description: "Household-authenticated image proxy for signed provider-issued actor images only. No client URL or credentials. At most 5 MiB, no redirects; wallpapers use primary with ratio=0, never actor backdrop."
+      x-requirements:
+        - "R08"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            $ref: "#/components/schemas/ActorToken"
+      responses:
+        "200":
+          description: "Success"
+          content:
+            image/jpeg:
+              schema:
+                type: "string"
+                format: "binary"
+            image/png:
+              schema:
+                type: "string"
+                format: "binary"
+            image/webp:
+              schema:
+                type: "string"
+                format: "binary"
+            image/gif:
+              schema:
+                type: "string"
+                format: "binary"
+        default:
+          $ref: "#/components/responses/Error"
+    head:
+      operationId: "actorImageHead"
+      tags:
+        - "R08"
+      description: "Household-authenticated image proxy for signed provider-issued actor images only. No client URL or credentials. At most 5 MiB, no redirects; wallpapers use primary with ratio=0, never actor backdrop."
+      x-requirements:
+        - "R08"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            $ref: "#/components/schemas/ActorToken"
+      responses:
+        "200":
+          description: "Success"
+        default:
+          $ref: "#/components/responses/Error"
   /api/people/{id}:
     get:
       operationId: person
@@ -2254,6 +2356,128 @@ components:
       description: >-
         One row per file version, ordered by episode number then stable file ID. Versions may span
         pages; never truncate a files array silently.
+    ActorToken:
+      type: "string"
+      minLength: 3
+      maxLength: 8192
+      pattern: "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
+      description: "Opaque HMAC-authenticated reference, not a stable local person ID. Session authentication is required; valid for at most one hour and one provider configuration revision."
+    ActorCandidate:
+      type: "object"
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ActorToken"
+        name:
+          type: "string"
+          maxLength: 256
+        aliases:
+          type: "array"
+          maxItems: 30
+          items:
+            type: "string"
+            maxLength: 256
+        provider:
+          type: "string"
+          maxLength: 128
+        photoId:
+          $ref: "#/components/schemas/ActorToken"
+      required:
+        - "id"
+        - "name"
+        - "aliases"
+        - "provider"
+        - "photoId"
+    ActorSearchPage:
+      type: "object"
+      additionalProperties: false
+      properties:
+        items:
+          type: "array"
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/ActorCandidate"
+        truncated:
+          type: "boolean"
+      required:
+        - "items"
+        - "truncated"
+    ActorDetail:
+      type: "object"
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ActorToken"
+        name:
+          type: "string"
+          maxLength: 256
+        aliases:
+          type: "array"
+          maxItems: 30
+          items:
+            type: "string"
+            maxLength: 256
+        provider:
+          type: "string"
+          maxLength: 128
+        photoId:
+          $ref: "#/components/schemas/ActorToken"
+        summary:
+          type: "string"
+          maxLength: 32768
+        homepage:
+          type: "string"
+          maxLength: 2048
+        birthday:
+          type: "string"
+          maxLength: 10
+        debutDate:
+          type: "string"
+          maxLength: 10
+        nationality:
+          type: "string"
+          maxLength: 256
+        height:
+          type: "string"
+          maxLength: 3
+        bloodType:
+          type: "string"
+          maxLength: 256
+        hobby:
+          type: "string"
+          maxLength: 1024
+        skill:
+          type: "string"
+          maxLength: 1024
+        measurements:
+          type: "string"
+          maxLength: 256
+        cupSize:
+          type: "string"
+          maxLength: 256
+        wallpapers:
+          type: "array"
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ActorToken"
+      required:
+        - "id"
+        - "name"
+        - "aliases"
+        - "provider"
+        - "photoId"
+        - "summary"
+        - "homepage"
+        - "birthday"
+        - "debutDate"
+        - "nationality"
+        - "height"
+        - "bloodType"
+        - "hobby"
+        - "skill"
+        - "measurements"
+        - "cupSize"
+        - "wallpapers"
     Person:
       type: object
       additionalProperties: false

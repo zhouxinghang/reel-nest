@@ -62,6 +62,12 @@ func TestEveryOperationHasValidRequestAndResponseFixture(t *testing.T) {
 					t.Fatal("missing requirement trace")
 				}
 				u := strings.NewReplacer("{id}", "id-1", "{source}", "tmdb", "{target}", "media", "{number}", "1", "{subtitle}", "sub-1").Replace(path)
+				if strings.Contains(path, "/actors/{id}") || strings.Contains(path, "/actor-images/{id}") {
+					u = strings.ReplaceAll(u, "id-1", "actor.signature")
+				}
+				if strings.HasSuffix(path, "/actors/search") {
+					u += "?q=synthetic"
+				}
 				if strings.HasSuffix(path, "/candidates") {
 					u += "?q=synthetic&source=tmdb"
 				}
@@ -124,7 +130,7 @@ func TestEveryOperationHasValidRequestAndResponseFixture(t *testing.T) {
 			})
 		}
 	}
-	if operations != 39 {
+	if operations != 43 {
 		t.Fatalf("operation inventory changed (%d); review new coverage", operations)
 	}
 }

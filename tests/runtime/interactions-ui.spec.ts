@@ -227,7 +227,18 @@ test("新 UI 完整链路：登录建库扫描、搜索收藏、匹配人物图�
     .toBe(true);
   await player.getByRole("button", { name: "关闭播放器", exact: true }).click();
   await expect(player).toHaveCount(0);
-  const address = await page.getByLabel("串流地址（可手动复制）").inputValue();
+  const external = page.getByRole("region", {
+    name: "外部播放器",
+    exact: true,
+  });
+  await expect(external.getByRole("textbox")).toHaveCount(0);
+  await expect(
+    external.getByText(/链接不过期|当前地址仅供本机使用|注册协议/),
+  ).toHaveCount(0);
+  const iina = await external
+    .getByRole("link", { name: "用 IINA 打开" })
+    .getAttribute("href");
+  const address = new URL(iina!).searchParams.get("url")!;
   expect(new URL(address).pathname).toBe(`/stream/${id}`);
   await expect(
     page.getByRole("link", { name: "用 IINA 打开" }),

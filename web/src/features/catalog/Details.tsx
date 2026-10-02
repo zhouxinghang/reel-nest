@@ -322,6 +322,15 @@ export function PersonDetail() {
           <p className={ui.muted}>
             来源：{person.data.source} · 当前媒体库中的作品
           </p>
+          {person.data.source === "metatube" && (
+            <p>
+              <Link
+                to={`/actors?${new URLSearchParams({ q: person.data.name })}`}
+              >
+                按此名字查询演员资料与壁纸
+              </Link>
+            </p>
+          )}
         </>
       )}
       <QueryError error={works.error} retry={() => void works.refetch()} />

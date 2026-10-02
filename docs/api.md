@@ -60,6 +60,9 @@
 | `GET /api/metadata/status` | `libraryId?,limit,cursor` → `MetadataStatus`，任务计数/revision 和有界失败目标 |
 | `GET /api/people/{id}` | `Person`：name、source、photoAssetId 等，不提供跨源名字合并 |
 | `GET /api/people/{id}/works` | `limit,cursor` → `PersonWorks`；当前有效资料/本地可用作品，电视剧不按单集重复 |
+| `GET /api/metadata/actors/search` | `q` → `ActorSearchPage`：MetaTube 演员姓名/别名查询，最多 50 个去重候选及 truncated 标记 |
+| `GET /api/metadata/actors/{id}` | 搜索返回的签名 id → `ActorDetail`：姓名、别名、简介、生日、出道日期、身高等，以及 photoId / wallpapers 图片引用 |
+| `GET/HEAD /api/metadata/actor-images/{id}` | 演员查询签发的图片引用 → 图片字节；需要家庭登录，不接受客户端 URL，单图最多 5 MiB |
 | `GET/HEAD /api/assets/{id}/content` | 已授权、仍有效的缓存图片字节，不接受任意 URL 代理 |
 | `GET /api/settings/metadata` | `Settings`：各来源 URL、revision、catalogId、credentialSet、pinSet、configured；无秘密内容 |
 | `PATCH /api/settings/metadata/{source}` | `SettingsPatch` → 更新后的 `ProviderSettings`；错误不回显输入秘密 |
@@ -69,6 +72,14 @@ subject 是本地可匹配目标，与 media/series ID 不同，请从详情的 
 `Match` 分离 selection（automatic/manual）、cacheState（有效/过期/缺失）和后台尝试状态。手动选择保留不意味着过期快照可继续展示。演职员/图片可选部分有独立状态与重试时间；Actor/Director、角色、人物身份均在来源目录空间内处理。图片同 key 合并下载，不同图最多全局 4/同源 2 个；缓存命中不等待其他慢图。
 
 设置必须携带 revision；credential/PIN 省略、null、空白表示保持，clearCredential/clearPin 显式清除。只有 TVDB 接受 PIN，只有 MetaTube 接受 URL。更换 MetaTube 地址时不能沿用旧 Token，须提供新值或清除；新目录空间隔离旧标识。URL 规范化保留反向代理前缀并包含 `/v1`；configured 仅表示具备配置，不是连接测试。重复相同保存不提升 revision，保存不等待资料网络请求。旧环境变量不读取/导入。
+
+### 独立演员查询
+
+页面入口 `/actors`，也可从 MetaTube 本地人物页按当前姓名跳转查询。姓名为 1–256 字符；HTTP 404 搜索结果视为空列表，上游失败与空结果区分。结果不保证覆盖全部上游 Provider，截断/无效条目通过 `truncated` 提示；不自动选择同名人物，不修改影片匹配、人物关系或媒体文件。
+
+演员与图片 id 是服务端 HMAC 签名的短期引用，不是本地 person ID；有效期一小时，绑定 MetaTube 目录空间和配置版本。过期或配置发生变化返回 `CANDIDATE_STALE`，重新搜索即可；签名不能替代家庭会话。查询按需读取 MetaTube 的 lazy 缓存，不新增本地持久化演员/图片缓存或数据库迁移。
+
+头像使用 MetaTube `images/primary`。演员 Provider 不支持 `thumb/backdrop`，壁纸改用 `primary?ratio=0` 保留比例；详情 `images` 中最多 20 个有效、去重 HTTP(S) 引用仅通过已配置 MetaTube 的图片接口代理。客户端不能指定或修改图片 URL，ReelNest 不直接请求这些图片源站、不跟随重定向、不向图片接口发送 Bearer Token。图片缺失时可单独重试，不影响演员资料；图片并发沿用全局 4 / 同源 2 的预算。
 
 ## 播放与字幕
 

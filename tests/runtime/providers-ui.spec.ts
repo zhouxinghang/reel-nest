@@ -193,3 +193,72 @@ test("照片与横图下载失败保留人物作品和本地播放", async ({ pa
   await page.getByTestId("media-card").getByRole("link").click();
   await play(page);
 });
+
+test("MetaTube 按演员名字查询资料和壁纸，无需本地影片", async ({
+  page,
+}, info) => {
+  await page.goto(origin + "/actors");
+  await expect(page.getByText(/尚未配置 MetaTube/)).toBeVisible();
+  expect(
+    (
+      await page.request.patch(origin + "/api/settings/metadata/metatube", {
+        data: {
+          revision: 1,
+          url: "http://127.0.0.1:18095",
+          credential: "isolated-browser-metatube-token",
+        },
+      })
+    ).status(),
+  ).toBe(200);
+  await page.reload();
+  await page.getByLabel("演员名字").fill("MetaTube 演员");
+  await page.getByRole("button", { name: "查询演员", exact: true }).click();
+  await expect(page.getByText("找到 2 个候选，请选择演员")).toBeVisible();
+  await expect(page.getByRole("region", { name: "演员资料" })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: /MetaTube 演员.*exampleactor/ })
+    .click();
+  await expect(page.getByText("按名字查询的演员简介")).toBeVisible();
+  await expect(page.getByText("1995-01-02", { exact: true })).toBeVisible();
+  await expect(page.getByText("170 cm")).toBeVisible();
+  const profile = page.getByRole("region", { name: "演员资料" });
+  const wallpaper = profile.getByAltText("MetaTube 演员壁纸 1");
+  await wallpaper.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      wallpaper.evaluate((image) => (image as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await expect(profile.getByRole("link", { name: "下载图片" })).toHaveCount(2);
+  const imageLink = await profile
+    .getByRole("link", { name: /查看大图 1/ })
+    .getAttribute("href");
+  expect(imageLink).toMatch(/^\/api\/metadata\/actor-images\//);
+  const imageResponse = await page.request.get(origin + imageLink);
+  expect(imageResponse.status()).toBe(200);
+  expect(imageResponse.headers()["content-type"]).toBe("image/png");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: info.outputPath("actors-desktop.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: info.outputPath("actors-mobile.png"),
+    fullPage: true,
+  });
+  await page.getByLabel("演员名字").fill("不存在的演员");
+  await page.getByRole("button", { name: "查询演员", exact: true }).click();
+  await expect(
+    page.getByText("未找到演员，请尝试其他名字或别名。"),
+  ).toBeVisible();
+  await expect(profile).toHaveCount(0);
+  await page.goBack();
+  await expect(page.getByText("按名字查询的演员简介")).toBeVisible();
+});

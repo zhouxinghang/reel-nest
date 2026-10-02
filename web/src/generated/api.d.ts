@@ -375,6 +375,58 @@ export interface paths {
     patch: operations["updateMetadataSettings"];
     trace?: never;
   };
+  "/api/metadata/actors/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Search configured MetaTube actor providers by name; read-only, no local people merge. Up to 50 distinct candidates; provider coverage is not guaranteed. */
+    get: operations["actorSearch"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/metadata/actors/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Fetch a searched actor by signed identity. References expire after one hour; changing provider settings invalidates them. Does not alter local title credits. */
+    get: operations["actorDetail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/metadata/actor-images/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Household-authenticated image proxy for signed provider-issued actor images only. No client URL or credentials. At most 5 MiB, no redirects; wallpapers use primary with ratio=0, never actor backdrop. */
+    get: operations["actorImage"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    /** @description Household-authenticated image proxy for signed provider-issued actor images only. No client URL or credentials. At most 5 MiB, no redirects; wallpapers use primary with ratio=0, never actor backdrop. */
+    head: operations["actorImageHead"];
+    patch?: never;
+    trace?: never;
+  };
   "/api/people/{id}": {
     parameters: {
       query?: never;
@@ -857,6 +909,38 @@ export interface components {
     EpisodeFile: {
       episodeNumber: number;
       file: components["schemas"]["MediaCard"];
+    };
+    /** @description Opaque HMAC-authenticated reference, not a stable local person ID. Session authentication is required; valid for at most one hour and one provider configuration revision. */
+    ActorToken: string;
+    ActorCandidate: {
+      id: components["schemas"]["ActorToken"];
+      name: string;
+      aliases: string[];
+      provider: string;
+      photoId: components["schemas"]["ActorToken"];
+    };
+    ActorSearchPage: {
+      items: components["schemas"]["ActorCandidate"][];
+      truncated: boolean;
+    };
+    ActorDetail: {
+      id: components["schemas"]["ActorToken"];
+      name: string;
+      aliases: string[];
+      provider: string;
+      photoId: components["schemas"]["ActorToken"];
+      summary: string;
+      homepage: string;
+      birthday: string;
+      debutDate: string;
+      nationality: string;
+      height: string;
+      bloodType: string;
+      hobby: string;
+      skill: string;
+      measurements: string;
+      cupSize: string;
+      wallpapers: components["schemas"]["ActorToken"][];
     };
     Person: {
       id: components["schemas"]["ID"];
@@ -1649,6 +1733,99 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ProviderSettings"];
         };
+      };
+      default: components["responses"]["Error"];
+    };
+  };
+  actorSearch: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActorSearchPage"];
+        };
+      };
+      default: components["responses"]["Error"];
+    };
+  };
+  actorDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["ActorToken"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActorDetail"];
+        };
+      };
+      default: components["responses"]["Error"];
+    };
+  };
+  actorImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["ActorToken"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": string;
+          "image/png": string;
+          "image/webp": string;
+          "image/gif": string;
+        };
+      };
+      default: components["responses"]["Error"];
+    };
+  };
+  actorImageHead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["ActorToken"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components["responses"]["Error"];
     };

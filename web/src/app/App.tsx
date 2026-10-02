@@ -87,6 +87,14 @@ export function App() {
                 {labels[c]}
               </Link>
             ))}
+            <Link
+              to="/actors"
+              aria-current={
+                location.pathname === "/actors" ? "page" : undefined
+              }
+            >
+              演员查询
+            </Link>
             <Link to="/libraries">媒体库管理</Link>
             <Link to="/tasks">影片资料任务</Link>
             <Link

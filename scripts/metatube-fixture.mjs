@@ -11,12 +11,24 @@ export async function startMetaTubeFixture() {
       res.end(JSON.stringify({ data }));
     };
     if (url.pathname.startsWith("/v1/images/")) {
-      if (req.headers.authorization || url.search) {
+      const actor = ["exampleactor", "otheractor"].includes(parts[4]);
+      if (
+        req.headers.authorization ||
+        (!actor && url.search) ||
+        (actor &&
+          (parts[3] !== "primary" ||
+            (url.search && url.searchParams.get("ratio") !== "0")))
+      ) {
         res.writeHead(400).end();
         return;
       }
       const type = parts[3];
-      const name = type === "primary" ? "poster" : type;
+      const name =
+        actor && url.searchParams.get("ratio") === "0"
+          ? "backdrop"
+          : type === "primary"
+            ? "poster"
+            : type;
       res.setHeader("Content-Type", "image/png");
       res.end(readFileSync(`tests/fixtures/tmdb-${name}.png`));
       return;
@@ -39,7 +51,32 @@ export async function startMetaTubeFixture() {
       actors: ["MetaTube 演员"],
       director: "MetaTube 导演",
     });
-    if (url.pathname === "/v1/movies/search") {
+    const actor = (provider) => ({
+      id: "actor/中文",
+      provider,
+      name: "MetaTube 演员",
+      aliases: ["演员别名"],
+      summary: "按名字查询的演员简介",
+      homepage: "https://example.invalid/actor/1",
+      birthday: "1995-01-02T00:00:00Z",
+      debut_date: "2015-01-01T00:00:00Z",
+      nationality: "日本",
+      height: 170,
+      hobby: "阅读",
+      images: [
+        "https://not-fetched.invalid/wallpaper-1.jpg",
+        "https://not-fetched.invalid/wallpaper-2.jpg",
+      ],
+    });
+    if (url.pathname === "/v1/actors/search") {
+      if (url.searchParams.get("q") === "不存在的演员") {
+        res.writeHead(404).end();
+      } else {
+        json([actor("ExampleActor"), actor("OtherActor")]);
+      }
+    } else if (parts[2] === "actors" && parts[4] === "actor/中文") {
+      json(actor(parts[3]));
+    } else if (url.pathname === "/v1/movies/search") {
       const q = url.searchParams.get("q");
       json(
         q === "选择" ? [movie("Example"), movie("Other")] : [movie("Example")],

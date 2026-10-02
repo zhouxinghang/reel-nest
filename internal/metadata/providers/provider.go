@@ -38,6 +38,9 @@ type Adapter interface {
 	Search(context.Context, string, string) (model.SearchResult, error)
 	FetchTitle(context.Context, model.RemoteRef, Parts) (model.Title, error)
 	FetchImage(context.Context, string, string) ([]byte, string, error)
+	SearchActors(context.Context, string) (model.ActorSearch, error)
+	FetchActor(context.Context, model.ActorRef) (model.ActorProfile, error)
+	FetchActorImage(context.Context, model.ActorRef, string, bool) ([]byte, string, error)
 }
 
 // Gate reserves request start times, not whole network operations. Each source
@@ -387,6 +390,9 @@ func (c *client) FetchImage(ctx context.Context, kind, reference string) ([]byte
 	if endpoint == "" {
 		return nil, "", model.ErrAsset
 	}
+	return c.fetchImage(ctx, endpoint)
+}
+func (c *client) fetchImage(ctx context.Context, endpoint string) ([]byte, string, error) {
 	b, h, _, e := c.request(ctx, "GET", endpoint, nil, "", c.images, 5<<20)
 	if e != nil {
 		return nil, "", e

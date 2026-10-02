@@ -332,3 +332,14 @@ node scripts/verify-organization-upgrade.mjs /absolute/pre-delete-reelnest /abso
 - 最终37 unit/hook、16浏览器、三轮48/48、全量Go/race、vet、构建、契约、格式、依赖及diff检查通过。50k文件档首页p95 86.301ms，20秒慢源时设置p95 1.123ms，真实50k文件有界遍历及SQL分批发布通过；原始JSON和完整命令在交付记录。
 - 所有验证仅使用临时媒体/DB和受控上游；未部署、未重启旧实例、未操作现有DATA_DIR/真实凭据/用户媒体、未push。Docker不可用，真实三源、NAS/EROFS、跨设备和播放器/音轨兼容性未验证。
 - 01–06全为resolved，Frontier为空。部署需另行授权、完整敏感备份及新空DATA_DIR；回退只恢复旧应用状态，不能恢复已删除源视频。
+
+## 2026-10-02：MetaTube 演员名字查询与壁纸
+
+- 新增独立 `/actors` 入口；按名字/别名搜索，无需影片或媒体库。候选按真实 Provider + 演员字符串 ID 区分；显式选择后展示头像、简介、别名、生日等资料，以及最多 20 张保留比例的图片/壁纸和下载入口。MetaTube 本地人物页可按姓名跳转，不自动合并人物或改写关联。
+- 上游依据为先前提供的 `API.md` 第 6.5/6.7/6.10 节：演员搜索和详情使用 Bearer；演员不支持 backdrop/thumb，图片统一走配置 MetaTube 的 primary 接口，壁纸 ratio=0。图片源 URL 只由演员详情签发，不接受客户端改写，不直接访问外部图片源或跟随重定向，图片通道不发送 Token。
+- Provider 测试覆盖搜索编码、原始 ID/Provider 大小写、重复及同名候选、50 项边界、非法条目、空/404/错误信封/401/429/500、详情身份不符、图片 URL 筛选/去重、日期空值、原比例参数、重定向和伪图片。Service/HTTP 覆盖家庭鉴权、签名用途隔离/篡改/长度/过期、参数限制、配置/Token 轮换、在途配置切换丢弃旧结果、取消及共享图片预算、图片 GET/HEAD。
+- `go test -race -count=1 ./...` 全部通过，metadata 14.209s、providers 8.212s、transport/http 35.421s；`go vet ./...` 通过。既有完整资料/播放/删除/存储测试没有移除或放宽。
+- `npm run test:unit` **41/41** 通过；新增四项覆盖未配置指引、显式候选选择、图片故障独立恢复、错误/空结果区分，以及旧搜索取消且迟到结果不覆盖新名字。`npm run typecheck:tests` 通过。
+- `npx playwright test` **17/17** 通过（46.1s）；新增演员完整流程验证无本地影片的查询、两个同名来源、资料与两张真实 fixture 图片、下载链接响应、390px 无横向溢出、空结果与浏览器后退恢复。该专项另独立通过两次，最终 4.5s；桌面/390px 截图已目视核验，保存在 `test-results/runtime-providers-ui-MetaTube-按演员名字查询资料和壁纸，无需本地影片/`。
+- `npm run build`、`contracts:check`、`architecture:check`、`baseline:check`、`format:check`、`git diff --check` 通过。OpenAPI 新增四个操作（含图片 HEAD）及响应示例，生成类型可复现。
+- 仅使用临时 SQLite、隔离测试进程和本地受控上游。没有新增依赖/数据库迁移，没有读取真实凭据、调用真实 MetaTube、操作用户媒体、重启或部署现有服务；真实上游覆盖、图片清晰度及 Docker/NAS 不由 fixture 证明。

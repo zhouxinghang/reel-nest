@@ -1,0 +1,122 @@
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 24px 0;
+}
+.search label {
+  flex: 1 1 200px;
+  max-width: 560px;
+}
+.results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.candidate {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 16px;
+  padding: 12px;
+  color: inherit;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.candidate[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+.candidate span span {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.thumbnail {
+  flex: 0 0 64px;
+  height: 86px;
+  background: #29332b;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.thumbnail img,
+.portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 24px 0;
+}
+.portrait {
+  flex: 0 0 120px;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.profile {
+  overflow-wrap: anywhere;
+}
+.summary {
+  white-space: pre-wrap;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.facts dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.facts dd {
+  margin: 6px 0 0;
+}
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+.gallery figure {
+  margin: 0;
+  min-width: 0;
+}
+.gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  object-fit: contain;
+  background: var(--surface-raised);
+  border-radius: 8px;
+}
+.gallery figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0;
+}
+.placeholder {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 150px;
+  color: var(--muted);
+  background: var(--surface-raised);
+}
+@media (max-width: 760px) {
+  .hero {
+    gap: 16px;
+  }
+  .portrait {
+    flex-basis: 90px;
+    height: 135px;
+  }
+}

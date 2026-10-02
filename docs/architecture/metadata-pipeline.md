@@ -18,6 +18,10 @@
 | TVDB | API Key/PIN 登录，缓存 JWT 最多 24 小时；401 丢弃 JWT，不无限重试；搜索不设置过滤原语言的 language=zho；中文→英文→原名；按已知 peopleType 建立演员/导演，按 artwork types 选择横图 |
 | MetaTube | 仅电影；provider 小写、remote ID 不变；搜索只读；一次详情取得基本资料/演职员/图片引用；name-only 人物不猜外部 ID；图片地址只由配置前缀和文档端点构造，不访问返回的任意图片 URL |
 
+独立演员查询（2026-10-02）补充：`SearchActors/FetchActor/FetchActorImage` 通过 MetaTube 演员接口工作，不改变上表电影演职员的 name-only 身份规则。`ActorRef` 与电影 `RemoteRef` 分开，按姓名得到候选后由用户选择，不写本地人物/作品关联。Service 签发一小时、配置版本绑定且用途隔离的演员/图片引用；家庭鉴权仍由 transport 执行。在途配置变更后丢弃旧结果，客户端不得传任意 URL。
+
+这条独立查询路径不进入作品快照/持久化 asset 缓存，也不创建数据库记录；详情按需使用上游 `lazy=true`。头像和壁纸只请求已配置 MetaTube 的 `images/primary`；壁纸的 `ratio=0` 及 `url` 仅由经校验的演员详情 images 和服务端签名确定，ReelNest 不访问图片源站。最多 50 候选、20 张壁纸、1 MiB 上游 JSON / 5 MiB 单图；沿用 API/图片 Gate 与下载并发预算。原有 `/api/assets` 缓存合并下载语义不变。
+
 所有搜索在结果被截断、丢弃无效行、重复或分页未完时不能证明唯一。自动匹配按媒体库顺序，只接受完整候选集中唯一的规范标题/原名/编号及年份匹配；无可靠结果继续回退。文件路径先取文件名并去视频扩展名，避免拿绝对路径或扩展名搜索。
 
 配置保存不获取网络锁。领取前比较 DB revision 与不可变注册表，防止“设置提交后、注册表发布前”的间隙混用版本。Token 更新不换目录空间；MetaTube 换地址不重解释旧空间 ID。旧手动绑定及其有效快照仍保留，旧空间不会被新地址刷新。
