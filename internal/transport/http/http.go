@@ -1,6 +1,6 @@
 // Package http provides explicit contract DTOs and authentication adapters.
 // This assembly is not exposed by cmd/reelnest until the remaining routes and
-// UI land. It mounts identity/library/scan and provider-setting routes so far.
+// UI land. It mounts identity/library/scan, metadata, people and asset routes.
 package http
 
 import (
@@ -78,6 +78,13 @@ func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, m *metadata.S
 	})
 	register("GET /api/libraries", true, t.libraries)
 	register("GET /api/settings/metadata", true, t.metadataSettings)
+	register("GET /api/metadata/subjects/{id}/candidates", true, t.metadataCandidates)
+	register("PUT /api/metadata/subjects/{id}/selection", true, t.metadataSelection)
+	register("POST /api/metadata/refresh", true, t.metadataRefresh)
+	register("GET /api/metadata/status", true, t.metadataStatus)
+	register("GET /api/people/{id}", true, t.metadataPerson)
+	register("GET /api/people/{id}/works", true, t.metadataPersonWorks)
+	register("GET /api/assets/{id}/content", true, t.metadataAsset)
 	register("PATCH /api/settings/metadata/{source}", true, t.updateMetadataSettings)
 	register("POST /api/libraries", true, t.createLibrary)
 	register("PATCH /api/libraries/{id}", true, t.updateLibrary)
@@ -140,6 +147,14 @@ func (t *Transport) fail(w http.ResponseWriter, e error) {
 	case errors.Is(e, identity.ErrLimited):
 		code, status, message = "RATE_LIMITED", 429, "登录过于频繁，请稍后重试"
 		w.Header().Set("Retry-After", "300")
+	case errors.Is(e, model.ErrCandidate):
+		code, status, message = "CANDIDATE_STALE", 409, "候选已失效，请重新搜索"
+	case errors.Is(e, model.ErrProvider):
+		code, status, message = "PROVIDER_UNAVAILABLE", 503, "资料源暂不可用"
+	case errors.Is(e, model.ErrMetadata):
+		code, status, message = "METADATA_UNAVAILABLE", 503, "资料暂不可用，已有选择保留"
+	case errors.Is(e, model.ErrAsset):
+		code, status, message = "ASSET_UNAVAILABLE", 503, "图片暂不可用"
 	case errors.Is(e, model.ErrInvalid):
 		code, status, message = "INVALID_REQUEST", 400, "请求内容无效"
 	case errors.Is(e, model.ErrNotFound):

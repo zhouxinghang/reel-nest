@@ -89,14 +89,14 @@ func (s *Store) SaveProviderSettings(ctx context.Context, next model.StoredProvi
  SELECT s.id,1,'queued',? FROM metadata_subjects s
  LEFT JOIN metadata_bindings b ON b.subject_id=s.id
  LEFT JOIN remote_titles r ON r.id=b.remote_title_id
- WHERE (s.media_file_id IS NULL OR EXISTS(SELECT 1 FROM media_files f WHERE f.id=s.media_file_id AND f.state='available'))
+ WHERE 1=1 `+targetAvailable+`
  AND (((b.selection IS NULL OR b.selection='automatic') AND EXISTS(SELECT 1 FROM library_sources l WHERE l.library_id=s.library_id AND l.source=?))
  OR (b.selection='manual' AND r.catalog_id=?))
  ON CONFLICT(subject_id) DO UPDATE SET requested_generation=metadata_jobs.requested_generation+1,
  state='queued',attempts=0,requested_at=excluded.requested_at,started_at=NULL,finished_at=NULL,next_attempt_at=NULL,error_code=NULL`, time.Now().UnixMilli(), next.Source, next.CatalogID); err != nil {
 		return next, err
 	}
-	if _, err = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1 WHERE singleton=1"); err != nil {
+	if _, err = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1,metadata=metadata+1 WHERE singleton=1"); err != nil {
 		return next, err
 	}
 	return next, tx.Commit()

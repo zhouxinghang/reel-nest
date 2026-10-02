@@ -119,7 +119,7 @@ func (s *Store) CreateLibrary(ctx context.Context, l model.Library) (model.Libra
 	if _, e = tx.ExecContext(ctx, "INSERT INTO scan_runs(id,library_id,state,requested_at) VALUES(?,?,'queued',?)", scanID, l.ID, now); e != nil {
 		return l, e
 	}
-	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1 WHERE singleton=1"); e != nil {
+	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1,metadata=metadata+1 WHERE singleton=1"); e != nil {
 		return l, e
 	}
 	l.LatestScanID = &scanID
@@ -169,13 +169,13 @@ func (s *Store) UpdateLibrary(ctx context.Context, id string, expected int64, na
 		// selections and their jobs are deliberately not replaced by policy changes.
 		_, e = tx.ExecContext(ctx, `INSERT INTO metadata_jobs(subject_id,requested_generation,state,requested_at)
  SELECT s.id,1,'queued',? FROM metadata_subjects s LEFT JOIN metadata_bindings b ON b.subject_id=s.id
- WHERE s.library_id=? AND (b.selection IS NULL OR b.selection='automatic')
- ON CONFLICT(subject_id) DO UPDATE SET requested_generation=metadata_jobs.requested_generation+1,state='queued',requested_at=excluded.requested_at,attempts=0`, time.Now().UnixMilli(), id)
+ WHERE s.library_id=? AND (b.selection IS NULL OR b.selection='automatic') `+targetAvailable+`
+ ON CONFLICT(subject_id) DO UPDATE SET requested_generation=metadata_jobs.requested_generation+1,state='queued',requested_at=excluded.requested_at,attempts=0,started_at=NULL,finished_at=NULL,next_attempt_at=NULL,error_code=NULL`, time.Now().UnixMilli(), id)
 		if e != nil {
 			return l, e
 		}
 	}
-	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1 WHERE singleton=1"); e != nil {
+	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1,metadata=metadata+1 WHERE singleton=1"); e != nil {
 		return l, e
 	}
 	return l, tx.Commit()

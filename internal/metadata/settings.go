@@ -1,6 +1,6 @@
-// Package metadata owns provider settings and immutable provider configuration
-// snapshots. Matching workers and adapters consume snapshots, never a settings
-// lock held across network I/O. No legacy environment import is supported.
+// Package metadata owns provider configuration, matching jobs and image
+// downloads. Workers consume immutable snapshots; settings locks never cover
+// network I/O. No legacy environment import is supported.
 package metadata
 
 import (
@@ -67,6 +67,7 @@ type Service struct {
 	update  sync.Mutex
 	current atomic.Pointer[registry]
 	closed  atomic.Bool
+	engine  *engine
 }
 
 func New(ctx context.Context, s *store.Store) (*Service, error) {
@@ -102,6 +103,7 @@ func New(ctx context.Context, s *store.Store) (*Service, error) {
 		reg.providers[i] = p
 	}
 	m.current.Store(reg)
+	m.initEngine(Options{})
 	return m, nil
 }
 
@@ -138,8 +140,12 @@ func (m *Service) Settings() ([]ProviderSnapshot, error) {
 // It does not own or close the database.
 func (m *Service) Close() {
 	m.update.Lock()
-	defer m.update.Unlock()
+	m.engine.mu.Lock()
 	m.closed.Store(true)
+	m.engine.cancel()
+	m.engine.mu.Unlock()
+	m.update.Unlock()
+	m.engine.wg.Wait()
 }
 
 type SettingsPatch struct {

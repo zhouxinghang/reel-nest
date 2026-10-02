@@ -24,7 +24,8 @@ CREATE TABLE revisions (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     catalog INTEGER NOT NULL DEFAULT 1 CHECK (catalog > 0),
     favorites INTEGER NOT NULL DEFAULT 1 CHECK (favorites > 0),
-    progress INTEGER NOT NULL DEFAULT 1 CHECK (progress > 0)
+    progress INTEGER NOT NULL DEFAULT 1 CHECK (progress > 0),
+    metadata INTEGER NOT NULL DEFAULT 1 CHECK (metadata > 0)
 ) STRICT;
 INSERT INTO revisions(singleton) VALUES (1);
 

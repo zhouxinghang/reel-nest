@@ -60,6 +60,9 @@ func NewRuntime(ctx context.Context, config RuntimeConfig) (_ *Runtime, err erro
 	if e != nil {
 		return nil, e
 	}
+	if e = r.metadata.Start(); e != nil {
+		return nil, e
+	}
 	r.handler, e = transport.New(s, i, r.catalog, r.metadata, config.MediaRoots, config.CookieSecure)
 	if e != nil {
 		return nil, e

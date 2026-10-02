@@ -410,3 +410,5 @@ MetaTube 地址变化：不把旧 Token 带给新地址；旧手动选择保持�
 - 2026-10-02：02 已完成安全文件、家庭身份、新媒体库/扫描事务与生命周期闭环，全量和最终专项回归通过；状态/接口及未集成边界见 02 Answer 与阶段 02 交接文档。新命令入口/前端尚未切换，无部署或数据操作，Frontier 为 03。
 
 - 2026-10-02：03 的首个增量已实现新资料源设置、加密/目录空间、不可变配置快照及设置 HTTP，验证/剩余项见 03 Progress 和阶段交接文档。03 保持 claimed，adapter、完整版本提交、人物/图片未完成，不解除后续依赖、不执行部署。
+
+- 2026-10-02：03 完整资料后端已完成并 resolved：三源 adapters、有界任务与统一版本提交、有效快照/人物/图片、新 HTTP 契约均通过受控 HTTP+SQLite 和最终全量回归。fresh schema 增加独立 metadata 任务状态 revision，避免任务领取使普通 catalog 分页失效；无迁移。交接/实际证据见 03 Answer 与 `docs/architecture/metadata-pipeline.md`。Frontier 为 04，新 CLI/前端未切换，无部署或用户数据操作。

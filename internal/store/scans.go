@@ -183,7 +183,7 @@ func (s *Store) CommitScan(ctx context.Context, id string) error {
 	if e = rebuildLocalProjection(ctx, tx, library); e != nil {
 		return e
 	}
-	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1 WHERE singleton=1"); e != nil {
+	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1,metadata=metadata+1 WHERE singleton=1"); e != nil {
 		return e
 	}
 	if _, e = tx.ExecContext(ctx, "UPDATE scan_runs SET state='completed',finished_at=max(started_at,?),error_code=NULL WHERE id=?", now, id); e != nil {

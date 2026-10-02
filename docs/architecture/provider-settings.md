@@ -1,5 +1,7 @@
 # 阶段 03 增量：资料源设置与配置快照
 
+> 历史增量记录：03 的后续完整后端实现见 [资料流水线交接](./metadata-pipeline.md)。下文“尚未实现”描述的是首个增量提交时的状态。
+
 日期：2026-10-02（Asia/Shanghai）。对应 `.scratch/architecture-refactor/issues/03-metadata-providers-assets.md`。
 
 这是 **03 的第一个可验证增量，不是 03 整体完成**。新 `app.NewRuntime` 提供设置 HTTP；`cmd/reelnest`、旧前端和正在运行的实例未切换。没有部署、迁移、真实资料源联通或用户媒体操作。

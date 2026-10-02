@@ -1,6 +1,6 @@
 # 03：资料源、版本提交、人物与图片
 
-Status: claimed
+Status: resolved
 Blocked by: 01, 02
 
 Parent: [全量重构技术方案](../spec.md)
@@ -19,15 +19,15 @@ Parent: [全量重构技术方案](../spec.md)
 
 ## Acceptance criteria
 
-- [ ] 三源按目录优先级匹配；中文回退、候选完整性与唯一性、来源独立限流/冷却符合既有需求。
-- [ ] MetaTube 仅电影，provider/remote_id 保持真实身份，搜索不写库；同 ID 跨来源/服务地址不会混用。
-- [ ] 页面配置成功后即时生效；空输入保持/显式清除/旧 revision 冲突/换地址 Token 保护/密钥缺失拒绝启动均通过。
-- [ ] 慢上游不使设置保存等待网络；成功和失败提交均核对 subject、binding、policy、provider 和 job generation。
-- [ ] 目标被扫描移除、手动改绑、策略/配置变化后，旧任务不能复活目标、清除新任务或覆盖新选择；以可控交错测试验证。
-- [ ] 缓存到期不清除手动选择，不返回过期内容；人物只来自当前有效本地关联，不按同名猜身份。
-- [ ] 图片按 key 合并、全局/同源有界；命中不等慢图；取消不写负缓存；旧引用/旧配置结果不能污染新图。
-- [ ] 上游响应体、图片大小/类型、重定向、任意 URL 和凭据隔离保持安全；无凭据及上游失败不影响本地读取。
-- [ ] 不保留 payload 双真源、旧人物索引补丁或 legacy 配置迁入路径；有效刷新和失败重试能力保留。
+- [x] 三源按目录优先级匹配；中文回退、候选完整性与唯一性、来源独立限流/冷却符合既有需求。
+- [x] MetaTube 仅电影，provider/remote_id 保持真实身份，搜索不写库；同 ID 跨来源/服务地址不会混用。
+- [x] 页面配置成功后即时生效；空输入保持/显式清除/旧 revision 冲突/换地址 Token 保护/密钥缺失拒绝启动均通过。
+- [x] 慢上游不使设置保存等待网络；成功和失败提交均核对 subject、binding、policy、provider 和 job generation。
+- [x] 目标被扫描移除、手动改绑、策略/配置变化后，旧任务不能复活目标、清除新任务或覆盖新选择；以可控交错测试验证。
+- [x] 缓存到期不清除手动选择，不返回过期内容；人物只来自当前有效本地关联，不按同名猜身份。
+- [x] 图片按 key 合并、全局/同源有界；命中不等慢图；取消不写负缓存；旧引用/旧配置结果不能污染新图。
+- [x] 上游响应体、图片大小/类型、重定向、任意 URL 和凭据隔离保持安全；无凭据及上游失败不影响本地读取。
+- [x] 不保留 payload 双真源、旧人物索引补丁或 legacy 配置迁入路径；有效刷新和失败重试能力保留。
 
 ## 验证与交接
 
@@ -75,3 +75,58 @@ Parent: [全量重构技术方案](../spec.md)
 4. 03 完整验收后才能 resolved 并推进 04；本轮没有认领 04–06。
 
 未修改 schema、既有 ADR、CONTEXT 或生产 README/API 文档。未切换 CLI/前端/用户 DATA_DIR，未部署、重启用户服务、读取真实凭据或操作用户媒体。Docker CLI 不可用；容器、真实三源/NAS、外部播放器未验证。
+
+## Progress — 完整后端收尾（2026-10-02）
+
+继续完成而非再次拆小票。新增三源结构化 adapter、两个有界 worker、成功/失败/补充资料统一事务 CAS、有效快照/人物、统一图片与全部 03 新 HTTP 能力。完整交接见 [资料流水线](../../../docs/architecture/metadata-pipeline.md)。
+
+- 22 个新增顶层测试（含参数化交错场景），覆盖真实 HTTP、SQLite FK 失败回滚、旧配置/目标/选择/策略/generation、人物名称与目录空间、重启、补充 TTL、图片合并/全局和来源上限/取消/改绑/移除/删除，以及新 HTTP 响应契约。
+- 本轮发现并修正：目录策略重新排队残留旧重试字段、不可用目标错误排队、任务状态分页与 catalog revision 的耦合，以及补充内容快照竞争后任务可能滞留 running。当前 fresh schema 增加独立 `revisions.metadata`，无 migration/legacy 导入。
+- 最后专项三轮 race 已通过：metadata 26.880s、providers 11.562s、store 33.507s、HTTP 28.332s、integration 8.539s（包总时长）。之后仅把慢源保存采样由单次扩大到 40 次；单测通过，p95 0.562ms、max 1.469ms。
+- 首轮 `npm test` 全部通过，含 27 个旧 UI 场景；最终源码的第二轮完整 `npm test` / Go race 亦已通过，完整结果见 Answer。
+
+40 次保存期间两个实际资料 worker 被受控 HTTP 阻塞；上述是小型合成库并发测试采样，不是 50,000 文件/真实服务 SLA。没有切换新 CLI/前端、部署、读取真实凭据或操作用户媒体。
+
+
+## Answer
+
+**03 已完成，Status: resolved。** 基线 `7d4ec8e`；本次完整交付资料后端，不再次停在增量。详细实现/消费接口见 [资料流水线交接](../../../docs/architecture/metadata-pipeline.md)。
+
+### 验收结果
+
+| 验收 | 实现与证据 |
+| --- | --- |
+| 三源优先级、中文回退、唯一性、冷却 | 新结构化 adapters；真实 HTTP contract 覆盖 TMDB/TVDB/MetaTube，截断/坏行/重复不能证明唯一；实际 worker 的 TMDB 不完整→TVDB 回退通过 |
+| 原始身份与搜索只读 | 不建立整数 ID bridge；保留大数字字符串和 MetaTube 大小写/转义身份；电影限制、跨地址同 ID/人物隔离测试通过 |
+| 配置即时生效与并发 | 复用首轮加密/保留/清除/revision/密钥验证；两个实际 worker 阻塞时 40 次保存不等待上游；旧成功和旧失败均不能覆写新配置 |
+| 成功/失败/补充提交 CAS | 目标可用性/类型、subject/binding/policy/provider/catalog/generation 同事务校验；失效工作只处理自己的 generation；补充内容另校验 snapshot revision |
+| 删除/改绑/策略/配置交错 | 可控交错覆盖全部版本维度；真实 scan/文件删除/手动改绑后的旧图片不能写回；FK 失败整事务回滚；新代次不会被旧 worker 清除 |
+| 手动绑定、TTL、人物 | 到期保留 manual 而不返回过期内容；仅重试到期的可选部分、不延长原 TTL；name-only 不跨标题合并；人物只来自当前有效本地绑定，作品去重、优先可用、系列不重复单集 |
+| 图片并发与安全 | 同 key 合并、全局 4/每源 2、命中不等慢图、独立等待者取消；真实失败负缓存；引用/快照/配置及当前可用绑定 CAS；1 MiB JSON / 5 MiB 图片、MIME+签名、重定向/任意 URL/凭据隔离测试通过 |
+| 刷新/重启/HTTP | 2 worker，65s 目标/20s 来源、每 generation 最多三次尝试；恢复不退还 attempts；selection/refresh/status/person/works/asset GET+HEAD 均接入新契约且实测响应通过校验 |
+| 单一新资料真源 | 结构化 snapshot/credits/assets；没有 payload 双真源、旧人物索引修补或 legacy 导入。既有旧 app 测试/入口暂留到 06 清理，非最终双栈交付 |
+
+“页面配置即时生效”在本阶段以新设置 HTTP、实际新 worker/adapter 和旧 UI 回归验证；**新 UI 切换仍属 05，不以旧 Playwright 作为新页面完成证据**。
+
+### 实际验证
+
+环境：macOS arm64，Go 1.25.12、Node 26.7.0、npm 11.19.0、本机 Chrome。只用临时 DB、合成媒体与受控上游。
+
+| 命令 | 最终结果 |
+| --- | --- |
+| `npm test` | 第二轮全量通过：契约生成检查、TypeScript/Vite、全量 Go、27 个 Playwright 场景（1.8m） |
+| `go test -race -count=1 ./...` | 最终全量通过，无 race；旧 app 433.239s；metadata 11.145s、providers 4.838s、store 13.544s、HTTP 10.916s |
+| `go test -race ./internal/metadata/... ./internal/store ./internal/transport/http ./internal/integration -count=3` | 三轮通过，包耗时见本轮 Progress；最终扩展 40 次保存采样也包含在上述最终全量 race 中 |
+| `go test ./internal/metadata -run '^TestSlowWorkersBoundedSettingsImmediateAndOldResultsRejected$' -count=1 -v` | 通过；两个 worker 同时被上游阻塞，40 次设置保存 p95 0.562ms、max 1.469ms（小型合成库，不是生产 SLA） |
+| `npm run contracts:check` / `npm run baseline:check` | 通过；无类型漂移，97 个旧基线声明保留 |
+| `go vet ./...` / `go build ./...` / `GOOS=linux GOARCH=amd64 go build ./...` | 通过；Linux 为交叉编译，非运行验证 |
+| `npm run format:check` / `gofmt -l` / `git diff --check` | 通过 / 无差异 |
+
+首轮全量 race 曾揭示一个测试 fixture 直接改文件状态而未更新读投影，导致代表项断言随随机 ID 排序变化；已改为使用真实 `MarkFileDeleted` 用例，随后三轮专项和第二轮全量 race 均通过，没有跳过或删除测试。
+
+### 交接与边界
+
+- 04 现在可认领：消费有效 Match/人物关系、独立 revision 和有界人物作品页，继续做完整查询投影、SQL 次数/分页/50,000 文件性能验收。当前不宣称达到这些性能目标。
+- 05/06 尚未认领：新前端/播放器切换和旧 app/兼容入口清理仍在其原票范围。
+- 没有修改 CONTEXT/既有 ADR、切换 CLI/前端或用户 DATA_DIR，没有部署、重启用户服务、读取真实凭据或操作真实媒体。
+- schema 仅增加 fresh-install 的 `revisions.metadata`；没有迁移旧数据。Docker CLI 不可用；容器运行、真实三源/NAS/外部播放器未验证。
