@@ -198,6 +198,7 @@ func TestMetaTubeMatchingImagesAndRestart(t *testing.T) {
 		t.Fatalf("invalid source status: %s", body)
 	}
 	count := f.count()
+	saveSettings(t, a, "metatube", map[string]any{"url": "", "clearCredential": true})
 	a.close()
 	disabled := config
 	disabled.MetaTubeURL = ""
@@ -227,6 +228,7 @@ func TestMetaTubeMatchingImagesAndRestart(t *testing.T) {
 	}
 	a = start(t, config)
 	login(t, a)
+	saveSettings(t, a, "metatube", map[string]any{"url": config.MetaTubeURL, "credential": fakeMetaTubeToken})
 	awaitMetadata(t, a)
 	if sourceFile(t, a, dir.ID).Match.Metadata.SourceID != m.SourceID || f.count() != count+2 {
 		t.Fatal("opaque identity did not survive expiry and restart")

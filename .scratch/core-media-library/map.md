@@ -1,6 +1,6 @@
 # 核心家庭媒体管理系统：Ticket 索引
 
-发布日期：2026-09-30。用户已确认原始 9 个纵向切片及依赖；2026-10-01 追加扫描同步、数字单集识别及 Emby 首页/收藏/最近添加，当前已完成 01–18（含按目录配置 TMDB / TVDB 资料源、演员/导演信息、人物照片/关联作品、人物页性能优化、多类型影片图片、MetaTube 及具名媒体库）。Docker 校验按用户要求跳过。
+发布日期：2026-09-30。用户已确认原始 9 个纵向切片及依赖；2026-10-01 追加扫描同步、数字单集识别及 Emby 首页/收藏/最近添加，当前已完成 01–19（含按目录配置 TMDB / TVDB 资料源、演员/导演信息、人物照片/关联作品、人物页性能优化、多类型影片图片、MetaTube、具名媒体库及页面资料源配置）。Docker 校验按用户要求跳过。
 
 ## 执行依据
 
@@ -10,7 +10,7 @@
 - [ADR 0002：以宿主机挂载目录作为媒体接入边界](/Users/bytedance/workspace/reel-nest/docs/adr/0002-host-mounted-media-directories.md)。
 - [ADR 0003：外部播放器使用不过期的单文件只读链接](/Users/bytedance/workspace/reel-nest/docs/adr/0003-non-expiring-read-only-stream-links.md)。
 
-正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–18，不新增技术锁定 ADR。
+正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–19，不新增技术锁定 ADR。
 
 ## Tickets 与依赖
 
@@ -34,14 +34,15 @@
 | 16 | [多类型影片图片](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/16-title-artwork.md) | 12, 14 | resolved |
 | 17 | [MetaTube 影片资料源](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/17-metatube-provider.md) | 12, 16 | resolved |
 | 18 | [按目录分组的具名媒体库](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/18-named-directory-libraries.md) | 02, 11, 12 | resolved |
+| 19 | [页面配置影片资料源](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/19-metadata-settings.md) | 12, 17 | resolved |
 
 所有依赖均指向更早编号，且只列真正阻塞本项的能力。每项交付自身必要的持久化、接口、界面、测试及使用说明，不拆出横向“后端/前端/测试”任务。
 
 ## Frontier
 
-- 已完成：**01–18**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
-- 当前 frontier：**无**。01–18 均已 resolved，无 claimed ticket；父规格与既有未验证边界不变。
-- 最新变更（2026-10-02）：18 个 ticket 与索引状态一致；18 增加目录对应的具名媒体库、名称迁移/修改、单库浏览与按目录分组展示；后续按用户要求将首页及完整“最近添加”改为跨目录统一排序，不影响具名媒体库入口。01 的 Docker 实测验收继续保留未勾选。
+- 已完成：**01–19**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
+- 当前 frontier：无；01–19 均已 resolved，父规格与既有未验证边界不变。
+- 最新变更（2026-10-02）：19 个 ticket 与索引状态一致；19 将 TMDB/TVDB/MetaTube 服务配置迁至页面，支持加密持久化、即时生效、一次性旧环境迁移和并发冲突保护。18 的具名媒体库入口及跨目录“最近添加”保持；01 的 Docker 实测验收继续保留未勾选。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -150,3 +151,7 @@
 - 全量 Go（64 个应用测试及启动器测试）、25 个 Chrome 流程、最终相关 race、vet、生产构建、格式与 diff 检查通过；新增流程独立运行两次，桌面/窄屏已目视检查。未操作用户媒体、调用真实外部服务或重启现有应用，01–18 全部 resolved。
 
 - 2026-10-02（18 后续调整）：按用户要求将首页及完整“最近添加”改为跨目录统一展示，保留具名媒体库入口和其他浏览页分组。专项 5 个及全量 26 个浏览器流程、生产构建、Go vet、格式与 diff 检查通过；桌面/窄屏截图已检查。仅调整前端，无数据迁移；用户授权提交后备份并重启应用。
+
+
+- 2026-10-02：完成 19；页面配置三类影片资料源、加密存储、一次性环境迁移、即时客户端切换和旧页面冲突保护已交付。全量 Go（69 个应用顶层测试及启动器测试）、27 个 Chrome 流程、全量及设置专项 race、vet、构建、格式与 diff 检查通过，桌面/手机布局已目视检查。
+- 自动化仅操作隔离临时数据与外部来源 fixture，未安装依赖或修改用户媒体；提交后按用户前述要求备份并重启本地应用，核验结果保存在受限备份目录。01–19 全部 resolved，无 frontier；Docker/真实外部服务/其他实机未验证边界维持不变。

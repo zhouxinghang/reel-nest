@@ -117,7 +117,7 @@ func (c *metadataHTTP) request(ctx context.Context, method, endpoint, token stri
 		}
 		switch response.StatusCode {
 		case 401, 403:
-			return nil, "", fmt.Errorf("%s 凭据无效或无权限，请部署者检查设置: %w", c.name, errMetadataUnauthorized)
+			return nil, "", fmt.Errorf("%s 凭据无效或无权限，请检查影片资料源配置: %w", c.name, errMetadataUnauthorized)
 		case 429:
 			return nil, "", errors.New(c.name + " 请求受限，已进入冷却期，请稍后重试")
 		case 404:

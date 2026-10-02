@@ -43,13 +43,14 @@ type metadataSourceStatus struct {
 func (s *metadataService) sources() []metadataSourceStatus {
 	result := []metadataSourceStatus{}
 	for _, source := range metadataSources {
-		client := s.providers[source.id]
+		client := s.provider(source.id)
 		result = append(result, metadataSourceStatus{source.id, source.name, client.configured(), client.cooldownUntil()})
 	}
 	return result
 }
 func (s *metadataService) configured() bool {
-	for _, client := range s.providers {
+	for _, source := range metadataSources {
+		client := s.provider(source.id)
 		if client.configured() {
 			return true
 		}

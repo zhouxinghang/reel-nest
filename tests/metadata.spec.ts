@@ -990,7 +990,7 @@ test("MetaTube 目录启用、编号匹配、图片、人物及手动选择", as
     orders.last().getByRole("checkbox", { name: /MetaTube/ }),
   ).toBeChecked();
   await expect(
-    page.getByText(/METATUBE_URL 和 METATUBE_TOKEN_FILE/),
+    page.getByRole("link", { name: "影片资料源配置", exact: true }),
   ).toBeVisible();
   await orders
     .last()
@@ -1061,4 +1061,190 @@ test("MetaTube 目录启用、编号匹配、图片、人物及手动选择", as
   expect(JSON.stringify(await response.json())).not.toContain(
     "isolated-browser-metatube-token",
   );
+});
+
+test("页面配置影片资料源：即时生效、凭据隐藏、冲突恢复与窄屏", async ({
+  page,
+  context,
+}, testInfo) => {
+  await login(page);
+  await page.goto("/directories");
+  await page.getByRole("link", { name: "影片资料源配置", exact: true }).click();
+  await expect(page).toHaveURL(/\/settings\/metadata$/);
+  const tmdb = page.getByRole("form", { name: "TheMovieDB 配置", exact: true });
+  const tvdb = page.getByRole("form", { name: "TheTVDB 配置", exact: true });
+  const metatube = page.getByRole("form", {
+    name: "MetaTube 配置",
+    exact: true,
+  });
+  await expect(
+    tmdb.getByLabel("TMDB API Read Access Token", { exact: true }),
+  ).toHaveValue("");
+  await expect(tmdb).toContainText("凭据已保存，不回显");
+  await tmdb
+    .getByLabel("清除已保存的 TMDB API Read Access Token", { exact: true })
+    .check();
+  await tmdb.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(tmdb).toContainText("尚未配置服务");
+  await tmdb
+    .getByLabel("TMDB API Read Access Token", { exact: true })
+    .fill("isolated-browser-token");
+  await tmdb.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(tmdb).toContainText("凭据已保存，不回显");
+  await tvdb
+    .getByLabel("TVDB API Key", { exact: true })
+    .fill("isolated-browser-tvdb-key");
+  await tvdb
+    .getByLabel("TVDB PIN", { exact: true })
+    .fill("isolated-browser-pin");
+  await tvdb.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(tvdb).toContainText("PIN 已保存，不回显");
+  await metatube
+    .getByLabel("MetaTube 服务地址", { exact: true })
+    .fill("http://127.0.0.1:18095");
+  await metatube
+    .getByLabel("MetaTube Token", { exact: true })
+    .fill("isolated-browser-metatube-token");
+  await metatube.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(metatube).toContainText("凭据已保存，不回显");
+  await page.reload();
+  for (const label of [
+    "TMDB API Read Access Token",
+    "TVDB API Key",
+    "TVDB PIN",
+    "MetaTube Token",
+  ]) {
+    await expect(page.getByLabel(label, { exact: true })).toHaveValue("");
+    await expect(page.getByLabel(label, { exact: true })).toHaveAttribute(
+      "type",
+      "password",
+    );
+  }
+  await expect(
+    metatube.getByLabel("MetaTube 服务地址", { exact: true }),
+  ).toHaveValue("http://127.0.0.1:18095");
+  const settings = await (
+    await context.request.get("/api/settings/metadata")
+  ).json();
+  for (const secret of [
+    "isolated-browser-token",
+    "isolated-browser-tvdb-key",
+    "isolated-browser-pin",
+    "isolated-browser-metatube-token",
+  ]) {
+    expect(JSON.stringify(settings)).not.toContain(secret);
+    expect(await page.content()).not.toContain(secret);
+  }
+  // Editing an endpoint must not forward the saved Token to a different service.
+  await metatube
+    .getByLabel("MetaTube 服务地址", { exact: true })
+    .fill("http://127.0.0.1:18095/other");
+  await metatube.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(metatube.getByRole("alert")).toContainText(
+    "重新填写或明确清除 Token",
+  );
+  await page
+    .getByRole("button", { name: "重新加载配置", exact: false })
+    .click();
+  await expect(
+    metatube.getByLabel("MetaTube 服务地址", { exact: true }),
+  ).toHaveValue("http://127.0.0.1:18095");
+
+  // A failed save preserves the user's input and does not pretend to succeed.
+  await page.route("**/api/settings/metadata/tvdb", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "配置保存暂不可用" }),
+    }),
+  );
+  await tvdb.getByLabel("TVDB PIN", { exact: true }).fill("retry-pin");
+  await tvdb.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(tvdb.getByRole("alert")).toHaveText("配置保存暂不可用");
+  await expect(tvdb.getByLabel("TVDB PIN", { exact: true })).toHaveValue(
+    "retry-pin",
+  );
+  await page.unroute("**/api/settings/metadata/tvdb");
+  await tvdb.getByLabel("清除已保存的 TVDB PIN", { exact: true }).check();
+  await tvdb.getByRole("button", { name: "保存配置", exact: true }).click();
+  await expect(tvdb).toContainText("未保存 PIN");
+
+  const other = await context.newPage();
+  try {
+    await other.goto("/settings/metadata");
+    const otherTMDB = other.getByRole("form", {
+      name: "TheMovieDB 配置",
+      exact: true,
+    });
+    await expect(otherTMDB).toContainText("凭据已保存，不回显");
+    await tmdb
+      .getByLabel("清除已保存的 TMDB API Read Access Token", { exact: true })
+      .check();
+    await tmdb.getByRole("button", { name: "保存配置", exact: true }).click();
+    await expect(tmdb).toContainText("尚未配置服务");
+    await otherTMDB
+      .getByLabel("TMDB API Read Access Token", { exact: true })
+      .fill("isolated-browser-token");
+    await otherTMDB
+      .getByRole("button", { name: "保存配置", exact: true })
+      .click();
+    await expect(otherTMDB.getByRole("alert")).toContainText(
+      "配置已被其他页面修改",
+    );
+    await other
+      .getByRole("button", { name: "重新加载配置", exact: false })
+      .click();
+    await expect(otherTMDB).toContainText("尚未配置服务");
+    await otherTMDB
+      .getByLabel("TMDB API Read Access Token", { exact: true })
+      .fill("isolated-browser-token");
+    await otherTMDB
+      .getByRole("button", { name: "保存配置", exact: true })
+      .click();
+    await expect(otherTMDB).toContainText("凭据已保存，不回显");
+  } finally {
+    await other.close();
+  }
+  await page.reload();
+  await expect(tmdb).toContainText("凭据已保存，不回显");
+  await page.bringToFront();
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.evaluate(async () => {
+      (document.activeElement as HTMLElement)?.blur();
+      window.scrollTo(0, 0);
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (width !== 320)
+      await page.screenshot({
+        path: testInfo.outputPath(`metadata-settings-${width}.png`),
+        fullPage: true,
+      });
+  }
+  // Real upstream fixtures now work with settings saved from the page, no restart.
+  const file = await addMedia(context, "ABC-123.webm", "movie", ["metatube"]);
+  await expect
+    .poll(
+      async () =>
+        (await (await context.request.get(`/api/media/${file.id}`)).json())
+          .match.metadata?.source,
+    )
+    .toBe("MetaTube");
+  const movie = await addMedia(context, "Arrival (2016).webm", "movie", [
+    "tvdb",
+  ]);
+  await expect
+    .poll(
+      async () =>
+        (await (await context.request.get(`/api/media/${movie.id}`)).json())
+          .match.metadata?.source,
+    )
+    .toBe("TVDB");
 });

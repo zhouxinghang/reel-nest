@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"crypto/cipher"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,6 +20,9 @@ import (
 )
 
 type Config struct {
+	// Called only on first migration; saved page settings always take precedence.
+	ImportLegacyMetadata func() LegacyMetadataCredentials
+
 	MetaTubeURL     string // Self-hosted service base URL; HTTP is allowed on trusted networks.
 	MetaTubeToken   string
 	MetaTubeTimeout time.Duration
@@ -43,7 +47,8 @@ type Config struct {
 }
 
 type App struct {
-	metadata *metadataService
+	metadata     *metadataService
+	settingsAEAD cipher.AEAD
 
 	streamKey    []byte
 	db           *sql.DB
@@ -167,6 +172,8 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("GET /api/session", a.auth(http.HandlerFunc(a.session)))
 	mux.Handle("GET /api/matching/{kind}/{id}/search", a.auth(http.HandlerFunc(a.matching)))
 	mux.Handle("POST /api/matching/{kind}/{id}/selection", a.auth(http.HandlerFunc(a.matching)))
+	mux.Handle("GET /api/settings/metadata", a.auth(http.HandlerFunc(a.metadataSettings)))
+	mux.Handle("POST /api/settings/metadata/{source}", a.auth(http.HandlerFunc(a.updateMetadataSettings)))
 	mux.Handle("GET /api/metadata/status", a.auth(http.HandlerFunc(a.metadataStatus)))
 	mux.Handle("POST /api/metadata/refresh", a.auth(http.HandlerFunc(a.refreshMetadata)))
 	mux.Handle("GET /api/metadata/posters/{source}/{kind}/{id}", a.auth(http.HandlerFunc(a.metadataPoster)))

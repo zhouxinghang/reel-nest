@@ -77,7 +77,7 @@ func (a *App) page(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.FS(a.config.Assets)).ServeHTTP(w, r)
 		return
 	}
-	if r.URL.Path != "/" && r.URL.Path != "/login" && r.URL.Path != "/library" && r.URL.Path != "/directories" && !strings.HasPrefix(r.URL.Path, "/media/") && !strings.HasPrefix(r.URL.Path, "/series/") && !strings.HasPrefix(r.URL.Path, "/people/") {
+	if r.URL.Path != "/" && r.URL.Path != "/login" && r.URL.Path != "/library" && r.URL.Path != "/directories" && r.URL.Path != "/settings/metadata" && !strings.HasPrefix(r.URL.Path, "/media/") && !strings.HasPrefix(r.URL.Path, "/series/") && !strings.HasPrefix(r.URL.Path, "/people/") {
 		http.NotFound(w, r)
 		return
 	}

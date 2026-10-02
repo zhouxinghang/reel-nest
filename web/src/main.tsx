@@ -14,6 +14,7 @@ import {
 import { SeriesDetails } from "./series";
 import { PersonDetails } from "./people";
 import { Icon } from "./icons";
+import { MetadataSettings } from "./metadata-settings";
 
 import { MetadataStatus, TMDBCredits } from "./metadata";
 
@@ -185,6 +186,8 @@ function App() {
     );
   const path = window.location.pathname;
   const directoryPage = path === "/directories";
+  const settingsPage = path === "/settings/metadata";
+  const managementPage = directoryPage || settingsPage;
   const seriesId = path.startsWith("/series/")
     ? path.slice("/series/".length)
     : null;
@@ -193,7 +196,7 @@ function App() {
     : null;
   const personRoute = path.match(/^\/people\/(tmdb|tvdb|metatube)\/([^/]+)$/);
   const detailPage = Boolean(mediaId || seriesId || personRoute);
-  const libraryPage = !detailPage && !directoryPage;
+  const libraryPage = !detailPage && !managementPage;
   return (
     <div
       className={`app-shell${detailPage ? " detail-page" : ""}${libraryPage ? " home-page" : ""}${navOpen ? " navigation-open" : ""}`}
@@ -206,11 +209,11 @@ function App() {
         <p className="nav-label">我的媒体</p>
         <nav aria-label="主导航">
           <a
-            className={`nav-item ${!directoryPage && libraryFilter === "all" ? "active" : ""}`}
+            className={`nav-item ${!managementPage && libraryFilter === "all" ? "active" : ""}`}
             href="/library"
             title="媒体库"
             aria-current={
-              !directoryPage && libraryFilter === "all" ? "page" : undefined
+              !managementPage && libraryFilter === "all" ? "page" : undefined
             }
           >
             <Icon name="library" /> 媒体库
@@ -228,9 +231,9 @@ function App() {
               key={value}
               title={label}
               href={`/library?type=${value}`}
-              className={`nav-item ${!directoryPage && !mediaId && !seriesId && libraryFilter === value ? "active" : ""}`}
+              className={`nav-item ${!managementPage && !mediaId && !seriesId && libraryFilter === value ? "active" : ""}`}
               aria-current={
-                !directoryPage &&
+                !managementPage &&
                 !mediaId &&
                 !seriesId &&
                 libraryFilter === value
@@ -243,6 +246,14 @@ function App() {
             </a>
           ))}
           <p className="nav-label">管理</p>
+          <a
+            className={`nav-item ${settingsPage ? "active" : ""}`}
+            href="/settings/metadata"
+            title="影片资料源"
+            aria-current={settingsPage ? "page" : undefined}
+          >
+            <Icon name="settings" /> 影片资料源
+          </a>
           <a
             className={`nav-item ${directoryPage ? "active" : ""}`}
             href="/directories"
@@ -308,11 +319,13 @@ function App() {
               </a>
             ) : (
               <span className="header-title">
-                {directoryPage
-                  ? "媒体目录管理"
-                  : detailPage
-                    ? "reelnest"
-                    : "我的家庭影院"}
+                {settingsPage
+                  ? "影片资料源配置"
+                  : directoryPage
+                    ? "媒体目录管理"
+                    : detailPage
+                      ? "reelnest"
+                      : "我的家庭影院"}
               </span>
             )}
           </div>
@@ -376,7 +389,9 @@ function App() {
             </p>
           )}
           <>
-            {directoryPage ? (
+            {settingsPage ? (
+              <MetadataSettings />
+            ) : directoryPage ? (
               <Directories />
             ) : personRoute ? (
               <PersonDetails

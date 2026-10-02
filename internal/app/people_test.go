@@ -208,6 +208,7 @@ func TestPeoplePhotosWorksIdentityAndPersistence(t *testing.T) {
 			}
 			request(t, a.client, "GET", a.server.URL+c.Directors[0].PhotoURL, nil, 200)
 			before = tmdb.count() + tvdb.count()
+			saveSettings(t, a, source, map[string]any{"clearCredential": true})
 			a.close()
 			config.TMDBToken, config.TVDBAPIKey = "", ""
 			a = start(t, config)

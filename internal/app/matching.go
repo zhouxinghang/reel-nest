@@ -55,7 +55,7 @@ func (a *App) matching(w http.ResponseWriter, r *http.Request) {
 		warnings := []string{}
 		more, succeeded := false, false
 		for _, source := range sources {
-			client := a.metadata.providers[source]
+			client := a.metadata.provider(source)
 			if !client.configured() {
 				continue
 			}
@@ -94,8 +94,7 @@ func (a *App) matching(w http.ResponseWriter, r *http.Request) {
 		body.Source, body.SourceID = "tmdb", body.TMDBID // Legacy API clients.
 	}
 	body.Source = strings.ToLower(body.Source)
-	client, exists := a.metadata.providers[body.Source]
-	if !exists || body.SourceID <= 0 || body.Kind != target.Kind || (body.TMDBID != 0 && (body.Source != "tmdb" || body.TMDBID != body.SourceID)) {
+	if !validMetadataSource(body.Source) || body.SourceID <= 0 || body.Kind != target.Kind || (body.TMDBID != 0 && (body.Source != "tmdb" || body.TMDBID != body.SourceID)) {
 		fail(w, 400, "候选作品类型或标识不符")
 		return
 	}
@@ -104,6 +103,7 @@ func (a *App) matching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer a.metadata.operation.Unlock()
+	client := a.metadata.provider(body.Source)
 	sources, _, err := a.directorySources(ctx, target.DirectoryID)
 	if err != nil {
 		fail(w, 500, "无法读取目录资料源")

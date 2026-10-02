@@ -213,7 +213,7 @@ export function MetadataStatus() {
           {!status
             ? "正在读取设置…"
             : !status.configured
-              ? "未配置影片资料源（TMDB / TVDB / MetaTube）；本地浏览与播放不受影响。请由部署者配置服务或凭据文件后重启。"
+              ? "未配置影片资料源（TMDB / TVDB / MetaTube）；本地浏览与播放不受影响。请在影片资料源配置页面设置服务。"
               : status.running
                 ? "正在按目录优先级获取资料和海报，本地播放不受影响…"
                 : "按目录选择资料源 · 扫描与匹配相互独立"}
@@ -225,7 +225,9 @@ export function MetadataStatus() {
                 `${source.name}：${source.configured ? (source.cooldownUntil * 1000 > Date.now() ? "冷却中" : "已配置") : "未配置"}`,
             )
             .join(" · ")}{" "}
-          · <a href="/directories">配置目录资料源</a>
+          · <a href="/settings/metadata">配置影片资料源</a>
+          {" · "}
+          <a href="/directories">配置目录资料源</a>
         </p>
         {(error || status?.error) && (
           <p className="notice" role="status">

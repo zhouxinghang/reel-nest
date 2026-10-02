@@ -8,6 +8,8 @@
 | `POST /api/login` | 输入 `username/password`，200 返回 `username`，同时设置会话 Cookie；错误凭据 401，连续失败过多 429 |
 | `GET /api/session` | 200 返回家庭共享账号的 `username`，不返回密码或哈希 |
 | `POST /api/logout` | 200 `{"ok":true}`，立即撤销当前会话；不撤销其他浏览器 |
+| `GET /api/settings/metadata` | 200 `{sources:[{id,name,url,credentialSet,pinSet,configured,revision}]}`；仅返回凭据存在状态，绝不返回凭据/掩码；`configured` 不代表联网验证 |
+| `POST /api/settings/metadata/{source}` | source 为 `tmdb/tvdb/metatube`；输入 `{revision,credential?,clearCredential?,pin?,clearPin?,url?}`，200 返回更新后的单来源公开配置；无效 400，未知来源 404，版本冲突或匹配忙 409，保存失败 500 |
 | `GET /api/directories` | 200 `{directories, allowedRoots, metadataSources}`；只暴露已配置允许根目录和已接入目录，不提供服务器目录树枚举 |
 | `POST /api/directories` | 输入 `{name, path, kind, metadataSources?}`；name 去除首尾空白后须为 1–80 个 Unicode 字符且无控制字符，否则 400，kind 为 `movie` 或 `series`；201 返回已接入目录并启动首次扫描；越界/符号链接/非目录 400，重复或重叠目录 409 |
 | `POST /api/directories/{id}/name` | 输入 `{name}`，200 返回规范化的 `{name}`；名称规则与创建相同，无效 400，不存在 404；只修改展示名称，不重扫、不改源目录 |
@@ -90,6 +92,18 @@
 
 网页预先获取并验证 VTT，再通过本地 Blob 交给原生 `<track>` 渲染，选择切换会禁用/移除旧 track、取消未完成请求并释放 Blob。CSP 仅为原生媒体增加 `blob:` 来源，脚本仍只允许同源。字幕错误不会停止视频或伪造加载成功。
 
+## 页面资料源配置（19）
+
+- `/settings/metadata` 需要家庭共享账号会话，可从管理菜单、媒体目录和资料状态栏进入；来源服务设置全家共用，每目录启用/优先级仍使用原接口。
+- 写入仍受统一的 8 KiB JSON 请求体上限约束；较长的凭据和 PIN 可以分别保存，省略字段不会清空已有值。
+- `revision` 必填，为刚读取的该来源版本（正整数）。成功变更只递增该来源版本；旧页面写入返回 409，禁止覆盖较新设置。无变化保存不改版本、不重建客户端或重置冷却。
+- `credential` 对 TMDB 是 Read Access Token，对 TVDB 是 API Key，对 MetaTube 是 Token。凭据/PIN 去首尾空白，最多 4096 字节且不能含内部空白或控制字符。省略、null 或空字符串均保留；`clearCredential:true` / `clearPin:true` 显式清除，不能同时传非空替换值。`pin/clearPin` 仅 TVDB 可用。
+- `url` 仅 MetaTube 可用，省略/null 保持，空字符串禁用服务；最多 2048 字节，必须是无 userinfo/query/fragment 的 HTTP/HTTPS 地址，允许反向代理路径和 `/v1` 后缀。若已有 Token，更改地址必须同时提供替换 Token 或 `clearCredential:true`，不能静默把旧凭据带往新服务。
+- 仅成功保存后替换来源客户端；登录 token 和冷却状态不跨新配置复用。与关联写入互斥，获取资料期间返回 409。已经在途的搜索/图片请求可用旧客户端结束；保存后新请求使用新客户端。失败不改变运行客户端和保存值；不重扫、不改媒体身份/进度/收藏，不覆盖手动匹配。
+- 凭据/PIN 以 AES-256-GCM 密文保存在 `metadata_provider_settings`，绑定来源及服务地址作为附加认证数据；随机 32 字节密钥单独位于数据目录 `metadata-settings.key`。SQLite、密钥均为 0600；恢复需要完整数据目录，已有设置却无密钥时拒绝启动，不生成新密钥覆盖。完整备份须视为敏感数据。
+- 首次无保存配置时导入旧环境凭据（文件优先），之后不再读取或应用旧变量/文件；页面清除也不会被环境恢复。新部署在页面填写，不需要资料源环境变量或 Compose override。公共 TMDB/TVDB API 地址不对网页开放。
+- GET、POST、错误和日志不回显凭据；同源 JSON 写入和会话鉴权沿用全局规则，串流只读凭证不能授权，响应均禁止缓存。只接受当前来源的字段，不接受前端传来的任意服务端配置。
+
 ## 目录资料源（12）
 
 - 目录字段 `metadataSources` 为不重复的有序数组，可含 `tmdb`、`tvdb`、`metatube`；`[]` 暂停自动获取。创建时省略/传 null 均采用默认 `["tmdb","tvdb"]`；修改接口必须传数组，null、未知来源、重复来源和超过三项均 400。每个目录的递归扫描内容共享此配置。
@@ -171,7 +185,7 @@
 
 ## MetaTube 适配约定（17）
 
-- 后端通过 `METATUBE_URL` 和 `METATUBE_TOKEN_FILE` / `METATUBE_TOKEN` 配置，状态仅返回是否配置，不接受浏览器提交服务 URL 或 Token。
+- 通过 `/settings/metadata` 页面及受会话保护的配置 API 保存服务地址和 Token；地址可回显，Token 只返回是否已保存。旧环境变量仅首次迁入，后续不再读取；详见页面资料源配置（19）。
 - 目录默认仍为 `["tmdb","tvdb"]`；可显式设置 `["metatube","tmdb","tvdb"]`。MetaTube 仅接受 `movie`，电视剧不发起上游请求并提示不支持，不伪造季集。
 - `metadata.source="MetaTube"`；可选 `number` 为影片编号、`provider` 为 MetaTube 上游 Provider。`sourceId` 是本地持久映射的正整数，不是上游字符串 ID。客户端只使用搜索返回的 `sourceId` 确认；不能自己转换/拼接 ProviderID。Provider 名忽略大小写，原始 ID 区分大小写。
 - 搜索关键词原样以 `q` 转发（含 URL），`fallback=true`；空数组、省略 data 或搜索 404 返回空候选。影片详情使用 `lazy=true`，核对返回 provider 与 id；失败不改变原选择。完整详情自带演职员/图片引用时不重复请求。

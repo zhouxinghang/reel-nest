@@ -173,7 +173,7 @@ func (a *App) metadataImage(w http.ResponseWriter, r *http.Request) {
 	if serveCached() {
 		return
 	}
-	data, typ, downloadErr := a.metadata.providers[source].image(ctx, ref, imageType)
+	data, typ, downloadErr := a.metadata.provider(source).image(ctx, ref, imageType)
 	typ = strings.Split(typ, ";")[0]
 	retry, imageExpires := int64(0), expires
 	if downloadErr != nil || !validImage(data, typ) {

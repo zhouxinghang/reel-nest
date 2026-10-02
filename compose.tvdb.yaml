@@ -1,3 +1,5 @@
+# Legacy one-time migration only. New deployments use /settings/metadata.
+# Remove this override after confirming imported settings; later env changes are ignored.
 # Optional: combine with compose.yaml and optionally compose.tmdb.yaml.
 services:
   reelnest:

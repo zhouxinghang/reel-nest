@@ -235,7 +235,7 @@ func (a *App) personPhoto(w http.ResponseWriter, r *http.Request) {
 	if serveCached() {
 		return
 	}
-	photo, typ, err := a.metadata.providers[source].photo(ctx, person.PhotoPath)
+	photo, typ, err := a.metadata.provider(source).photo(ctx, person.PhotoPath)
 	typ = strings.Split(typ, ";")[0]
 	if err != nil || len(photo) == 0 || (typ != "image/jpeg" && typ != "image/png" && typ != "image/webp") || http.DetectContentType(photo) != typ {
 		if r.Context().Err() == nil && a.ctx.Err() == nil {

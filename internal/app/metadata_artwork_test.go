@@ -147,6 +147,8 @@ func TestTitleArtworkTypesSourcesPersistenceAndExpiry(t *testing.T) {
 			if before != tmdb.count()+tvdb.count() {
 				t.Fatal("restart discarded artwork cache")
 			}
+			saveSettings(t, a, "tmdb", map[string]any{"clearCredential": true})
+			saveSettings(t, a, "tvdb", map[string]any{"clearCredential": true})
 			a.close()
 			db, err := sql.Open("sqlite", filepath.Join(config.DataDir, "reelnest.sqlite"))
 			if err != nil {

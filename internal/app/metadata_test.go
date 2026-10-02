@@ -316,6 +316,7 @@ func TestTMDBExpiredCacheFallsBackButKeepsProgressAndAssociation(t *testing.T) {
 	file := metadataMedia(t, a, id)
 	poster := file.Match.Metadata.PosterURL
 	request(t, a.client, "POST", a.server.URL+"/api/media/"+id+"/progress", map[string]any{"position": 8, "duration": 60, "completed": false}, 200)
+	saveSettings(t, a, "tmdb", map[string]any{"clearCredential": true})
 	a.close()
 	// Age a real persisted cache fixture, not the application clock or storage API.
 	db, err := sql.Open("sqlite", filepath.Join(config.DataDir, "reelnest.sqlite"))
@@ -327,7 +328,6 @@ func TestTMDBExpiredCacheFallsBackButKeepsProgressAndAssociation(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.Close()
-	config.TMDBToken = ""
 	a = start(t, config)
 	login(t, a)
 	file = metadataMedia(t, a, id)
@@ -337,9 +337,9 @@ func TestTMDBExpiredCacheFallsBackButKeepsProgressAndAssociation(t *testing.T) {
 	request(t, a.client, "GET", a.server.URL+poster, nil, 404)
 	request(t, a.client, "GET", a.server.URL+"/api/media/"+id+"/content", nil, 200)
 	a.close()
-	config.TMDBToken = fakeTMDBToken
 	a = start(t, config)
 	login(t, a)
+	saveSettings(t, a, "tmdb", map[string]any{"credential": fakeTMDBToken})
 	awaitMetadata(t, a)
 	file = metadataMedia(t, a, id)
 	if !file.Matched || file.Match.Metadata.TMDBID != 10 || file.Progress.Position != 8 {

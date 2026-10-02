@@ -314,6 +314,7 @@ func TestCreditsUpgradePreservesManualTitlePosterProgressAndBackoff(t *testing.T
 			request(t, a.client, "POST", a.server.URL+"/api/matching/movie/"+file.ID+"/selection", map[string]any{"kind": "movie", "source": source, "sourceId": 30}, 200)
 			request(t, a.client, "POST", a.server.URL+"/api/media/"+file.ID+"/progress", map[string]any{"position": 12, "duration": 60, "completed": false}, 200)
 			original := metadataMedia(t, a, file.ID).Match.Metadata
+			saveSettings(t, a, source, map[string]any{"clearCredential": true})
 			a.close()
 			editCreditsCache(t, config, "json_remove(payload,'$.credits')")
 			// No credential: keep the old payload readable. Restore credentials and fail
@@ -333,6 +334,11 @@ func TestCreditsUpgradePreservesManualTitlePosterProgressAndBackoff(t *testing.T
 			before := tmdb.count() + tvdb.count()
 			a = start(t, config)
 			login(t, a)
+			credential := fakeTMDBToken
+			if source == "tvdb" {
+				credential = fakeTVDBKey
+			}
+			saveSettings(t, a, source, map[string]any{"credential": credential})
 			awaitMetadata(t, a)
 			check := func(wantStatus string) {
 				after := metadataMedia(t, a, file.ID)

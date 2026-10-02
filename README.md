@@ -199,23 +199,17 @@ docker compose -f compose.yaml -f compose.media-write.yaml up --build -d
 
 | 变量 | 默认值 / 说明 |
 | --- | --- |
-| `DATA_DIR` | `./data`；SQLite 和授权状态，只能放本地持久化磁盘，不放 SMB/NFS |
+| `DATA_DIR` | `./data`；SQLite、资料源配置密钥和授权状态，只能放本地持久化磁盘，不放 SMB/NFS |
 | `LISTEN_ADDR` | `:8090`；进程监听地址 |
 | `MEDIA_ROOTS` | 默认空，不允许任意服务器路径；允许接入的绝对根目录，macOS/Linux 用 `:` 分隔 |
 | `HOUSEHOLD_USERNAME` | 首次启动必填，1–80 字节 |
 | `HOUSEHOLD_PASSWORD_FILE` | 首次密码文件；只去掉末尾换行，优先于密码环境变量 |
 | `HOUSEHOLD_PASSWORD` | 可选的首次密码环境变量；推荐密码文件，12–72 UTF-8 字节 |
-| `TMDB_READ_ACCESS_TOKEN_FILE` | 可选 TMDB API Read Access Token 文件；优先于环境变量，去首尾空白 |
-| `TMDB_READ_ACCESS_TOKEN` | 可选 Bearer token，默认不配置；仅用于后端资料请求 |
-| `TVDB_API_KEY_FILE` / `TVDB_API_KEY` | 可选 TheTVDB v4 API key，文件优先；默认不配置 |
-| `TVDB_PIN_FILE` / `TVDB_PIN` | 使用 user-supported TVDB key 时的订阅 PIN；其他 key 可省略，文件优先 |
-| `METATUBE_URL` | 可选自部署 MetaTube 服务地址，如 `http://192.168.1.20:8080`；留空禁用，可含反向代理路径或末尾 `/v1` |
-| `METATUBE_TOKEN_FILE` / `METATUBE_TOKEN` | MetaTube Bearer Token，文件优先；仅服务未启用鉴权时可省略 |
 | `COOKIE_SECURE` | `false`；同源 HTTPS 部署设置 `true` |
 
 会话使用不可猜测凭证，数据库只存凭证哈希，Cookie 为 HttpOnly、SameSite=Strict，最长 30 天。退出撤销当前会话，其他浏览器仍可登录同一家庭账号。写入接口检查浏览器来源并要求 JSON。连续 10 次登录失败会暂时锁定登录（最多 5 分钟）；不信任客户端伪造的代理 IP。
 
-备份前停止应用，然后备份**整个**应用数据目录/命名卷（含 SQLite 文件及可能存在的 WAL 文件）和部署配置/密码文件。恢复到相同 `DATA_DIR`；不要只在线复制一个数据库文件。应用备份不包含原始媒体，应另行备份。
+备份前停止应用，然后备份**整个**应用数据目录/命名卷（含 SQLite、可能存在的 WAL 和 `metadata-settings.key`）和部署配置/密码文件。恢复到相同 `DATA_DIR`；不要只在线复制一个数据库文件。应用备份不包含原始媒体，应另行备份。资料源凭据以 AES-256-GCM 加密保存，密钥文件与数据库权限均为 0600；完整备份同时含密文和密钥，须按敏感数据保护。密钥丢失或损坏时不能解密，不会静默重置配置；仅复制数据库不是可恢复的完整备份。
 
 ## 验证
 
@@ -260,34 +254,48 @@ node scripts/verify-organization-upgrade.mjs /absolute/path/to/pre-04-reelnest "
 - 修改顺序会立即排队重新评估该目录的**自动**匹配，已确认的手动作品不会被覆盖。资料获取期间保存可能返回忙，请稍后重试。配置与来源身份持久化，重扫/重启保留。
 - 顺序未改变且缓存有效时继续使用缓存（含先前回退结果），不会每次扫描都重复下载。有效缓存按来源、类型和 ID 隔离；未获取新资料成功前保留原有效关联。禁用来源/全部取消不会删除既有资料，到期后不再自动获取禁用来源的资料。
 
+### 在页面配置服务
+
+进入管理菜单「影片资料源」，或媒体目录中的「影片资料源配置」链接（`/settings/metadata`），使用家庭共享账号保存服务配置：
+
+| 来源 | 页面配置项 |
+| --- | --- |
+| TMDB | API Read Access Token（不是 v3 API Key）；清除后禁用 |
+| TVDB | v4 API Key、可选订阅 PIN；清除 API Key 后禁用 |
+| MetaTube | 自部署 HTTP/HTTPS 服务地址、可选 Token；留空地址禁用，只有服务无鉴权时可省略 Token |
+
+- 配置加密保存在应用数据中，重启保留；保存后即时替换对应来源客户端、清除该客户端的旧登录/冷却状态，并排队按现有目录规则重新评估资料，不需要重启或重扫。已在途的搜索/图片请求可使用旧客户端完成；关联写入期间保存返回 409，请稍后重试。
+- 凭据输入框不回填旧值。留空保持已有值，明确勾选清除才删除；API 只返回是否设置，不返回掩码或原值。不同页面同时修改同一来源时，旧版本保存会被拒绝，须重新加载确认。
+- 改 MetaTube 地址时必须重新填写或明确清除已保存的 Token，防止旧凭据被自动发送到新服务。TMDB/TVDB 的公共服务地址仍固定，测试地址只允许由 Go 测试配置注入。
+- 保存成功只证明配置已持久化并启用，不证明凭据、订阅或服务连通性。首次启用、401 等错误可到状态栏查看，并使用「匹配 / 刷新到期资料」重试；不要将真实凭据贴入聊天或仓库。浏览器配置请使用 HTTPS 或可信局域网。
+- **升级兼容**：首次启动新版且尚无保存配置时，才将旧 `TMDB_READ_ACCESS_TOKEN[_FILE]`、`TVDB_API_KEY[_FILE]`、`TVDB_PIN[_FILE]`、`METATUBE_URL`、`METATUBE_TOKEN[_FILE]` 导入；文件仍优先，不可读则导入空凭据。升级首次启动时保留原配置，确认页面状态后删除旧变量/secret/资料源 Compose override。之后启动不再读取这些变量或文件，修改、清除或空配置也不会被旧环境恢复。新部署直接在页面填写，不需要上述变量或 override。
+
 ### TMDB 凭据
 
 使用部署者自己的 **API Read Access Token**（Bearer token），不是 v3 短 API Key。到 [TMDB 账号 API 设置](https://www.themoviedb.org/settings/api) 申请并接受其使用条款；不要把真实凭据贴到聊天、提交仓库或放在浏览器代码中。应用不需要 TMDB 用户登录会话。
 
-- **本机**：把 token 保存到仅部署者可读的 `secrets/tmdb_read_access_token.txt`，启动时设置 `TMDB_READ_ACCESS_TOKEN_FILE="$PWD/secrets/tmdb_read_access_token.txt"`。也支持 `TMDB_READ_ACCESS_TOKEN` 环境变量；文件优先；文件缺失/不可读时记录不含秘密的警告并禁用该来源，不阻止本地应用启动。改动后重启，设置不会改变家庭共享账号。
-- **Docker（本轮未验证）**：同目录创建该 secret 文件，按家庭账号 secret 的方式授予容器 UID 10001 读取权限；执行 `docker compose -f compose.yaml -f compose.tmdb.yaml up --build -d`。媒体挂载同时追加 `-f compose.media.yaml`。不需要资料服务时省略 TMDB override，不必创建空 secret。
-- TMDB 凭据仅保留在后端进程并通过 HTTPS Authorization 头发送给 TMDB API，不写入数据库、不回显到网页或日志、不发送给图片 CDN。部署者应保护进程环境和 secret 文件。测试专用服务地址仅能通过 Go `app.Config` 注入，生产启动器不暴露此配置。
+- 在「影片资料源」页面的 TMDB 表单填写 Token 并保存。本机和 Docker 使用同一页面流程。
+- Token 仅通过后端 HTTPS Authorization 头发送给 TMDB API，不回显到网页或日志，不发送给图片 CDN；持久化采用上述加密配置存储。
 
 ### MetaTube 服务地址与 Token
 
-接入用户提供接口文档中的自部署服务，仅获取**电影资料和图片**，不下载视频。服务地址在启动时读取，网页仅负责按目录启用和排序，不保存或展示 Token。
+接入用户提供接口文档中的自部署服务，仅获取**电影资料和图片**，不下载视频。服务地址和 Token 在「影片资料源」页面保存；按目录启用和排序仍在媒体目录中管理。
 
-- **本机**：设置 `METATUBE_URL` 为服务根地址，例如 `http://192.168.1.20:8080`；反向代理路径和末尾 `/v1` 也支持。把 Token 保存到仅部署者可读的文件，设置 `METATUBE_TOKEN_FILE="$PWD/secrets/metatube_token.txt"`，或直接设置 `METATUBE_TOKEN`。文件优先并去首尾空白；文件不可读时不回退环境变量，会以无 Token 请求（有鉴权的服务将返回 401），本地播放不受影响。
-- **Docker**：设置私有 `.env` 的 `METATUBE_URL`，创建 `secrets/metatube_token.txt` 并授予容器 UID 10001 读取权限，执行 `docker compose -f compose.yaml -f compose.metatube.yaml up --build -d`。可叠加媒体挂载与其他资料源 override。它只连接已有服务，不负责部署 MetaTube；地址必须可从 Reel Nest 容器访问，`localhost` 指容器自身。服务未开启鉴权时可使用空 Token 文件。
-- 改配置后重启 Reel Nest，并在「媒体目录」勾选 **MetaTube（仅电影）**、调整顺序后保存。未设置地址时来源禁用；配置成功的状态不代表已验证服务连通。支持可信局域网 HTTP，但 HTTP Token 未加密，跨不可信网络请使用 HTTPS。地址不接受 URL 内用户名密码、查询参数或片段。
+- 在 MetaTube 表单填写服务根地址，例如 `http://192.168.1.20:8080`；支持反向代理路径和末尾 `/v1`。填写自己服务的 Token，无鉴权服务才可省略，保存后即时生效。
+- 本机和 Docker 均连接已有服务，不负责部署 MetaTube；地址必须可从 Reel Nest 进程/容器访问，容器内 `localhost` 指容器自身。再到「媒体目录」勾选 **MetaTube（仅电影）** 并保存优先级。
+- 支持可信局域网 HTTP，但 HTTP Token 未加密，跨不可信网络请使用 HTTPS。地址不接受 URL 内用户名密码、查询参数或片段。
 - 按文档调用 `GET /v1/movies/search?q=...&fallback=true` 和 `GET /v1/movies/{provider}/{id}?lazy=true`；Token 仅通过后端 `Authorization: Bearer ...` 发送。标题、编号或影片主页 URL 都可用于手动搜索，由 MetaTube 汇总自身已启用的 Provider。HTTP 404 视为空结果，最多展示 20 个去重候选；不完整/歧义结果不自动匹配。
 - Provider 名大小写不敏感，ID 保留原始字符串；持久保存 `(provider,id)` 到站内数字 `sourceId` 的映射，跨 Provider 同 ID 不冲突，重启和资料过期不丢关联。映射不是 MetaTube 原始 ID，也不复用 TMDB/TVDB ID。换服务地址应指向相同身份语义的 MetaTube 实例。
 - 三类图片只通过该服务的 `/v1/images/primary|thumb|backdrop/{provider}/{id}` 获取，不抓取响应内任意图片 URL、不跟随重定向、不向公开图片接口发送 Token；保留同源认证、5 MiB 限制、类型校验和持久缓存。背景图按 MetaTube 接口语义可能仍带文字，不承诺无字。
 - 从完整影片详情映射简介、发行年份和 `actors` / `director` 姓名，不额外猜测人物 ID、角色或照片。人物页仅列出该作品范围的本地关联；文档没有电视剧季集接口，因此不会把电影结果用于电视剧，后续可用来源继续回退。翻译、评论和演员独立搜索不属于本次接入。
-- 服务端可自行配置 Provider 优先级；Reel Nest 不修改 MetaTube 的运行参数。Token 不入数据库、不返回前端或错误正文。每个来源最多 20 秒、总匹配预算 65 秒；来源间独立冷却，图片失败不丢弃已获取的影片资料。
+- 服务端可自行配置 Provider 优先级；Reel Nest 不修改 MetaTube 的运行参数。Token 加密保存，不返回前端或错误正文。每个来源最多 20 秒、总匹配预算 65 秒；来源间独立冷却，图片失败不丢弃已获取的影片资料。
 
 ### TVDB 凭据
 
 从 [TheTVDB API 信息](https://thetvdb.com/api-information) / 账号后台取得自己的 **v4 API key**。使用 user-supported key 时还须有效订阅对应的 PIN；其他类型的 key 不传 PIN。使用范围受所持许可和 TheTVDB 条款约束，本仓库不提供他人凭据或额外数据授权。
 
-- 本机：保存到仅部署者可读的文件，启动时设置 `TVDB_API_KEY_FILE="$PWD/secrets/tvdb_api_key.txt"`；如需 PIN，再设置 `TVDB_PIN_FILE="$PWD/secrets/tvdb_pin.txt"`。也支持 `TVDB_API_KEY` / `TVDB_PIN`，文件优先，变更后重启。
-- Docker（未实测）：准备 `secrets/tvdb_api_key.txt` 并授予容器 UID 10001 读取权限；启动命令追加 `-f compose.tvdb.yaml`，可与 `-f compose.tmdb.yaml` 同时使用。需要 PIN 时设置私有 `.env` 中的 `TVDB_PIN`，或自行添加 secret 挂载并设置 `TVDB_PIN_FILE`；不需要 PIN 时留空，不创建不必要的凭据文件。
-- 后端通过 HTTPS `POST /login` 发送 key / 可选 PIN，缓存 Bearer token 后请求 v4 的电影/电视剧搜索与详情。凭据和 token 不入数据库、不返回浏览器、不发送至海报域名。中文 `zho` 优先，缺少时回退 `eng` 或原文。海报仅从受信任的 TheTVDB artwork 域名获取，不代理任意外部 URL。
+- 在「影片资料源」页面的 TVDB 表单填写 API Key；需要订阅时填写 PIN。保存后即时生效，本机和 Docker 使用同一流程；不需要 PIN 时可以明确勾选清除已有 PIN。
+- 后端通过 HTTPS `POST /login` 发送 key / 可选 PIN，缓存 Bearer token 后请求 v4 的电影/电视剧搜索与详情。API Key / PIN 加密保存，短期登录 token 仅留在内存；二者均不返回浏览器、不发送至海报域名。中文 `zho` 优先，缺少时回退 `eng` 或原文。海报仅从受信任的 TheTVDB artwork 域名获取，不代理任意外部 URL。
 - 状态栏分别展示各资料源是否已配置、是否冷却。“已配置”仅表示本地存在凭据（MetaTube 为服务地址），不代表许可、订阅或真实网络已经验证。
 - 实现依据：[官方 v4 API / OpenAPI](https://github.com/thetvdb/v4-api)、[v4 API 文档](https://thetvdb.github.io/v4-api/)。官方登录 token 有效期为一个月，应用保守按一天重新登录；失效后不在同次操作内无限重试。
 

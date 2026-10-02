@@ -181,9 +181,8 @@ export function Directories() {
           </p>
         )}
         <p className="fine">
-          凭据由部署者配置：TMDB_READ_ACCESS_TOKEN_FILE、TVDB_API_KEY_FILE，以及需要订阅时的
-          TVDB_PIN_FILE；MetaTube 使用 METATUBE_URL 和 METATUBE_TOKEN_FILE（或
-          METATUBE_TOKEN）。更改配置后重启应用。
+          服务地址和凭据在<a href="/settings/metadata">影片资料源配置</a>
+          页面管理，保存后即时生效，无需重启。
         </p>
         <p className="fine directory-tip">
           新增后自动扫描一次，之后由你手动重新扫描。不会上传、改名或移动源文件。

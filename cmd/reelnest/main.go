@@ -23,8 +23,8 @@ func env(name, fallback string) string {
 	return fallback
 }
 
-// File-based credentials take precedence; unreadable optional credentials never
-// prevent local scanning or playback and are never included in error output.
+// Legacy migration only. Saved page settings prevent this reader from running.
+// Files take precedence; unreadable optional credentials are never logged.
 func optionalSecret(name string) string {
 	if path := os.Getenv(name + "_FILE"); path != "" {
 		contents, err := os.ReadFile(path)
@@ -46,10 +46,9 @@ func run() error {
 		}
 		password = strings.TrimRight(string(contents), "\r\n")
 	}
-	token := optionalSecret("TMDB_READ_ACCESS_TOKEN")
-	tvdbKey := optionalSecret("TVDB_API_KEY")
-	tvdbPIN := optionalSecret("TVDB_PIN")
-	application, err := app.New(app.Config{MetaTubeURL: os.Getenv("METATUBE_URL"), MetaTubeToken: optionalSecret("METATUBE_TOKEN"), TMDBToken: token, TVDBAPIKey: tvdbKey, TVDBPIN: tvdbPIN, DataDir: env("DATA_DIR", "./data"), Username: os.Getenv("HOUSEHOLD_USERNAME"), Password: password, CookieSecure: os.Getenv("COOKIE_SECURE") == "true", Assets: web.Assets(), MediaRoots: filepath.SplitList(os.Getenv("MEDIA_ROOTS"))})
+	application, err := app.New(app.Config{ImportLegacyMetadata: func() app.LegacyMetadataCredentials {
+		return app.LegacyMetadataCredentials{TMDBToken: optionalSecret("TMDB_READ_ACCESS_TOKEN"), TVDBAPIKey: optionalSecret("TVDB_API_KEY"), TVDBPIN: optionalSecret("TVDB_PIN"), MetaTubeURL: os.Getenv("METATUBE_URL"), MetaTubeToken: optionalSecret("METATUBE_TOKEN")}
+	}, DataDir: env("DATA_DIR", "./data"), Username: os.Getenv("HOUSEHOLD_USERNAME"), Password: password, CookieSecure: os.Getenv("COOKIE_SECURE") == "true", Assets: web.Assets(), MediaRoots: filepath.SplitList(os.Getenv("MEDIA_ROOTS"))})
 	if err != nil {
 		return err
 	}

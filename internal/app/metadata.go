@@ -35,16 +35,17 @@ type TitleMetadata struct {
 }
 
 type metadataService struct {
-	imageGate chan struct{} // Title images never queue behind metadata or person photos.
-	photoGate chan struct{} // Coalesce lazy artwork downloads without blocking metadata writes.
-	providers map[string]metadataProvider
-	wake      chan struct{}
-	operation sync.Mutex // Serialize association changes, not library reads.
-	mu        sync.Mutex
-	running   bool
-	lastError string
-	finished  int64
-	revision  int64
+	imageGate   chan struct{} // Title images never queue behind metadata or person photos.
+	photoGate   chan struct{} // Coalesce lazy artwork downloads without blocking metadata writes.
+	providers   map[string]metadataProvider
+	providersMu sync.RWMutex
+	wake        chan struct{}
+	operation   sync.Mutex // Serialize association changes, not library reads.
+	mu          sync.Mutex
+	running     bool
+	lastError   string
+	finished    int64
+	revision    int64
 }
 
 type metadataTarget struct{ Kind, ID, Title, DirectoryID string }
@@ -65,20 +66,13 @@ func (a *App) initializeMetadata() error {
 	if err := a.initializePeopleIndex(); err != nil {
 		return err
 	}
-	tmdb, err := newTMDB(a.config)
+	providers, err := a.initializeMetadataSettings()
 	if err != nil {
 		return err
 	}
-	tvdb, err := newTVDB(a.config)
-	if err != nil {
-		return err
-	}
-	metatube, err := newMetaTube(a.config, a.db)
-	if err != nil {
-		return err
-	}
-	a.config.TMDBToken, a.config.TVDBAPIKey, a.config.TVDBPIN, a.config.MetaTubeToken = "", "", "", ""
-	a.metadata = &metadataService{providers: map[string]metadataProvider{"tmdb": tmdb, "tvdb": tvdb, "metatube": metatube}, wake: make(chan struct{}, 1), photoGate: make(chan struct{}, 1), imageGate: make(chan struct{}, 1)}
+	a.config.TMDBToken, a.config.TVDBAPIKey, a.config.TVDBPIN, a.config.MetaTubeToken, a.config.MetaTubeURL = "", "", "", "", ""
+	a.config.ImportLegacyMetadata = nil
+	a.metadata = &metadataService{providers: providers, wake: make(chan struct{}, 1), photoGate: make(chan struct{}, 1), imageGate: make(chan struct{}, 1)}
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -238,7 +232,7 @@ func (a *App) matchTarget(ctx context.Context, target metadataTarget) error {
 		}
 		var m TitleMetadata
 		if err == nil && json.Unmarshal([]byte(payload), &m) == nil {
-			client := a.metadata.providers[oldSource]
+			client := a.metadata.provider(oldSource)
 			if (creditsDue(m.Credits) || artworkDue(m.Artwork)) && sourceEnabled(sources, oldSource) && client != nil && client.configured() {
 				if artworkDue(m.Artwork) {
 					m.Artwork = fetchTitleArtwork(ctx, client, target.Kind, oldID, m.Artwork)
@@ -274,7 +268,7 @@ func (a *App) matchTarget(ctx context.Context, target metadataTarget) error {
 	failures := []string{}
 	failed := false
 	for _, source := range sources {
-		client := a.metadata.providers[source]
+		client := a.metadata.provider(source)
 		if !client.configured() {
 			failures = append(failures, strings.ToUpper(source)+" 未配置凭据")
 			failed = true
