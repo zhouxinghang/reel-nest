@@ -1,0 +1,55 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.story {
+  background: radial-gradient(ellipse at 30% 30%, #293a29, #171b17 70%);
+  padding: 55px 12%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.brand {
+  font-size: 32px;
+  font-weight: 750;
+}
+.brand span {
+  color: var(--accent);
+}
+.story h1 {
+  font-size: clamp(36px, 4vw, 66px);
+  line-height: 1.3;
+}
+.form {
+  padding: 60px 24px;
+  width: min(440px, 100%);
+  margin: auto;
+  display: grid;
+  gap: 16px;
+}
+.form h2 {
+  font-size: 29px;
+  margin-bottom: 0;
+}
+.form label {
+  display: grid;
+  gap: 8px;
+}
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .story {
+    padding: 20px 24px;
+  }
+  .story h1 {
+    font-size: 30px;
+  }
+  .story > p:last-child {
+    display: none;
+  }
+  .form {
+    padding-top: 28px;
+  }
+}

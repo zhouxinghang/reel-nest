@@ -1,0 +1,6 @@
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 100px;
+}

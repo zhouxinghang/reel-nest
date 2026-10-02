@@ -5,27 +5,36 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config web/vite.config.ts",
-    "build": "npm run contracts:check && tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts",
-    "test": "npm run build && go test ./... && playwright test",
+    "build": "npm run contracts:check && tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts && npm run build:runtime",
+    "test": "npm run build && npm run typecheck:tests && npm run test:unit && go test ./... && playwright test",
     "test:browser": "npm run build && playwright test",
     "format:check": "prettier --check web scripts tests playwright.config.ts package.json compose*.yaml api/openapi.yaml api/testdata/*.json docs/architecture/*.json",
     "contracts:generate": "node scripts/contracts.mjs",
     "contracts:check": "node scripts/contracts.mjs --check && go test ./api",
     "baseline:check": "node scripts/check-regression-inventory.mjs",
-    "verify:foundation": "npm run baseline:check && npm test && go test -race ./... && go vet ./... && npm run format:check && git diff --check"
+    "verify:foundation": "npm run baseline:check && npm test && go test -race ./... && go vet ./... && npm run format:check && git diff --check",
+    "build:runtime": "vite build --config web/vite.runtime.config.ts",
+    "test:unit": "vitest run --config web/vitest.config.ts",
+    "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json && tsc --noEmit -p web/tsconfig.test.json"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.90.5",
     "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "react-dom": "19.1.1",
+    "react-router-dom": "7.9.4"
   },
   "devDependencies": {
     "@playwright/test": "1.55.1",
+    "@testing-library/react": "16.3.0",
+    "@types/node": "24.7.2",
     "@types/react": "19.1.16",
     "@types/react-dom": "19.1.9",
     "@vitejs/plugin-react": "5.0.4",
+    "jsdom": "27.0.1",
     "openapi-typescript": "7.13.0",
     "prettier": "3.6.2",
     "typescript": "5.9.3",
-    "vite": "7.1.7"
+    "vite": "7.1.7",
+    "vitest": "3.2.4"
   }
 }

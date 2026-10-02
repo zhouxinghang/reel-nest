@@ -1,0 +1,45 @@
+.button,
+.primary {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 9px 15px;
+  background: var(--surface-raised);
+  color: inherit;
+  text-align: center;
+}
+.primary {
+  background: var(--accent);
+  color: #10200e;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.primary:hover {
+  background: var(--accent-hover);
+}
+.input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  color: inherit;
+  background: #242424;
+  border: 1px solid #3b3b3b;
+  border-radius: 5px;
+}
+.muted {
+  color: var(--muted);
+}
+.error {
+  color: #ffb4a6;
+  overflow-wrap: anywhere;
+}
+.error p {
+  margin-bottom: 8px;
+}
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+}

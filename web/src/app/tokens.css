@@ -1,0 +1,57 @@
+:root {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  color: #ededed;
+  background: #141414;
+  font-synthesis: none;
+  color-scheme: dark;
+  line-height: 1.6;
+  --accent: #62c052;
+  --accent-hover: #77d267;
+  --surface: #1d1d1d;
+  --surface-raised: #262626;
+  --border: #303030;
+  --muted: #a0a0a0;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+::selection {
+  background: #62c05250;
+  color: white;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
