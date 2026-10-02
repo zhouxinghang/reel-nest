@@ -85,15 +85,8 @@ type Person struct {
 	PhotoAssetID                *string
 }
 type PersonWork struct {
-	Filename                                                                      string
-	FavoritedAt                                                                   *int64
-	Progress                                                                      *Progress
-	RemoteTitleID, EntryKey, MediaFileID, SeriesID, LibraryID, Kind, Title, State string
-	AddedAt                                                                       int64
-	SeasonCount, EpisodeCount, FileCount, AvailableFileCount                      int
-	Favorite                                                                      bool
-	Roles, Characters                                                             []string
-	Match                                                                         Match
+	CatalogCard
+	Roles, Characters []string
 }
 type MetadataJob struct {
 	SubjectID, State                     string

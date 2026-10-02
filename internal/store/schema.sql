@@ -246,7 +246,9 @@ CREATE TABLE metadata_snapshots (
     credits_state TEXT NOT NULL CHECK (credits_state IN ('missing','ready','failed')),
     artwork_state TEXT NOT NULL CHECK (artwork_state IN ('missing','ready','failed')),
     credits_retry_at INTEGER,
-    artwork_retry_at INTEGER
+    artwork_retry_at INTEGER,
+    title_sort_key TEXT GENERATED ALWAYS AS (rn_title_key_v1(title)) STORED,
+    search_key TEXT GENERATED ALWAYS AS (rn_search_v1(title || char(10) || original_title)) STORED
 ) STRICT;
 CREATE INDEX snapshots_expiry ON metadata_snapshots(expires_at, remote_title_id);
 -- Stable scoped people; names/roles/photos live only in current title_credits.

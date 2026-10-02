@@ -6,6 +6,7 @@ require (
 	github.com/getkin/kin-openapi v0.133.0
 	golang.org/x/crypto v0.43.0
 	golang.org/x/sys v0.37.0
+	golang.org/x/text v0.30.0
 	modernc.org/sqlite v1.39.1
 )
 

@@ -3,9 +3,9 @@
 - 方案：[已通过的技术方案](./spec.md)
 - 审计：[现状与验证基线](./audit.md)
 - 评审：2026-10-02，用户确认“评审通过”。
-- 当前阶段：01–03 已完成；04 已解除阻塞，05–06 仍等待其剩余前置任务。
-- 最近完成：[03：资料源、版本提交、人物与图片](./issues/03-metadata-providers-assets.md)（resolved，完整资料后端与验收已交付）。
-- Frontier（新的认领）：[04：查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md)（ready-for-agent，尚未认领）。
+- 当前阶段：01–04 已完成；05 已解除阻塞，06 仍等待 05。
+- 最近完成：[04：查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md)（resolved，最终完整回归与三档 HTTP 基准通过）。
+- Frontier（新的认领）：[05：前端、播放与交互切换](./issues/05-frontend-playback-interactions.md)（ready-for-agent，尚未认领）。
 
 ## 任务与依赖
 
@@ -16,7 +16,7 @@
 | 01 | [契约、数据模型与验证基线](./issues/01-contract-schema-baseline.md) | resolved | 无 |
 | 02 | [文件安全、身份与媒体编目](./issues/02-mediafs-identity-catalog.md) | resolved | 01 |
 | 03 | [资料源、版本提交、人物与图片](./issues/03-metadata-providers-assets.md) | resolved | 01, 02 |
-| 04 | [查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md) | ready-for-agent | 02, 03 |
+| 04 | [查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md) | resolved | 02, 03 |
 | 05 | [前端、播放与交互切换](./issues/05-frontend-playback-interactions.md) | ready-for-agent | 03, 04 |
 | 06 | [兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md) | ready-for-agent | 02, 03, 04, 05 |
 
@@ -39,3 +39,5 @@
 - 2026-10-02：03 已推进配置基础增量：加密设置、不可变配置快照、MetaTube 目录空间、设置事务/任务 generation 与新版设置 HTTP 已实现；全量 Go/race、27 个旧浏览器场景及最终专项三轮 race 通过，结果见 03 Progress。adapter/匹配 CAS/人物/图片尚未完成，03 保持 claimed，04–06 不解除阻塞。没有切换或部署。
 
 - 2026-10-02：03 完整后端已完成并通过最终全量 Go/race、27 个旧 UI 场景和三轮专项 race；22 个新增顶层测试覆盖三源、CAS、重启、人物、图片和新 HTTP。详见 03 Answer 与资料流水线交接。Frontier 更新为 04；没有自动认领 04、切换或部署。
+
+- 2026-10-02：04 完成轻量投影、定向详情、全局分组/独立分页、子串搜索、独立收藏/续播、人物批量读取及 TTL/revision 游标。修复基准发现的无用资料 JOIN 退化；最终三档真实 HTTP（每场景 30 样本）、全量 Go race、27 个浏览器场景及格式/vet 全部通过。详见 04 Answer、查询交接及原始 JSON。Frontier 为 05；没有自动认领、切换、部署或操作现有媒体数据。

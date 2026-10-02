@@ -107,7 +107,7 @@ func (s *Store) MarkFileDeleted(ctx context.Context, id string) error {
  WHERE subject_id IN (SELECT sub.id FROM metadata_subjects sub WHERE sub.media_file_id=? OR sub.series_id IN (SELECT o.series_id FROM file_organization o WHERE o.media_file_id=?) AND NOT EXISTS(SELECT 1 FROM file_organization o JOIN media_files f ON f.id=o.media_file_id WHERE o.series_id=sub.series_id AND f.state='available'))`, time.Now().UnixMilli(), id, id); e != nil {
 		return e
 	}
-	if e = rebuildLocalProjection(ctx, tx, library); e != nil {
+	if e = updateDeletedProjection(ctx, tx, id); e != nil {
 		return e
 	}
 	if _, e = tx.ExecContext(ctx, "UPDATE revisions SET catalog=catalog+1,metadata=metadata+1 WHERE singleton=1"); e != nil {

@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"reelnest/internal/model"
@@ -193,21 +192,4 @@ func (s *Store) CommitScan(ctx context.Context, id string) error {
 		return e
 	}
 	return tx.Commit()
-}
-func rebuildLocalProjection(ctx context.Context, tx *sql.Tx, library string) error {
-	queries := []string{
-		`DELETE FROM catalog_entries WHERE library_id=?`,
-		`INSERT INTO catalog_entries(entry_key,library_id,media_file_id,subject_id,kind,local_title,local_search_key,title_sort_key,added_at,file_count,available_file_count)
- SELECT 'media:'||f.id,f.library_id,f.id,s.id,l.kind,f.relative_path,lower(f.relative_path),lower(f.relative_path),f.added_at,1,(f.state='available')
- FROM media_files f JOIN libraries l ON l.id=f.library_id JOIN metadata_subjects s ON s.media_file_id=f.id WHERE f.library_id=?`,
-		`INSERT INTO catalog_entries(entry_key,library_id,series_id,subject_id,kind,local_title,local_search_key,title_sort_key,added_at,season_count,episode_count,file_count,available_file_count)
- SELECT 'series:'||se.id,se.library_id,se.id,s.id,'series',se.local_title,lower(se.local_title),lower(se.local_title),max(f.added_at),count(DISTINCT o.season_number),count(DISTINCT o.season_number||':'||o.episode_number),count(*),sum(f.state='available')
- FROM series se JOIN file_organization o ON o.series_id=se.id JOIN media_files f ON f.id=o.media_file_id JOIN metadata_subjects s ON s.series_id=se.id WHERE se.library_id=? GROUP BY se.id`,
-	}
-	for _, q := range queries {
-		if _, e := tx.ExecContext(ctx, q, library); e != nil {
-			return e
-		}
-	}
-	return nil
 }

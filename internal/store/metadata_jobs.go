@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type metadataReader interface {
+type queryReader interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
@@ -25,7 +25,7 @@ const targetSQL = `SELECT s.id,s.library_id,s.expected_kind,s.revision,l.policy_
  WHERE s.id=?`
 const targetAvailable = ` AND (s.media_file_id IS NULL AND EXISTS(SELECT 1 FROM file_organization o JOIN media_files f ON f.id=o.media_file_id WHERE o.series_id=s.series_id AND f.state='available') OR EXISTS(SELECT 1 FROM media_files f WHERE f.id=s.media_file_id AND f.state='available'))`
 
-func readTarget(ctx context.Context, q metadataReader, id string, available bool) (model.MetadataTarget, error) {
+func readTarget(ctx context.Context, q queryReader, id string, available bool) (model.MetadataTarget, error) {
 	var t model.MetadataTarget
 	var sources string
 	query := targetSQL

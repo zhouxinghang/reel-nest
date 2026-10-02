@@ -125,7 +125,7 @@ func writeAsset(ctx context.Context, tx *sql.Tx, title, catalog, credit, kind, r
 	_, e = tx.ExecContext(ctx, `INSERT INTO assets(id,remote_title_id,catalog_id,credit_id,kind,reference,revision,provider_revision) VALUES(?,?,?,?,?,?,1,?) ON CONFLICT DO NOTHING`, model.NewID(), title, catalog, nullable(credit), kind, reference, revision)
 	return e
 }
-func readMatch(ctx context.Context, q metadataReader, id string, now int64) (model.Match, error) {
+func readMatch(ctx context.Context, q queryReader, id string, now int64) (model.Match, error) {
 	m := model.Match{CacheState: "absent", AttemptState: "never", Credits: []model.StoredCredit{}, Artwork: map[string]string{}}
 	t, e := readTarget(ctx, q, id, false)
 	if e != nil {

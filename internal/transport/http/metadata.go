@@ -331,8 +331,8 @@ type mediaCardDTO struct {
 	AddedAt   int64        `json:"addedAt"`
 	Favorite  favoriteDTO  `json:"favorite"`
 	Progress  *progressDTO `json:"progress"`
-	Episode   *struct{}    `json:"episode"`
-	Metadata  summaryDTO   `json:"metadata"`
+	Episode   *episodeDTO  `json:"episode"`
+	Metadata  *summaryDTO  `json:"metadata"`
 }
 type seriesCardDTO struct {
 	EntryType          string      `json:"entryType"`
@@ -347,7 +347,7 @@ type seriesCardDTO struct {
 	FileCount          int         `json:"fileCount"`
 	AvailableFileCount int         `json:"availableFileCount"`
 	Favorite           favoriteDTO `json:"favorite"`
-	Metadata           summaryDTO  `json:"metadata"`
+	Metadata           *summaryDTO `json:"metadata"`
 }
 type personWorkDTO struct {
 	Card       any      `json:"card"`
@@ -367,6 +367,11 @@ func (t *Transport) metadataPersonWorks(w http.ResponseWriter, r *http.Request) 
 		t.fail(w, e)
 		return
 	}
+	c.Expires = min(c.Expires, expiry)
+	if c.Expires <= time.Now().UnixMilli() {
+		t.fail(w, model.ErrCursor)
+		return
+	}
 	result := struct {
 		Items []personWorkDTO `json:"items"`
 		Page  pageInfo        `json:"page"`
@@ -379,18 +384,7 @@ func (t *Transport) metadataPersonWorks(w http.ResponseWriter, r *http.Request) 
 		result.Page = t.metadataPage(c)
 	}
 	for _, v := range items {
-		var card any
-		if v.SeriesID != "" {
-			card = seriesCardDTO{"series", v.SeriesID, v.EntryKey, v.LibraryID, "series", v.Title, v.AddedAt, v.SeasonCount, v.EpisodeCount, v.FileCount, v.AvailableFileCount, favoriteDTO{v.Favorite, v.FavoritedAt}, summary(v.Match)}
-		} else {
-			var progress *progressDTO
-			if v.Progress != nil {
-				p := v.Progress
-				progress = &progressDTO{p.Position, p.Duration, p.Completed, p.UpdatedAt}
-			}
-			card = mediaCardDTO{"media", v.MediaFileID, v.EntryKey, v.LibraryID, v.Kind, v.Title, v.Filename, v.State, v.AddedAt, favoriteDTO{v.Favorite, v.FavoritedAt}, progress, nil, summary(v.Match)}
-		}
-		result.Items = append(result.Items, personWorkDTO{card, v.Roles, v.Characters})
+		result.Items = append(result.Items, personWorkDTO{card(v.CatalogCard), v.Roles, v.Characters})
 	}
 	respond(w, 200, result)
 }

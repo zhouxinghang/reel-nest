@@ -1,6 +1,7 @@
 // Package http provides explicit contract DTOs and authentication adapters.
 // This assembly is not exposed by cmd/reelnest until the remaining routes and
-// UI land. It mounts identity/library/scan, metadata, people and asset routes.
+// UI land. It mounts identity/library/scan, bounded catalog reads, metadata,
+// people and asset routes; playback and final UI integration are still pending.
 package http
 
 import (
@@ -77,6 +78,13 @@ func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, m *metadata.S
 		respond(w, 200, session{name})
 	})
 	register("GET /api/libraries", true, t.libraries)
+	register("GET /api/home", true, t.catalogHome)
+	register("GET /api/catalog", true, t.catalogEntries)
+	register("GET /api/catalog/groups", true, t.catalogGroups)
+	register("GET /api/media/{id}", true, t.catalogMedia)
+	register("GET /api/series/{id}", true, t.catalogSeries)
+	register("GET /api/series/{id}/seasons/{number}/episodes", true, t.catalogEpisodes)
+	register("PUT /api/favorites/{kind}/{id}", true, t.catalogFavorite)
 	register("GET /api/settings/metadata", true, t.metadataSettings)
 	register("GET /api/metadata/subjects/{id}/candidates", true, t.metadataCandidates)
 	register("PUT /api/metadata/subjects/{id}/selection", true, t.metadataSelection)

@@ -171,7 +171,7 @@ func TestOrganizationSubjectChangesDoNotSpreadManualSelections(t *testing.T) {
 		t.Fatal("multiple versions merged or subjects duplicated")
 	}
 	var episodes, fileCount int
-	if e := s.reader.QueryRow("SELECT episode_count,file_count FROM catalog_entries").Scan(&episodes, &fileCount); e != nil || episodes != 1 || fileCount != 2 {
+	if e := s.reader.QueryRow("SELECT episode_count,file_count FROM catalog_entries WHERE series_id IS NOT NULL").Scan(&episodes, &fileCount); e != nil || episodes != 1 || fileCount != 2 {
 		t.Fatal(episodes, fileCount, e)
 	}
 	scan = beginScan(t, s, l, false)

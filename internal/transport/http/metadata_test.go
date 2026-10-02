@@ -152,7 +152,8 @@ func TestMetadataPeopleAndFailurePagesUseScopedCursors(t *testing.T) {
 	if _, e = h.store.Favorite(ctx, "media", files[0].ID, true); e != nil {
 		t.Fatal(e)
 	}
-	h.request(t, "GET", "/api/people/"+person+"/works?limit=1&cursor="+cursor, "", 409)
+	// Ordinary person works ordering is independent of favorites.
+	h.request(t, "GET", "/api/people/"+person+"/works?limit=1&cursor="+cursor, "", 200)
 	h.request(t, "POST", "/api/metadata/refresh", `{}`, 202)
 	versions := []model.ProviderVersion{{Source: "tmdb", CatalogID: "tmdb", Revision: 1}}
 	for range files {

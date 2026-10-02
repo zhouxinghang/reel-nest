@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"reelnest/internal/model"
 	"runtime"
 	"sort"
 	"strconv"
@@ -260,4 +261,110 @@ func TestSyntheticQueryBaseline(t *testing.T) {
 	if err = os.WriteFile(*baselineOutput, append(b, '\n'), 0600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// Test-only bridge for the external-package real HTTP benchmark. Never shipped
+// as an application data-import or raw database API.
+func PopulateHTTPFixture(t testing.TB, s *Store, files int) {
+	populateSynthetic(t, s, files, min(files, 5000), 150)
+	// Keep original schema probes reproducible while making real HTTP fixture TTL
+	// relative to execution time. Other fixed collection times preserve stable ties.
+	now := time.Now().UnixMilli()
+	if _, e := s.writer.Exec("UPDATE metadata_snapshots SET fetched_at=?,expires_at=?", now, now+86400000); e != nil {
+		t.Fatal(e)
+	}
+}
+func HTTPQueryPlans(t testing.TB, s *Store) map[string]any {
+	t.Helper()
+	result := map[string]any{}
+	for _, q := range []struct {
+		name  string
+		query model.CatalogQuery
+	}{
+		{"library-title", model.CatalogQuery{LibraryID: "lib-00", View: "browse", Sort: "title"}},
+		{"global-recent", model.CatalogQuery{View: "recent", Sort: "recent"}},
+		{"continue", model.CatalogQuery{View: "continue", Sort: "progress"}},
+		{"substring", model.CatalogQuery{LibraryID: "lib-00", View: "browse", Sort: "title", Query: "000"}},
+	} {
+		query, args := catalogSelection(q.query, time.Now().UnixMilli())
+		var matches int
+		if e := s.reader.QueryRow("SELECT count(*) FROM ("+query+")", args...).Scan(&matches); e != nil {
+			t.Fatal(e)
+		}
+		query = `WITH matches AS (` + query + `) SELECT entry_key,sort_key FROM matches WHERE (sort_key,entry_key)>(?,?) ORDER BY sort_key,entry_key LIMIT ?`
+		args = append(args, "", "", 51)
+		rows, e := s.reader.Query("EXPLAIN QUERY PLAN "+query, args...)
+		if e != nil {
+			t.Fatal(e)
+		}
+		plan := []string{}
+		for rows.Next() {
+			var a, b, c int
+			var detail string
+			if e = rows.Scan(&a, &b, &c, &detail); e != nil {
+				t.Fatal(e)
+			}
+			plan = append(plan, detail)
+		}
+		if e = rows.Err(); e != nil {
+			t.Fatal(e)
+		}
+		rows.Close()
+		result[q.name] = map[string]any{"sql": query, "plan": plan, "matchingRowsBeforePage": matches, "note": "matching/returned rows are exact; SQLite VM rows visited are not instrumented"}
+	}
+	for name, p := range map[string]struct {
+		sql  string
+		args []any
+	}{
+		"person-works":  {personWorksSQL, []any{time.Now().UnixMilli(), "person-000", "", 51}},
+		"person-detail": {personDetailSQL, []any{time.Now().UnixMilli(), "person-000"}},
+	} {
+		rows, e := s.reader.Query("EXPLAIN QUERY PLAN "+p.sql, p.args...)
+		if e != nil {
+			t.Fatal(e)
+		}
+		plan := []string{}
+		for rows.Next() {
+			var a, b, c int
+			var detail string
+			if e = rows.Scan(&a, &b, &c, &detail); e != nil {
+				t.Fatal(e)
+			}
+			plan = append(plan, detail)
+		}
+		if e = rows.Err(); e != nil {
+			t.Fatal(e)
+		}
+		rows.Close()
+		result[name] = map[string]any{"sql": p.sql, "plan": plan}
+	}
+
+	q := &countingReader{queryReader: s.reader}
+	d, e := readMediaDetail(context.Background(), q, "file-00000", time.Now().UnixMilli())
+	if e != nil {
+		t.Fatal(e)
+	}
+	detailPlans := []any{}
+	for i, query := range q.queries {
+		rows, e := s.reader.Query("EXPLAIN QUERY PLAN "+query, q.args[i]...)
+		if e != nil {
+			t.Fatal(e)
+		}
+		plan := []string{}
+		for rows.Next() {
+			var a, b, c int
+			var v string
+			if e = rows.Scan(&a, &b, &c, &v); e != nil {
+				t.Fatal(e)
+			}
+			plan = append(plan, v)
+		}
+		if e = rows.Err(); e != nil {
+			t.Fatal(e)
+		}
+		rows.Close()
+		detailPlans = append(detailPlans, map[string]any{"sql": query, "plan": plan})
+	}
+	result["detail"] = map[string]any{"selectCount": len(q.queries), "targetCreditsReturned": len(d.Match.Credits), "unrelatedCreditsParsed": 0, "statements": detailPlans}
+	return result
 }
