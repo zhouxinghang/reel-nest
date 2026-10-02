@@ -63,7 +63,7 @@ async function addMedia(
   mkdirSync(root, { recursive: true });
   copyFileSync("tests/fixtures/playback.webm", join(root, name));
   const added = await context.request.post("/api/directories", {
-    data: { path: root, kind, metadataSources },
+    data: { name: "测试媒体库", path: root, kind, metadataSources },
   });
   expect(added.status()).toBe(201);
   const directory = await added.json();
@@ -595,11 +595,12 @@ test("资料源：目录排序、独立配置、重载与同 ID 手动选择", a
   await addForm
     .getByRole("button", { name: "上移 TheTVDB (TVDB)", exact: true })
     .click();
+  await page.getByLabel("媒体库名称", { exact: true }).fill("first");
   await page.getByLabel("媒体目录路径").fill(join(root, "first"));
   await addForm.getByRole("button", { name: "添加并扫描" }).click();
   const firstRow = page.locator(".directory-row").filter({
     has: page.getByRole("heading", {
-      name: join(root, "first"),
+      name: "first",
       exact: true,
     }),
   });
@@ -608,11 +609,12 @@ test("资料源：目录排序、独立配置、重载与同 ID 手动选择", a
   await addForm
     .getByRole("button", { name: "上移 TheMovieDB (TMDB)", exact: true })
     .click();
+  await page.getByLabel("媒体库名称", { exact: true }).fill("second");
   await page.getByLabel("媒体目录路径").fill(join(root, "second"));
   await addForm.getByRole("button", { name: "添加并扫描" }).click();
   const secondRow = page.locator(".directory-row").filter({
     has: page.getByRole("heading", {
-      name: join(root, "second"),
+      name: "second",
       exact: true,
     }),
   });
@@ -710,7 +712,12 @@ test("资料源：TVDB 故障按优先级回退 TMDB，仍可实际播放", asyn
   expect(
     (
       await context.request.post("/api/directories", {
-        data: { path: root, kind: "movie", metadataSources: ["tvdb", "tmdb"] },
+        data: {
+          name: "测试媒体库",
+          path: root,
+          kind: "movie",
+          metadataSources: ["tvdb", "tmdb"],
+        },
       })
     ).status(),
   ).toBe(201);

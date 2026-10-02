@@ -1,4 +1,4 @@
-# 当前应用 HTTP 契约（01–12）
+# 当前应用 HTTP 契约
 
 应用与网页同源。所有写入请求为 `application/json`，无参数 POST 发送 `{}`；错误返回 `{"error":"可显示的错误说明"}`。对跨站浏览器写入请求返回 403。除健康检查和登录外，API 均要求家庭共享账号会话；独立的 `/stream/{id}` 使用单文件只读串流凭证，不能代替网页会话。
 
@@ -9,21 +9,26 @@
 | `GET /api/session` | 200 返回家庭共享账号的 `username`，不返回密码或哈希 |
 | `POST /api/logout` | 200 `{"ok":true}`，立即撤销当前会话；不撤销其他浏览器 |
 | `GET /api/directories` | 200 `{directories, allowedRoots, metadataSources}`；只暴露已配置允许根目录和已接入目录，不提供服务器目录树枚举 |
-| `POST /api/directories` | 输入 `{path, kind, metadataSources?}`，kind 为 `movie` 或 `series`；201 返回已接入目录并启动首次扫描；越界/符号链接/非目录 400，重复或重叠目录 409 |
+| `POST /api/directories` | 输入 `{name, path, kind, metadataSources?}`；name 去除首尾空白后须为 1–80 个 Unicode 字符且无控制字符，否则 400，kind 为 `movie` 或 `series`；201 返回已接入目录并启动首次扫描；越界/符号链接/非目录 400，重复或重叠目录 409 |
+| `POST /api/directories/{id}/name` | 输入 `{name}`，200 返回规范化的 `{name}`；名称规则与创建相同，无效 400，不存在 404；只修改展示名称，不重扫、不改源目录 |
 | `POST /api/directories/{id}/metadata-sources` | 输入 `{metadataSources:["tvdb","tmdb"]}`，200 保存启用来源与优先级；空数组禁用自动获取，校验失败 400，资料写入争用 409 |
 | `POST /api/directories/{id}/scan` | 202 `{"scanStatus":"running"}`，异步重新扫描；已在扫描时 409，不存在 404 |
-| `GET /api/library` | 200 `{items:[媒体文件...], series:[电视剧摘要...]}`；支持 `q` 文件名/本地电视剧名/资料标题子串搜索、`kind=movie/series` 分类、`sort=recent` 按实际收录时间降序；未指定排序沿用文件名排序，未知分类/排序 400 |
+| `GET /api/library` | 200 `{items:[媒体文件...], series:[电视剧摘要...], directories:[具名目录...]}`；支持 `directoryId` 限定单个媒体库（未指定为全部，不存在 404）， `q` 文件名/本地电视剧名/资料标题子串搜索、`kind=movie/series` 分类、`sort=recent` 按实际收录时间降序；未指定排序沿用文件名排序，未知分类/排序 400 |
 | `POST /api/favorites/{kind}/{id}` | 家庭共享账号添加/取消收藏；kind 为 `media`（电影或单集文件）或 `series`（整部电视剧），输入 `{"favorite":true/false}`，200 返回 `{favorite,favoritedAt}`；非法类型/缺失或无效字段 400，对象不存在 404 |
 | `GET /api/media/{id}` | 200 返回单个媒体文件详情，包含可空的季集关联；不存在 404；标识不是服务器文件路径 |
 | `GET /api/series/{id}` | 200 返回电视剧摘要及按季号/集号排序的 `seasons` 层级；不存在 404；媒体文件标识不能充当电视剧标识 |
 
-目录字段：`id / path / kind / scanStatus / scanError / scanStarted / scanFinished / metadataSources`。状态为 `pending / running / completed / failed / interrupted`。时间为 Unix 秒，未开始/完成为 0。新增或重扫响应仅代表请求已接受；应轮询目录列表观察终态，不按固定延时假定成功。
+目录字段：`id / name / path / kind / scanStatus / scanError / scanStarted / scanFinished / metadataSources`。状态为 `pending / running / completed / failed / interrupted`。时间为 Unix 秒，未开始/完成为 0。新增或重扫响应仅代表请求已接受；应轮询目录列表观察终态，不按固定延时假定成功。
 
-媒体文件字段：`id / directoryId / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress / match`。大小为字节，修改时间为 Unix 秒；`available` 是成功删除后的即时索引状态，不是实时探测结果。完整成功扫描会移除未发现的文件记录；扫描失败或中断不发布部分结果。`matched` 表示存在未过期的影片资料。
+一个已接入目录对应一个具名媒体库；名称不是身份，同名媒体库仍按目录 ID 隔离。旧目录启动迁移时用文件夹名补全名称（去除控制字符并截取至 80 字符，空名回退“媒体库”），无需读取媒体文件或重扫。
+
+网页 `/library?directory={id}` 为单库入口，刷新/浏览器前进后退保持选择；全局分类、搜索、收藏、最近添加按目录分组展示，目录下的电视剧仍保留季集组织。`/api/library` 的 `directories` 始终包含全部已接入目录（含空库），只有 `items/series` 应用查询条件。
+
+媒体文件字段：`id / directoryId / directoryName / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress / match`。大小为字节，修改时间为 Unix 秒；`available` 是成功删除后的即时索引状态，不是实时探测结果。完整成功扫描会移除未发现的文件记录；扫描失败或中断不发布部分结果。`matched` 表示存在未过期的影片资料。
 
 `episode` 为 `null`（电影或未组织文件），或 `{seriesId, seriesTitle, seasonNumber, episodeNumber}`。无法识别的电视剧文件通过 `organizationReason` 解释原因；识别成功时为空字符串。`matched` 表示影片资料匹配，不能用 `episode != null` 代替它。
 
-电视剧摘要字段：`id / title / directoryId / directoryPath / seasonCount / episodeCount / fileCount / availableFileCount / matched / match`。季/集数量按逻辑季集去重，文件数量不合并版本；来源目录区分跨目录的同名作品。`/api/library` 的摘要对应本次筛选出的文件；`items` 始终保留每个文件，不被电视剧摘要替代。
+电视剧摘要字段：`id / title / directoryId / directoryName / directoryPath / seasonCount / episodeCount / fileCount / availableFileCount / matched / match`。季/集数量按逻辑季集去重，文件数量不合并版本；来源目录区分跨目录的同名作品。`/api/library` 的摘要对应本次筛选出的文件；`items` 始终保留每个文件，不被电视剧摘要替代。
 
 媒体文件与电视剧摘要还包含 `addedAt / favorite / favoritedAt`。`addedAt` 为首次完整成功扫描收录该文件的 Unix 毫秒；整部电视剧取当前所有单集文件的最大值，新单集入库会更新电视剧的最近添加排序。旧版未记录历史日期，升级时保留为 0（未知），不使用文件修改时间或升级时间伪造；普通重扫不改写。`sort=recent` 以时间降序、相同时间按稳定标识排序，历史未知项在后。
 

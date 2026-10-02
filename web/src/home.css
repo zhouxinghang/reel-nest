@@ -177,10 +177,10 @@
   justify-content: center;
 }
 .library-tile-art > .icon {
-  width: 64px;
-  height: 64px;
+  width: clamp(40px, 4.5vw, 64px);
+  height: clamp(40px, 4.5vw, 64px);
   opacity: 0.8;
-  margin-bottom: 28px;
+  margin-bottom: 48px;
 }
 .library-tile-art img {
   width: 100%;
@@ -201,13 +201,50 @@
 }
 .library-tile-name {
   position: absolute;
-  bottom: 13px;
+  bottom: 34px;
   left: 10px;
   right: 10px;
   text-align: center;
   font-size: 23px;
   font-weight: 500;
   text-shadow: 0 2px 5px #0008;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.library-tile-description {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  text-align: center;
+  font-size: 13px;
+  color: #ddd;
+}
+.library-source {
+  margin: -6px 0 20px;
+}
+.home-browse-toolbar > select {
+  width: 210px;
+  max-width: 100%;
+  min-width: 0;
+}
+.library-group {
+  margin-bottom: 32px;
+}
+.library-group-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.library-group-heading h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-size: 20px;
+}
+.library-group > .file-path {
+  margin: 4px 0 16px;
 }
 .home-library-tile:hover {
   box-shadow: 0 0 0 2px #eee;
@@ -224,6 +261,8 @@
 }
 .shelf-heading h2 {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .shelf-heading h2 a {
   display: inline-flex;
@@ -239,6 +278,7 @@
 }
 .shelf-arrows {
   display: flex;
+  flex-shrink: 0;
   gap: 0;
 }
 .shelf-arrows .icon-button {
@@ -423,6 +463,7 @@
   font-weight: 500;
   font-size: 26px;
   margin: 5px 0 24px;
+  overflow-wrap: anywhere;
 }
 .home-browse-toolbar {
   display: flex;

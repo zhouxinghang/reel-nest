@@ -44,7 +44,7 @@ test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动
     utimesSync(path, 1700000000 + index, 1700000000 + index);
   }
   const added = await page.request.post("/api/directories", {
-    data: { path: root, kind: "movie" },
+    data: { name: "测试媒体库", path: root, kind: "movie" },
   });
   expect(added.status()).toBe(201);
   const directory = await added.json();
@@ -99,7 +99,11 @@ test("Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动
     animations: "disabled",
   });
 
-  await page.getByRole("button", { name: "浏览电影", exact: true }).click();
+  await page.getByRole("button", { name: "打开导航", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("link", { name: "电影", exact: true })
+    .click();
   await expect(page).toHaveURL(/type=movie/);
   await page.getByRole("button", { name: "打开导航", exact: true }).click();
   await expect(
@@ -255,7 +259,7 @@ test("Emby 详情页：全宽布局、续播与从头播放、图标操作、季
     for (const name of names)
       copyFileSync("tests/fixtures/playback.webm", join(path, name));
     const response = await page.request.post("/api/directories", {
-      data: { path, kind },
+      data: { name: "测试媒体库", path, kind },
     });
     expect(response.status()).toBe(201);
     const directory = await response.json();
@@ -507,13 +511,13 @@ test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添
   }
   const movieDir = await (
     await context.request.post("/api/directories", {
-      data: { path: movies, kind: "movie" },
+      data: { name: "Home 电影", path: movies, kind: "movie" },
     })
   ).json();
   await awaitScan(movieDir.id);
   const showDir = await (
     await context.request.post("/api/directories", {
-      data: { path: shows, kind: "series" },
+      data: { name: "Home 电视剧", path: shows, kind: "series" },
     })
   ).json();
   await awaitScan(showDir.id);
@@ -559,7 +563,7 @@ test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添
       .evaluate((el) => getComputedStyle(el).backgroundColor),
   ).toBe("rgb(20, 20, 20)");
   const recentMovies = page.getByRole("region", {
-    name: "最近添加的电影",
+    name: "最近添加 · Home 电影",
     exact: true,
   });
   await expect(recentMovies.locator(".media-card h2").first()).toHaveText(
@@ -683,7 +687,7 @@ test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/library");
     await expect(
-      page.getByRole("region", { name: "最近添加的电影" }),
+      page.getByRole("region", { name: "最近添加 · Home 电影" }),
     ).toBeVisible();
     expect(
       await page.evaluate(

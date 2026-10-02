@@ -159,7 +159,7 @@ func (f *tvdbFixture) configure(config *app.Config) {
 }
 func addSourceDirectory(t *testing.T, a *runningApp, root, kind string, sources []string) app.Directory {
 	t.Helper()
-	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]any{"path": root, "kind": kind, "metadataSources": sources}, 201)
+	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]any{"name": "测试媒体库", "path": root, "kind": kind, "metadataSources": sources}, 201)
 	var dir app.Directory
 	if err := json.Unmarshal(body, &dir); err != nil {
 		t.Fatal(err)
@@ -427,6 +427,7 @@ func TestLegacyTMDBCacheAndDirectoryMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = db.Exec(`ALTER TABLE media_directories DROP COLUMN metadata_sources;
+ ALTER TABLE media_directories DROP COLUMN name;
  ALTER TABLE metadata_cache RENAME TO new_cache; ALTER TABLE metadata_matches RENAME TO new_matches;
  CREATE TABLE metadata_cache(kind TEXT NOT NULL,tmdb_id INTEGER NOT NULL,payload TEXT NOT NULL,expires_at INTEGER NOT NULL,poster BLOB,poster_type TEXT NOT NULL,PRIMARY KEY(kind,tmdb_id));
  CREATE TABLE metadata_matches(kind TEXT NOT NULL,target_id TEXT NOT NULL,tmdb_id INTEGER NOT NULL DEFAULT 0,selection TEXT NOT NULL DEFAULT 'automatic',status TEXT NOT NULL,error TEXT NOT NULL DEFAULT '',PRIMARY KEY(kind,target_id));
@@ -442,6 +443,9 @@ func TestLegacyTMDBCacheAndDirectoryMigration(t *testing.T) {
 	login(t, a)
 	awaitMetadata(t, a)
 	after := sourceFile(t, a, dir.ID)
+	if after.DirectoryName != filepath.Base(root) {
+		t.Fatalf("legacy library name not migrated: %+v", after)
+	}
 	if after.Match.Metadata.SourceID != 30 || after.Match.Metadata.TMDBID != 30 || after.Match.Selection != "manual" || after.Progress.Position != 9 || tmdb.count() != before {
 		t.Fatalf("legacy migration lost state: %+v", after)
 	}

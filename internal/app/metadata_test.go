@@ -232,7 +232,7 @@ func TestTMDBSeriesAndEnglishFallback(t *testing.T) {
 	writeMedia(t, filepath.Join(root, "Dark S02E02.mkv"), "episode two")
 	a := start(t, f.config(t, root))
 	login(t, a)
-	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": root, "kind": "series"}, 201)
+	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": root, "kind": "series"}, 201)
 	var dir directory
 	_ = json.Unmarshal(body, &dir)
 	awaitScan(t, a, dir.ID, "completed")

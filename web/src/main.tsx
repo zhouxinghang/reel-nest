@@ -388,16 +388,7 @@ function App() {
             ) : mediaId ? (
               <MediaDetails id={mediaId} />
             ) : (
-              <Library
-                filter={libraryFilter}
-                onFilterChange={(value) => {
-                  setLibraryFilter(value);
-                  const url = new URL(window.location.href);
-                  if (value === "all") url.searchParams.delete("type");
-                  else url.searchParams.set("type", value);
-                  window.history.replaceState(null, "", url);
-                }}
-              />
+              <Library filter={libraryFilter} />
             )}
           </>
           {libraryPage ? (

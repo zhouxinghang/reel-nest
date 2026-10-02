@@ -2,7 +2,7 @@ import { DeleteSourceFile } from "./deletion";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, message } from "./api";
 
-import type { MediaFile } from "./media";
+import { libraryURL, type Directory, type MediaFile } from "./media";
 import { seriesURL } from "./series";
 import { Player, clock } from "./player";
 import { ExternalPlayer } from "./external-player";
@@ -19,16 +19,6 @@ import {
   type SourceStatus,
 } from "./metadata-sources";
 
-type Directory = {
-  metadataSources: MetadataSource[];
-  id: string;
-  path: string;
-  kind: "movie" | "series";
-  scanStatus: "pending" | "running" | "completed" | "failed" | "interrupted";
-  scanError: string;
-  scanStarted: number;
-  scanFinished: number;
-};
 type DirectoriesResponse = {
   directories: Directory[];
   allowedRoots: string[];
@@ -46,6 +36,7 @@ export { Library, readLibraryFilter, type LibraryFilter } from "./home";
 
 export function Directories() {
   const [data, setData] = useState<DirectoriesResponse | null>(null);
+  const [name, setName] = useState("");
   const [path, setPath] = useState("");
   const [kind, setKind] = useState("movie");
   const [sources, setSources] = useState<MetadataSource[]>(["tmdb", "tvdb"]);
@@ -79,7 +70,13 @@ export function Directories() {
     setBusy(true);
     setError("");
     try {
-      await api("/api/directories", { path, kind, metadataSources: sources });
+      await api("/api/directories", {
+        name,
+        path,
+        kind,
+        metadataSources: sources,
+      });
+      setName("");
       setData(await api("/api/directories"));
     } catch (error) {
       setError(message(error));
@@ -102,14 +99,14 @@ export function Directories() {
         <div>
           <p className="eyebrow">MAKE ROOM FOR STORIES</p>
           <h1>媒体目录</h1>
-          <p className="muted">连接已经存放在本机或 NAS 的珍藏。</p>
+          <p className="muted">每个目录建立一个独立媒体库，为你的珍藏命名。</p>
         </div>
         <a className="secondary" href="/library">
           返回媒体库 →
         </a>
       </div>
       <section className="panel">
-        <h2>接入一个媒体目录</h2>
+        <h2>创建媒体库</h2>
         <p className="muted small">
           填写应用可见的绝对路径。NAS 请先在宿主机挂载；容器内使用挂载后的路径。
         </p>
@@ -134,6 +131,17 @@ export function Directories() {
               ))}
             </p>
             <form className="directory-form" onSubmit={add}>
+              <div>
+                <label htmlFor="library-name">媒体库名称</label>
+                <input
+                  id="library-name"
+                  required
+                  maxLength={80}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="例如：经典电影、家庭电视剧"
+                />
+              </div>
               <div>
                 <label htmlFor="media-path">媒体目录路径</label>
                 <input
@@ -183,7 +191,7 @@ export function Directories() {
       </section>
       <section className="directory-list">
         <h2>
-          已接入的目录{" "}
+          已创建的媒体库{" "}
           <span className="count">{data?.directories.length || 0}</span>
         </h2>
         {data?.directories.length === 0 && (
@@ -196,7 +204,10 @@ export function Directories() {
                 <Icon name="folder" />
               </span>
               <div>
-                <h3>{dir.path}</h3>
+                <h3>
+                  <a href={libraryURL(dir.id)}>{dir.name}</a>
+                </h3>
+                <p className="fine file-path">{dir.path}</p>
                 <p className="fine">
                   {dir.kind === "movie" ? "电影" : "电视剧"} ·{" "}
                   <span
@@ -219,6 +230,11 @@ export function Directories() {
                 重新扫描
               </button>
             </div>
+            <DirectoryName
+              key={`${dir.id}:${dir.name}`}
+              directory={dir}
+              saved={async () => setData(await api("/api/directories"))}
+            />
             <DirectorySources
               key={`${dir.id}:${JSON.stringify(dir.metadataSources)}`}
               id={dir.id}
@@ -235,6 +251,75 @@ export function Directories() {
         ))}
       </section>
     </>
+  );
+}
+
+function DirectoryName({
+  directory,
+  saved,
+}: {
+  directory: Directory;
+  saved: () => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(directory.name);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/directories/${directory.id}/name`, { name });
+      await saved();
+      setEditing(false);
+    } catch (error) {
+      setError(message(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="directory-name-editor">
+      {editing ? (
+        <form onSubmit={submit}>
+          <label htmlFor={`name-${directory.id}`}>媒体库名称</label>
+          <input
+            id={`name-${directory.id}`}
+            required
+            maxLength={80}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            disabled={busy}
+            autoFocus
+          />
+          <button className="primary" disabled={busy || !name.trim()}>
+            {busy ? "正在保存…" : "保存名称"}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => {
+              setEditing(false);
+              setName(directory.name);
+              setError("");
+            }}
+          >
+            取消
+          </button>
+        </form>
+      ) : (
+        <button className="secondary" onClick={() => setEditing(true)}>
+          修改名称
+        </button>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -472,6 +557,12 @@ export function MediaDetails({ id }: { id: string }) {
                   )}
                   <dt>媒体目录</dt>
                   <dd className="file-path">{file.directoryPath}</dd>
+                  <dt>所属媒体库</dt>
+                  <dd>
+                    <a href={libraryURL(file.directoryId)}>
+                      {file.directoryName}
+                    </a>
+                  </dd>
                   <dt>媒体文件标识</dt>
                   <dd className="file-path">{file.id}</dd>
                 </dl>

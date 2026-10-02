@@ -1153,7 +1153,7 @@ footer > div > span {
 }
 .directory-form {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 150px auto;
+  grid-template-columns: minmax(150px, 1fr) minmax(180px, 2fr) 150px;
   gap: 15px;
   align-items: end;
   margin-top: 22px;
@@ -1218,6 +1218,24 @@ footer > div > span {
 }
 .directory-row .error {
   margin: 15px 0 0;
+}
+.directory-name-editor {
+  margin-top: 18px;
+}
+.directory-name-editor form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.directory-name-editor input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.directory-name-editor label {
+  width: 100%;
+  font-size: 12px;
+  color: var(--muted);
 }
 .back-link {
   display: inline-flex;

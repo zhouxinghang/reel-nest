@@ -17,6 +17,7 @@ type MediaFile struct {
 	Match              metadataAssociation `json:"match"`
 	Progress           *WatchProgress      `json:"progress"`
 	DirectoryPath      string              `json:"directoryPath"`
+	DirectoryName      string              `json:"directoryName"`
 	Episode            *EpisodeReference   `json:"episode"`
 	OrganizationReason string              `json:"organizationReason"`
 	ID                 string              `json:"id"`
@@ -31,7 +32,7 @@ type MediaFile struct {
 	Matched            bool                `json:"matched"`
 }
 
-const mediaColumns = `f.id, f.directory_id, f.filename, f.relative_path, d.path, d.kind, f.size, f.modified_at, f.available, COALESCE(s.id,''), COALESCE(s.title,''), COALESCE(o.season_number,0), COALESCE(o.episode_number,0), COALESCE(o.reason,''), COALESCE(p.position,0), COALESCE(p.duration,0), COALESCE(p.completed,0), COALESCE(p.updated_at,0), f.added_at, COALESCE(mf.favorited_at,0), COALESCE(sf.favorited_at,0)`
+const mediaColumns = `f.id, f.directory_id, f.filename, f.relative_path, d.path, d.kind, f.size, f.modified_at, f.available, COALESCE(s.id,''), COALESCE(s.title,''), COALESCE(o.season_number,0), COALESCE(o.episode_number,0), COALESCE(o.reason,''), COALESCE(p.position,0), COALESCE(p.duration,0), COALESCE(p.completed,0), COALESCE(p.updated_at,0), f.added_at, COALESCE(mf.favorited_at,0), COALESCE(sf.favorited_at,0), d.name`
 const mediaFrom = ` FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id LEFT JOIN series s ON s.id=o.series_id LEFT JOIN watch_progress p ON p.media_file_id=f.id LEFT JOIN media_favorites mf ON mf.target_id=f.id LEFT JOIN series_favorites sf ON sf.target_id=s.id`
 
 func scanMedia(row scanner) (MediaFile, error) {
@@ -39,7 +40,7 @@ func scanMedia(row scanner) (MediaFile, error) {
 	var root string
 	var episode EpisodeReference
 	var progress WatchProgress
-	err := row.Scan(&file.ID, &file.DirectoryID, &file.Filename, &file.RelativePath, &root, &file.Kind, &file.Size, &file.ModifiedAt, &file.Available, &episode.SeriesID, &episode.SeriesTitle, &episode.SeasonNumber, &episode.EpisodeNumber, &file.OrganizationReason, &progress.Position, &progress.Duration, &progress.Completed, &progress.UpdatedAt, &file.AddedAt, &file.FavoritedAt, &file.SeriesFavoritedAt)
+	err := row.Scan(&file.ID, &file.DirectoryID, &file.Filename, &file.RelativePath, &root, &file.Kind, &file.Size, &file.ModifiedAt, &file.Available, &episode.SeriesID, &episode.SeriesTitle, &episode.SeasonNumber, &episode.EpisodeNumber, &file.OrganizationReason, &progress.Position, &progress.Duration, &progress.Completed, &progress.UpdatedAt, &file.AddedAt, &file.FavoritedAt, &file.SeriesFavoritedAt, &file.DirectoryName)
 	file.Favorite = file.FavoritedAt > 0
 	if progress.UpdatedAt > 0 {
 		file.Progress = &progress
@@ -53,6 +54,7 @@ func scanMedia(row scanner) (MediaFile, error) {
 }
 
 func (a *App) library(w http.ResponseWriter, r *http.Request) {
+	directoryID := r.URL.Query().Get("directoryId")
 	kind := r.URL.Query().Get("kind")
 	if kind != "" && kind != "movie" && kind != "series" {
 		fail(w, 400, "未知媒体类型")
@@ -72,7 +74,7 @@ func (a *App) library(w http.ResponseWriter, r *http.Request) {
 	if recent {
 		order = "f.added_at DESC, f.id"
 	}
-	rows, err := a.db.QueryContext(r.Context(), "SELECT "+mediaColumns+mediaFrom+" WHERE (?='' OR d.kind=?) ORDER BY "+order, kind, kind)
+	rows, err := a.db.QueryContext(r.Context(), "SELECT "+mediaColumns+mediaFrom+" WHERE (?='' OR d.kind=?) AND (?='' OR d.id=?) ORDER BY "+order, kind, kind, directoryID, directoryID)
 	if err != nil {
 		fail(w, 500, "无法读取媒体库")
 		return
@@ -92,6 +94,24 @@ func (a *App) library(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows.Close()
+	// Read the resource inventory after the files: a newly added directory may
+	// finish scanning while this request is running. Every returned file must
+	// have a corresponding directory even during concurrent additions.
+	directories, err := a.listDirectories(r.Context())
+	if err != nil {
+		fail(w, 500, "无法读取媒体库")
+		return
+	}
+	if directoryID != "" {
+		found := false
+		for _, d := range directories {
+			found = found || d.ID == directoryID
+		}
+		if !found {
+			fail(w, 404, "媒体库不存在")
+			return
+		}
+	}
 	if err := a.attachMetadata(r.Context(), files); err != nil {
 		fail(w, 500, "无法读取影片资料")
 		return
@@ -112,7 +132,7 @@ func (a *App) library(w http.ResponseWriter, r *http.Request) {
 			return series[i].AddedAt > series[j].AddedAt
 		})
 	}
-	respond(w, 200, map[string]any{"items": files, "series": series})
+	respond(w, 200, map[string]any{"items": files, "series": series, "directories": directories})
 }
 
 func (a *App) media(w http.ResponseWriter, r *http.Request) {

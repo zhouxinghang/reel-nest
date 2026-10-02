@@ -70,7 +70,8 @@ func TestReadOnlyStreamsPersistWithoutSessionsAndCannotChangeTarget(t *testing.T
 		body         any
 	}{
 		{"GET", "/api/session", nil}, {"GET", "/api/library", nil}, {"GET", "/api/directories", nil}, {"GET", "/api/media/" + id, nil}, {"GET", "/api/media/" + id + "/progress", nil},
-		{"POST", "/api/directories", map[string]any{"path": root, "kind": "movie"}}, {"POST", "/api/directories/" + d.ID + "/scan", map[string]any{}},
+		{"POST", "/api/directories", map[string]any{"name": "测试媒体库", "path": root, "kind": "movie"}}, {"POST", "/api/directories/" + d.ID + "/scan", map[string]any{}},
+		{"POST", "/api/directories/" + d.ID + "/name", map[string]any{"name": "不可凭串流凭证改名"}},
 		{"POST", "/api/media/" + id + "/progress", map[string]any{"position": 30, "duration": 60, "completed": false}},
 		{"POST", "/api/media/" + id + "/stream-link", map[string]any{}}, {"DELETE", "/api/media/" + id, nil},
 	} {

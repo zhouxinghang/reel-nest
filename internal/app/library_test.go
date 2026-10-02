@@ -41,7 +41,7 @@ func writeMedia(t *testing.T, path, content string) {
 
 func addDirectory(t *testing.T, a *runningApp, path string) directory {
 	t.Helper()
-	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": path, "kind": "movie"}, 201)
+	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": path, "kind": "movie"}, 201)
 	var result directory
 	if err := json.Unmarshal(body, &result); err != nil || result.ID == "" {
 		t.Fatalf("invalid directory: %s", body)
@@ -224,13 +224,13 @@ func TestDirectoryAuthorizationAndFilesystemBoundaries(t *testing.T) {
 		}
 	}
 	a := start(t, app.Config{DataDir: t.TempDir(), Username: "family", Password: password, MediaRoots: []string{root}})
-	request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": root, "kind": "movie"}, 401)
+	request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": root, "kind": "movie"}, 401)
 	request(t, a.client, "GET", a.server.URL+"/api/directories", nil, 401)
 	request(t, a.client, "POST", a.server.URL+"/api/directories/unknown/scan", map[string]string{}, 401)
 	request(t, a.client, "GET", a.server.URL+"/api/media/unknown", nil, 401)
 	login(t, a)
 	for _, path := range []string{outside, filepath.Join(root, "escaped-directory"), filepath.Join(root, "internal-link"), root + "/../", filepath.Join(root, "inside", "real.mp4")} {
-		request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": path, "kind": "movie"}, 400)
+		request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": path, "kind": "movie"}, 400)
 	}
 	d := addDirectory(t, a, root)
 	awaitScan(t, a, d.ID, "completed")
@@ -238,8 +238,8 @@ func TestDirectoryAuthorizationAndFilesystemBoundaries(t *testing.T) {
 	if len(items) != 1 || items[0].Filename != "real.mp4" {
 		t.Fatalf("symlink scanned or real file missing: %+v", items)
 	}
-	request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": root, "kind": "movie"}, 409)
-	request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": filepath.Join(root, "inside"), "kind": "movie"}, 409)
+	request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": root, "kind": "movie"}, 409)
+	request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": filepath.Join(root, "inside"), "kind": "movie"}, 409)
 	request(t, a.client, "GET", a.server.URL+"/api/media/not-a-media-id", nil, 404)
 	request(t, a.client, "GET", a.server.URL+"/api/library?kind=invalid", nil, 400)
 	body, _ := request(t, a.client, "GET", a.server.URL+"/api/library?q=real&kind=movie", nil, 200)

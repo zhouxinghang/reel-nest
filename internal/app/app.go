@@ -190,6 +190,7 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("GET /api/series/{id}", a.auth(http.HandlerFunc(a.series)))
 	mux.Handle("GET /api/directories", a.auth(http.HandlerFunc(a.directories)))
 	mux.Handle("POST /api/directories", a.auth(http.HandlerFunc(a.addDirectory)))
+	mux.Handle("POST /api/directories/{id}/name", a.auth(http.HandlerFunc(a.renameDirectory)))
 	mux.Handle("POST /api/directories/{id}/metadata-sources", a.auth(http.HandlerFunc(a.updateDirectorySources)))
 	mux.Handle("POST /api/directories/{id}/scan", a.auth(http.HandlerFunc(a.rescan)))
 	mux.Handle("/api/", a.auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "接口不存在") })))

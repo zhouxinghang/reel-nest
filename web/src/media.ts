@@ -1,3 +1,5 @@
+import type { MetadataSource } from "./metadata-sources";
+
 export type WatchProgress = {
   position: number;
   duration: number;
@@ -21,6 +23,7 @@ export type MediaFile = {
   id: string;
   directoryId: string;
   directoryPath: string;
+  directoryName: string;
   filename: string;
   relativePath: string;
   path: string;
@@ -42,6 +45,7 @@ export type SeriesSummary = {
   title: string;
   directoryId: string;
   directoryPath: string;
+  directoryName: string;
   seasonCount: number;
   episodeCount: number;
   fileCount: number;
@@ -101,3 +105,19 @@ export type MetadataAssociation = {
   status: string;
   error: string;
 };
+
+export type Directory = {
+  metadataSources: MetadataSource[];
+  id: string;
+  name: string;
+  path: string;
+  kind: "movie" | "series";
+  scanStatus: "pending" | "running" | "completed" | "failed" | "interrupted";
+  scanError: string;
+  scanStarted: number;
+  scanFinished: number;
+};
+
+export function libraryURL(directoryId: string) {
+  return `/library?directory=${encodeURIComponent(directoryId)}`;
+}

@@ -34,7 +34,7 @@ func TestManualMatchingPreservesFilesVersionsProgressAndChoice(t *testing.T) {
 			}
 			a := start(t, config)
 			login(t, a)
-			body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": root, "kind": directoryKind}, 201)
+			body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": root, "kind": directoryKind}, 201)
 			var dir directory
 			_ = json.Unmarshal(body, &dir)
 			awaitScan(t, a, dir.ID, "completed")

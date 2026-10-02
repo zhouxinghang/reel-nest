@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -11,11 +12,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Directory struct {
 	MetadataSources []string `json:"metadataSources"`
 	ID              string   `json:"id"`
+	Name            string   `json:"name"`
 	Path            string   `json:"path"`
 	Kind            string   `json:"kind"`
 	ScanStatus      string   `json:"scanStatus"`
@@ -25,14 +29,14 @@ type Directory struct {
 	Identity        string   `json:"-"`
 }
 
-const directoryColumns = `id, path, kind, scan_status, scan_error, scan_started, scan_finished, identity, metadata_sources`
+const directoryColumns = `id, path, kind, scan_status, scan_error, scan_started, scan_finished, identity, metadata_sources, name`
 
 type scanner interface{ Scan(...any) error }
 
 func scanDirectory(row scanner) (Directory, error) {
 	var d Directory
 	var sources string
-	err := row.Scan(&d.ID, &d.Path, &d.Kind, &d.ScanStatus, &d.ScanError, &d.ScanStarted, &d.ScanFinished, &d.Identity, &sources)
+	err := row.Scan(&d.ID, &d.Path, &d.Kind, &d.ScanStatus, &d.ScanError, &d.ScanStarted, &d.ScanFinished, &d.Identity, &sources, &d.Name)
 	if err == nil {
 		err = json.Unmarshal([]byte(sources), &d.MetadataSources)
 	}
@@ -96,7 +100,69 @@ func (a *App) initializeLibrary() error {
 	if err != nil {
 		return err
 	}
-	return a.initializeDirectorySources()
+	if err = a.initializeDirectorySources(); err != nil {
+		return err
+	}
+	return a.initializeDirectoryNames()
+}
+
+// Upgrade offline libraries without opening their source directories or
+// rebuilding file identities. Keep the schema change and backfill atomic.
+func (a *App) initializeDirectoryNames() error {
+	tx, err := a.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var count int
+	if err = tx.QueryRow("SELECT COUNT(*) FROM pragma_table_info('media_directories') WHERE name='name'").Scan(&count); err != nil {
+		return err
+	}
+	if count == 0 {
+		if _, err = tx.Exec("ALTER TABLE media_directories ADD COLUMN name TEXT NOT NULL DEFAULT ''"); err != nil {
+			return err
+		}
+	}
+	rows, err := tx.Query("SELECT id,path FROM media_directories WHERE name=''")
+	if err != nil {
+		return err
+	}
+	var legacy []Directory
+	for rows.Next() {
+		var d Directory
+		if err = rows.Scan(&d.ID, &d.Path); err != nil {
+			rows.Close()
+			return err
+		}
+		legacy = append(legacy, d)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	for _, d := range legacy {
+		name := strings.TrimSpace(strings.Map(func(r rune) rune {
+			if unicode.IsControl(r) {
+				return -1
+			}
+			return r
+		}, filepath.Base(d.Path)))
+		if name == "" {
+			name = "媒体库"
+		}
+		if runes := []rune(name); len(runes) > 80 {
+			name = string(runes[:80])
+		}
+		if _, err = tx.Exec("UPDATE media_directories SET name=? WHERE id=?", name, d.ID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func validDirectoryName(name string) bool {
+	return name != "" && utf8.RuneCountInString(name) <= 80 && strings.IndexFunc(name, unicode.IsControl) < 0
 }
 
 // openDirectory grants a bounded filesystem handle, not an arbitrary server path.
@@ -162,23 +228,26 @@ func (a *App) openDirectory(path string) (*os.Root, os.FileInfo, error) {
 	return nil, nil, errors.New("目录不在部署者配置的 MEDIA_ROOTS 范围内")
 }
 
-func (a *App) directories(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.db.QueryContext(r.Context(), "SELECT "+directoryColumns+" FROM media_directories ORDER BY path")
+func (a *App) listDirectories(ctx context.Context) ([]Directory, error) {
+	rows, err := a.db.QueryContext(ctx, "SELECT "+directoryColumns+" FROM media_directories ORDER BY name, path, id")
 	if err != nil {
-		fail(w, 500, "无法读取媒体目录")
-		return
+		return nil, err
 	}
 	defer rows.Close()
 	directories := []Directory{}
 	for rows.Next() {
 		directory, err := scanDirectory(rows)
 		if err != nil {
-			fail(w, 500, "无法读取媒体目录")
-			return
+			return nil, err
 		}
 		directories = append(directories, directory)
 	}
-	if rows.Err() != nil {
+	return directories, rows.Err()
+}
+
+func (a *App) directories(w http.ResponseWriter, r *http.Request) {
+	directories, err := a.listDirectories(r.Context())
+	if err != nil {
 		fail(w, 500, "无法读取媒体目录")
 		return
 	}
@@ -188,11 +257,17 @@ func (a *App) directories(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) addDirectory(w http.ResponseWriter, r *http.Request) {
 	var input struct {
+		Name            string   `json:"name"`
 		Path            string   `json:"path"`
 		MetadataSources []string `json:"metadataSources"`
 		Kind            string   `json:"kind"`
 	}
 	if !decode(w, r, &input) {
+		return
+	}
+	input.Name = strings.TrimSpace(input.Name)
+	if !validDirectoryName(input.Name) {
+		fail(w, 400, "媒体库名称须为 1–80 个字符，不能包含控制字符")
 		return
 	}
 	if input.Kind != "movie" && input.Kind != "series" {
@@ -239,9 +314,9 @@ func (a *App) addDirectory(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "该目录已接入或与已接入目录重叠，请直接重新扫描")
 		return
 	}
-	d := Directory{MetadataSources: input.MetadataSources, ID: newID(), Path: input.Path, Kind: input.Kind, ScanStatus: "pending", Identity: fileIdentity(info)}
+	d := Directory{MetadataSources: input.MetadataSources, ID: newID(), Name: input.Name, Path: input.Path, Kind: input.Kind, ScanStatus: "pending", Identity: fileIdentity(info)}
 	sources, _ := json.Marshal(d.MetadataSources)
-	_, err = a.db.ExecContext(r.Context(), "INSERT INTO media_directories(id,path,kind,scan_status,identity,metadata_sources) VALUES(?,?,?,?,?,?)", d.ID, d.Path, d.Kind, d.ScanStatus, d.Identity, string(sources))
+	_, err = a.db.ExecContext(r.Context(), "INSERT INTO media_directories(id,path,kind,scan_status,identity,metadata_sources,name) VALUES(?,?,?,?,?,?,?)", d.ID, d.Path, d.Kind, d.ScanStatus, d.Identity, string(sources), d.Name)
 	if err != nil {
 		fail(w, 500, "保存媒体目录失败")
 		return
@@ -252,6 +327,35 @@ func (a *App) addDirectory(w http.ResponseWriter, r *http.Request) {
 	}
 	d.ScanStatus = "running"
 	respond(w, 201, d)
+}
+
+func (a *App) renameDirectory(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Name string `json:"name"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	input.Name = strings.TrimSpace(input.Name)
+	if !validDirectoryName(input.Name) {
+		fail(w, 400, "媒体库名称须为 1–80 个字符，不能包含控制字符")
+		return
+	}
+	result, err := a.db.ExecContext(r.Context(), "UPDATE media_directories SET name=? WHERE id=?", input.Name, r.PathValue("id"))
+	if err != nil {
+		fail(w, 500, "无法保存媒体库名称")
+		return
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		fail(w, 500, "无法保存媒体库名称")
+		return
+	}
+	if count == 0 {
+		fail(w, 404, "媒体库不存在")
+		return
+	}
+	respond(w, 200, map[string]string{"name": input.Name})
 }
 
 var errScanRunning = errors.New("该目录正在扫描，请等待当前扫描结束")

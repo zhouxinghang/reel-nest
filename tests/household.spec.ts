@@ -30,6 +30,7 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
     "isolated browser fixture; not a playback test",
   );
   await page.getByRole("link", { name: "接入第一个媒体目录" }).click();
+  await page.getByLabel("媒体库名称", { exact: true }).fill("家庭电影");
   await page.getByLabel("媒体目录路径").fill(media);
   await page.getByRole("button", { name: "添加并扫描" }).click();
   await expect(page.getByRole("status")).toHaveText("扫描完成");
@@ -113,6 +114,7 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
     writeFileSync(target, "isolated series fixture; not a playback test");
   }
   await page.goto("/directories");
+  await page.getByLabel("媒体库名称", { exact: true }).fill("家庭电视剧");
   await page.getByLabel("媒体目录路径").fill(television);
   await page.getByLabel("内容类型").selectOption("series");
   await page.getByRole("button", { name: "添加并扫描" }).click();
@@ -123,7 +125,9 @@ test("家庭共享账号、扫描、电影与电视剧季集导航、失联恢�
       .getByRole("status"),
   ).toHaveText("扫描完成");
   await page.getByRole("link", { name: "返回媒体库" }).click();
-  await page.getByRole("button", { name: "浏览电视剧", exact: true }).click();
+  await page
+    .getByRole("link", { name: "浏览媒体库：家庭电视剧", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "家庭电影 (2026).mp4" }),
   ).toHaveCount(0);

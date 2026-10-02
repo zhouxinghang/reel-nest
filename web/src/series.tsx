@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, message } from "./api";
-import type { SeriesDetail, SeriesSummary } from "./media";
+import { libraryURL, type SeriesDetail, type SeriesSummary } from "./media";
 
 import { Matching } from "./matching";
 import { Poster } from "./metadata";
@@ -210,6 +210,12 @@ export function SeriesDetails({ id }: { id: string }) {
           </section>
           <section className="detail-section" aria-label="电视剧媒体信息">
             <h2>媒体信息</h2>
+            <p className="fine">
+              所属媒体库：
+              <a href={libraryURL(series.directoryId)}>
+                {series.directoryName}
+              </a>
+            </p>
             <p className="fine">来源目录</p>
             <p className="detail-source-path">{series.directoryPath}</p>
             <p className="fine">

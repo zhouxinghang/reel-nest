@@ -95,6 +95,7 @@ async function awaitScan(context: BrowserContext, id: string) {
 async function addMedia(page: Page, context: BrowserContext, root: string) {
   await login(page);
   await page.goto("/directories");
+  await page.getByLabel("媒体库名称", { exact: true }).fill("删除测试");
   await page.getByLabel("媒体目录路径").fill(root);
   const response = page.waitForResponse(
     (r) =>

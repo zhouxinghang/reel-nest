@@ -57,7 +57,7 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
     page.getByRole("region", { name: "影片资料源设置与状态" }),
   ).toContainText("未配置影片资料源（TMDB / TVDB / MetaTube）");
   const added = await context.request.post("/api/directories", {
-    data: { path: root, kind: "movie" },
+    data: { name: "测试媒体库", path: root, kind: "movie" },
   });
   expect(added.status()).toBe(201);
   const directory = await added.json();
@@ -257,7 +257,7 @@ test("外部播放器协议编码、可复制兜底与无会话只读串流", as
   await login(page);
   const directory = await (
     await context.request.post("/api/directories", {
-      data: { path: root, kind: "movie" },
+      data: { name: "测试媒体库", path: root, kind: "movie" },
     })
   ).json();
   await expect
@@ -347,7 +347,7 @@ test("真实字幕渲染、SRT/VTT 切换、时间轴定位、关闭与错误不
   await login(page);
   const directory = await (
     await context.request.post("/api/directories", {
-      data: { path: root, kind: "movie" },
+      data: { name: "测试媒体库", path: root, kind: "movie" },
     })
   ).json();
   await expect
@@ -433,7 +433,7 @@ test("自动播放拦截可重试、退出保存进度、串流失败重试和�
   await login(page);
   const directory = await (
     await context.request.post("/api/directories", {
-      data: { path: root, kind: "movie" },
+      data: { name: "测试媒体库", path: root, kind: "movie" },
     })
   ).json();
   await expect

@@ -12,6 +12,7 @@ type SeriesSummary struct {
 	FavoritedAt        int64               `json:"favoritedAt"`
 	Match              metadataAssociation `json:"match"`
 	DirectoryPath      string              `json:"directoryPath"`
+	DirectoryName      string              `json:"directoryName"`
 	ID                 string              `json:"id"`
 	Title              string              `json:"title"`
 	DirectoryID        string              `json:"directoryId"`
@@ -50,7 +51,7 @@ func seriesSummaries(files []MediaFile) []SeriesSummary {
 		}
 		group := groups[ref.SeriesID]
 		if group == nil {
-			group = &collection{summary: SeriesSummary{ID: ref.SeriesID, Title: ref.SeriesTitle, Match: file.Match, Matched: file.Matched, DirectoryID: file.DirectoryID, DirectoryPath: file.DirectoryPath}, seasons: map[int]map[int]bool{}}
+			group = &collection{summary: SeriesSummary{ID: ref.SeriesID, Title: ref.SeriesTitle, Match: file.Match, Matched: file.Matched, DirectoryID: file.DirectoryID, DirectoryPath: file.DirectoryPath, DirectoryName: file.DirectoryName}, seasons: map[int]map[int]bool{}}
 			groups[ref.SeriesID] = group
 		}
 		group.summary.FileCount++

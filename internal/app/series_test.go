@@ -41,7 +41,7 @@ type seriesDetail struct {
 
 func addSeriesDirectory(t *testing.T, a *runningApp, path string) directory {
 	t.Helper()
-	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"path": path, "kind": "series"}, 201)
+	body, _ := request(t, a.client, "POST", a.server.URL+"/api/directories", map[string]string{"name": "测试媒体库", "path": path, "kind": "series"}, 201)
 	var result directory
 	if err := json.Unmarshal(body, &result); err != nil {
 		t.Fatal(err)

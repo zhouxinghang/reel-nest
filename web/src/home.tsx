@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, message } from "./api";
-import type { MediaFile, SeriesSummary } from "./media";
+import {
+  libraryURL,
+  type Directory,
+  type MediaFile,
+  type SeriesSummary,
+} from "./media";
 import { Poster } from "./metadata";
 import { Icon } from "./icons";
 import { FavoriteButton, type FavoriteState } from "./favorite";
@@ -26,6 +31,7 @@ export function readLibraryFilter(): LibraryFilter {
 
 type Entry = {
   id: string;
+  directoryId: string;
   kind: "media" | "series";
   title: string;
   href: string;
@@ -211,13 +217,10 @@ function Card({
   );
 }
 
-export function Library({
-  filter,
-  onFilterChange,
-}: {
-  filter: LibraryFilter;
-  onFilterChange: (value: LibraryFilter) => void;
-}) {
+export function Library({ filter }: { filter: LibraryFilter }) {
+  const directoryId =
+    new URLSearchParams(window.location.search).get("directory") || "";
+  const [directories, setDirectories] = useState<Directory[]>([]);
   const [items, setItems] = useState<MediaFile[]>([]);
   const [series, setSeries] = useState<SeriesSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -235,8 +238,12 @@ export function Library({
     const controller = new AbortController();
     const refresh = () => {
       const revision = ++libraryRevision.current;
-      void api<{ items: MediaFile[]; series: SeriesSummary[] }>(
-        "/api/library?sort=recent",
+      void api<{
+        items: MediaFile[];
+        series: SeriesSummary[];
+        directories: Directory[];
+      }>(
+        `/api/library?sort=recent&directoryId=${encodeURIComponent(directoryId)}`,
         undefined,
         { signal: controller.signal },
       )
@@ -245,6 +252,7 @@ export function Library({
             !controller.signal.aborted &&
             revision === libraryRevision.current
           ) {
+            setDirectories(data.directories);
             setItems(data.items);
             setSeries(data.series);
             setLoaded(true);
@@ -267,7 +275,7 @@ export function Library({
       window.removeEventListener("metadata-updated", refresh);
       window.removeEventListener("focus", refresh);
     };
-  }, [attempt]);
+  }, [attempt, directoryId]);
   function onFavorite(entry: Entry, state: FavoriteState) {
     // A refresh started before this mutation must not restore stale favorites.
     libraryRevision.current++;
@@ -285,7 +293,10 @@ export function Library({
       );
     setFeedback(`${state.favorite ? "已收藏" : "已取消收藏"}：${entry.title}`);
   }
-  const home = filter === "all" && !searchMode && !query;
+  const home = filter === "all" && !searchMode && !query && !directoryId;
+  const selectedDirectory = directories.find(
+    (directory) => directory.id === directoryId,
+  );
   const titles: Record<LibraryFilter, string> = {
     all: "媒体库",
     movie: "电影",
@@ -343,15 +354,24 @@ export function Library({
           ? b.favoritedAt - a.favoritedAt || a.id.localeCompare(b.id)
           : newest(a, b),
     );
-  const movies = items
-    .filter((file) => file.kind === "movie")
-    .map(fileEntry)
-    .sort(newest);
-  const shows = series.map(seriesEntry).sort(newest);
-  const unorganized = items
-    .filter((file) => file.kind === "series" && !file.episode)
-    .map(fileEntry)
-    .sort(newest);
+  const collections = directories.map((directory) => ({
+    directory,
+    entries: [
+      ...items
+        .filter((file) => file.directoryId === directory.id && !file.episode)
+        .map(fileEntry),
+      ...series
+        .filter((show) => show.directoryId === directory.id)
+        .map(seriesEntry),
+    ].sort(newest),
+  }));
+  // Keep the selected sort within each group; order groups by their first result.
+  const groups = new Map<string, Entry[]>();
+  for (const entry of entries) {
+    const group = groups.get(entry.directoryId) || [];
+    group.push(entry);
+    groups.set(entry.directoryId, group);
+  }
   const continuing = items
     .filter(
       (file) =>
@@ -368,7 +388,7 @@ export function Library({
   return (
     <div className="emby-library">
       <h1 className={home ? "sr-only" : "browse-heading"}>
-        {searchMode ? "搜索" : titles[filter]}
+        {selectedDirectory?.name || (searchMode ? "搜索" : titles[filter])}
       </h1>
       {feedback && (
         <p className="sr-only" role="status">
@@ -386,6 +406,11 @@ export function Library({
           >
             重新加载媒体库
           </button>
+          {directoryId && (
+            <a className="back-link" href="/library">
+              返回全部媒体库
+            </a>
+          )}
         </div>
       ) : !loaded ? (
         <p role="status" className="library-loading">
@@ -398,17 +423,13 @@ export function Library({
               <section className="home-libraries" aria-label="我的媒体">
                 <h2>我的媒体</h2>
                 <div className="home-library-tiles">
-                  {(
-                    [
-                      ["movie", "电影", movies, "film"],
-                      ["series", "电视剧", shows, "tv"],
-                    ] as const
-                  ).map(([value, label, collection, icon]) => (
-                    <button
-                      key={value}
-                      className={`home-library-tile tile-${value}`}
-                      aria-label={`浏览${label}`}
-                      onClick={() => onFilterChange(value)}
+                  {collections.map(({ directory, entries: collection }) => (
+                    <a
+                      key={directory.id}
+                      className={`home-library-tile tile-${directory.kind}`}
+                      aria-label={`浏览媒体库：${directory.name}`}
+                      title={directory.path}
+                      href={libraryURL(directory.id)}
                     >
                       <span className="library-tile-art" aria-hidden="true">
                         {collection.some((entry) => entry.metadata) ? (
@@ -423,14 +444,22 @@ export function Library({
                               collection.find((entry) => entry.metadata)
                                 ?.metadata
                             }
-                            title={label}
+                            title={directory.name}
                           />
                         ) : (
-                          <Icon name={icon} />
+                          <Icon
+                            name={directory.kind === "movie" ? "film" : "tv"}
+                          />
                         )}
                       </span>
-                      <span className="library-tile-name">{label}</span>
-                    </button>
+                      <span className="library-tile-name">
+                        {directory.name}
+                      </span>
+                      <span className="library-tile-description">
+                        {directory.kind === "movie" ? "电影" : "电视剧"} ·{" "}
+                        {collection.length} 项
+                      </span>
+                    </a>
                   ))}
                 </div>
               </section>
@@ -474,53 +503,61 @@ export function Library({
                   ))}
                 </Shelf>
               )}
-              {movies.length > 0 && (
-                <Shelf title="最近添加的电影" more="/library?type=recent">
-                  <>
-                    {movies.slice(0, 20).map((entry) => (
+              {collections
+                .filter((collection) => collection.entries.length > 0)
+                .map(({ directory, entries: collection }) => (
+                  <Shelf
+                    key={directory.id}
+                    title={`最近添加 · ${directory.name}`}
+                    more={libraryURL(directory.id)}
+                  >
+                    {collection.slice(0, 20).map((entry) => (
                       <Card
-                        key={entry.id}
+                        key={`${entry.kind}-${entry.id}`}
                         entry={entry}
                         onFavorite={onFavorite}
                       />
                     ))}
-                  </>
-                </Shelf>
-              )}
-              {shows.length > 0 && (
-                <Shelf title="最近添加的电视剧" more="/library?type=recent">
-                  <>
-                    {shows.slice(0, 20).map((entry) => (
-                      <Card
-                        key={entry.id}
-                        entry={entry}
-                        onFavorite={onFavorite}
-                      />
-                    ))}
-                  </>
-                </Shelf>
-              )}
-              {unorganized.length > 0 && (
-                <Shelf
-                  title="未组织的电视剧文件"
-                  more="/library?type=unmatched"
-                >
-                  <>
-                    {unorganized.slice(0, 20).map((entry) => (
-                      <Card
-                        key={entry.id}
-                        entry={entry}
-                        onFavorite={onFavorite}
-                      />
-                    ))}
-                  </>
-                </Shelf>
-              )}
+                  </Shelf>
+                ))}
             </>
           )}
           {!home && (
             <>
+              {selectedDirectory && (
+                <div className="library-source">
+                  <a className="back-link" href="/library">
+                    ← 全部媒体库
+                  </a>
+                  <p className="fine file-path">{selectedDirectory.path}</p>
+                  <p className="fine">
+                    {selectedDirectory.kind === "movie" ? "电影" : "电视剧"}
+                    媒体库
+                  </p>
+                  {selectedDirectory.scanError && (
+                    <p className="notice">{selectedDirectory.scanError}</p>
+                  )}
+                </div>
+              )}
               <div className="home-browse-toolbar">
+                <select
+                  aria-label="选择媒体库"
+                  value={directoryId}
+                  onChange={(event) => {
+                    const url = new URL(window.location.href);
+                    if (event.target.value)
+                      url.searchParams.set("directory", event.target.value);
+                    else url.searchParams.delete("directory");
+                    window.location.assign(url);
+                  }}
+                >
+                  <option value="">全部媒体库</option>
+                  {directories.map((directory) => (
+                    <option key={directory.id} value={directory.id}>
+                      {directory.name} · {directory.path}
+                    </option>
+                  ))}
+                </select>
                 <div className="search-field">
                   <Icon name="search" />
                   <input
@@ -532,26 +569,27 @@ export function Library({
                     autoFocus={searchMode}
                   />
                 </div>
-                {(filter === "favorites" ||
-                  filter === "recent" ||
-                  filter === "all") && (
-                  <div className="filters" role="group" aria-label="媒体分类">
-                    {[
-                      ["all", "全部"],
-                      ["movie", "电影"],
-                      ["series", "电视剧"],
-                    ].map(([value, label]) => (
-                      <button
-                        key={value}
-                        className={category === value ? "selected" : ""}
-                        aria-pressed={category === value}
-                        onClick={() => setCategory(value)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {!selectedDirectory &&
+                  (filter === "favorites" ||
+                    filter === "recent" ||
+                    filter === "all") && (
+                    <div className="filters" role="group" aria-label="媒体分类">
+                      {[
+                        ["all", "全部"],
+                        ["movie", "电影"],
+                        ["series", "电视剧"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          className={category === value ? "selected" : ""}
+                          aria-pressed={category === value}
+                          onClick={() => setCategory(value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 <div className="collection-controls">
                   <select
                     aria-label="排序方式"
@@ -591,30 +629,60 @@ export function Library({
                   {filter === "favorites" ? "收藏 · 家庭共享" : "媒体"}
                 </p>
                 {entries.length ? (
-                  <div
-                    className={`home-card-grid${view === "list" ? " home-card-list" : ""}`}
-                  >
-                    {entries.map((entry) => (
-                      <Card
-                        key={`${entry.kind}-${entry.id}`}
-                        entry={entry}
-                        recent={filter === "recent"}
-                        onFavorite={onFavorite}
-                      />
-                    ))}
-                  </div>
+                  [...groups].map(([id, collection]) => {
+                    const directory = directories.find(
+                      (item) => item.id === id,
+                    )!;
+                    return (
+                      <section
+                        className="library-group"
+                        key={id}
+                        aria-label={`媒体库：${directory.name}`}
+                      >
+                        {!selectedDirectory && (
+                          <>
+                            <div className="library-group-heading">
+                              <h2>
+                                <a href={libraryURL(id)}>{directory.name}</a>
+                              </h2>
+                              <span className="fine">
+                                {collection.length} 项
+                              </span>
+                            </div>
+                            <p className="fine file-path">{directory.path}</p>
+                          </>
+                        )}
+                        <div
+                          className={`home-card-grid${view === "list" ? " home-card-list" : ""}`}
+                        >
+                          {collection.map((entry) => (
+                            <Card
+                              key={`${entry.kind}-${entry.id}`}
+                              entry={entry}
+                              recent={filter === "recent"}
+                              onFavorite={onFavorite}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })
                 ) : (
                   <div className="home-empty">
                     <Icon name={filter === "favorites" ? "heart" : "search"} />
                     <h2>
                       {filter === "favorites" && !query && category === "all"
                         ? "还没有收藏"
-                        : "没有找到对应的媒体"}
+                        : selectedDirectory && items.length === 0
+                          ? "这个媒体库还是空的"
+                          : "没有找到对应的媒体"}
                     </h2>
                     <p>
                       {filter === "favorites"
                         ? "点击海报或详情页上的爱心，将喜欢的电影与电视剧放在这里。"
-                        : "试试其他标题或分类。"}
+                        : selectedDirectory && items.length === 0
+                          ? "首次扫描可能仍在进行；扫描完成后刷新页面，或到媒体目录检查扫描状态。"
+                          : "试试其他标题或分类。"}
                     </p>
                     <a className="secondary" href="/library">
                       返回首页
@@ -624,7 +692,7 @@ export function Library({
               </section>
             </>
           )}
-          {home && items.length === 0 && (
+          {home && directories.length === 0 && (
             <section className="home-empty">
               <Icon name="film" />
               <h2>媒体库还是空的</h2>
