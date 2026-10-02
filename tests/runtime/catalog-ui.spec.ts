@@ -448,3 +448,44 @@ test("390px 与键盘导航、卡片可访问且无水平溢出", async ({
     await context.close();
   }
 });
+
+test("新 UI 真实不支持解码提示与资料失败目标有界分页", async ({ browser }) => {
+  const context = await signedIn(browser);
+  try {
+    const page = await context.newPage();
+    // These catalog fixture files intentionally contain text, not a video codec.
+    await page.goto(`${origin}/media/${firstFile.id}`);
+    await page.getByRole("button", { name: "网页播放", exact: true }).click();
+    const player = page.getByRole("dialog", {
+      name: `播放 ${firstFile.title}`,
+    });
+    await expect(player.locator("[data-player-state]")).toHaveAttribute(
+      "data-player-state",
+      "failed",
+    );
+    await expect(player.getByRole("alert")).toContainText("浏览器无法解码");
+    await player
+      .getByRole("button", { name: "关闭播放器", exact: true })
+      .click();
+    await expect(player).toHaveCount(0);
+    const progress = await (
+      await context.request.get(`/api/media/${firstFile.id}/progress`)
+    ).json();
+    expect(progress.progress).toBeNull();
+    await page.goto(origin + "/tasks");
+    const failures = page
+      .locator("main p")
+      .filter({ hasText: / · 已尝试 \d+ 次$/ });
+    await expect(failures).toHaveCount(50);
+    await page.getByRole("link", { name: "下一页", exact: true }).click();
+    await expect.poll(() => failures.count()).toBeGreaterThan(0);
+    expect(await failures.count()).toBeLessThanOrEqual(50);
+    expect(new URL(page.url()).searchParams.has("cursor")).toBe(true);
+    await page.reload();
+    await expect.poll(() => failures.count()).toBeGreaterThan(0);
+    await page.goBack();
+    await expect(failures).toHaveCount(50);
+  } finally {
+    await context.close();
+  }
+});

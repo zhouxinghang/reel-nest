@@ -1,5 +1,7 @@
 # 阶段 05：新前端路由与查询增量
 
+> 历史增量记录：后续已在正式源码入口接入新 UI / runtime；当前实现与测试边界见 [frontend-interactions.md](frontend-interactions.md)。本文当时的“未接入/未切换”描述不代表当前状态，部署和真实数据切换仍未执行。
+
 日期：2026-10-02（Asia/Shanghai）。对应 `.scratch/architecture-refactor/issues/05-frontend-playback-interactions.md`。
 
 ## 交付边界

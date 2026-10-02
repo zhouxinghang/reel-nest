@@ -1,3 +1,8 @@
+import { useState } from "react";
+import { Matching } from "../matching/Matching";
+import { Player } from "../playback/Player";
+import { External } from "../playback/External";
+import { Deletion } from "../playback/Deletion";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import type { Schema } from "../../shared/api";
@@ -14,6 +19,26 @@ import { Cards, Favorite } from "./Card";
 import { queries } from "./queries";
 import styles from "./catalog.module.css";
 
+function Artwork({
+  id,
+  className = "",
+}: {
+  id: string | null | undefined;
+  className?: string;
+}) {
+  return id ? (
+    <img
+      key={id}
+      className={className}
+      src={`/api/assets/${encodeURIComponent(id)}/content`}
+      alt=""
+      loading="lazy"
+      onError={(e) => {
+        e.currentTarget.hidden = true;
+      }}
+    />
+  ) : null;
+}
 function Match({ match }: { match: Schema["Match"] }) {
   const metadata = match.metadata;
   return (
@@ -34,6 +59,10 @@ function Match({ match }: { match: Schema["Match"] }) {
                   key={`${credit.personId}-${credit.role}`}
                   to={`/people/${encodeURIComponent(credit.personId)}`}
                 >
+                  <Artwork
+                    id={credit.photoAssetId}
+                    className={styles.portrait}
+                  />
                   {credit.name} ·{" "}
                   {credit.role === "director"
                     ? "导演"
@@ -58,14 +87,37 @@ function Match({ match }: { match: Schema["Match"] }) {
 }
 export function MediaDetail() {
   const { id = "" } = useParams();
+  return <MediaContent key={id} id={id} />;
+}
+function MediaContent({ id }: { id: string }) {
   const query = useQuery(queries.media(useAPI(), id));
+  const [modal, setModal] = useState<
+    "match" | "play" | "start" | "delete" | null
+  >(null);
+  const [notice, setNotice] = useState("");
   return (
     <>
       <QueryError error={query.error} retry={() => void query.refetch()} />
       {query.isPending && <Loading />}
       {query.data && (
         <>
-          <h1>{query.data.card.title}</h1>
+          <Artwork
+            id={query.data.card.metadata?.artwork.backdrop}
+            className={styles.backdrop}
+          />
+          <div className={styles.hero}>
+            <Artwork
+              id={query.data.card.metadata?.artwork.primary}
+              className={styles.detailPoster}
+            />
+            <div>
+              <h1>{query.data.card.title}</h1>
+              <p className={ui.muted}>
+                {query.data.card.metadata?.year} ·{" "}
+                {query.data.card.kind === "movie" ? "电影" : "电视剧"}
+              </p>
+            </div>
+          </div>
           <Favorite card={query.data.card} />
           <p className={styles.path}>{query.data.path}</p>
           <p className={ui.muted}>
@@ -80,9 +132,67 @@ export function MediaDetail() {
               返回电视剧 · 第 {query.data.card.episode.seasonNumber} 季
             </Link>
           )}
-          <p className={ui.muted}>
-            开发预览：播放器、手动匹配与源文件操作尚未接入此页面。
-          </p>
+          <div className={styles.seasons}>
+            <button
+              className={ui.primary}
+              disabled={query.data.card.state === "deleted"}
+              onClick={() => setModal("play")}
+            >
+              {query.data.card.progress && !query.data.card.progress.completed
+                ? "继续播放"
+                : "网页播放"}
+            </button>
+            <button
+              className={ui.button}
+              disabled={query.data.card.state === "deleted"}
+              onClick={() => setModal("start")}
+            >
+              从头播放
+            </button>
+            <button className={ui.button} onClick={() => setModal("match")}>
+              匹配影片资料
+            </button>
+            <button
+              className={ui.button}
+              disabled={query.data.card.state === "deleted"}
+              onClick={() => setModal("delete")}
+            >
+              删除源文件
+            </button>
+          </div>
+          {notice && <p role="status">{notice}</p>}
+          {modal === "match" && (
+            <Matching
+              match={query.data.match}
+              libraryId={query.data.card.libraryId}
+              title={query.data.card.title}
+              onClose={() => setModal(null)}
+            />
+          )}
+          {(modal === "play" || modal === "start") && (
+            <Player
+              id={id}
+              title={query.data.card.title}
+              libraryId={query.data.card.libraryId}
+              fromStart={modal === "start"}
+              onClose={(text) => {
+                setNotice(text);
+                setModal(null);
+              }}
+            />
+          )}
+          {modal === "delete" && (
+            <Deletion
+              id={id}
+              subjectId={query.data.match.subjectId}
+              libraryId={query.data.card.libraryId}
+              onClose={(text) => {
+                setNotice(text);
+                setModal(null);
+              }}
+            />
+          )}
+          {query.data.card.state !== "deleted" && <External id={id} />}
           <Match match={query.data.match} />
         </>
       )}
@@ -112,6 +222,10 @@ function Episodes({ id, season }: { id: string; season: number }) {
 }
 export function SeriesDetail() {
   const { id = "" } = useParams();
+  return <SeriesContent key={id} id={id} />;
+}
+function SeriesContent({ id }: { id: string }) {
+  const [matching, setMatching] = useState(false);
   const [search, setSearch] = useSearchParams();
   const query = useQuery(
     queries.series(useAPI(), id, search.get("cursor") || ""),
@@ -128,12 +242,38 @@ export function SeriesDetail() {
       {query.isPending && <Loading />}
       {query.data && (
         <>
-          <h1>{query.data.card.title}</h1>
+          <Artwork
+            id={query.data.card.metadata?.artwork.backdrop}
+            className={styles.backdrop}
+          />
+          <div className={styles.hero}>
+            <Artwork
+              id={query.data.card.metadata?.artwork.primary}
+              className={styles.detailPoster}
+            />
+            <div>
+              <h1>{query.data.card.title}</h1>
+              <p className={ui.muted}>
+                {query.data.card.metadata?.year} · 电视剧
+              </p>
+            </div>
+          </div>
           <Favorite card={query.data.card} />
           <p className={ui.muted}>
             {query.data.card.seasonCount} 季 · {query.data.card.episodeCount} 集
             · {query.data.card.fileCount} 个文件版本
           </p>
+          <button className={ui.button} onClick={() => setMatching(true)}>
+            匹配影片资料
+          </button>
+          {matching && (
+            <Matching
+              match={query.data.match}
+              libraryId={query.data.card.libraryId}
+              title={query.data.card.title}
+              onClose={() => setMatching(false)}
+            />
+          )}
           <Match match={query.data.match} />
           <nav className={styles.seasons} aria-label="季">
             {query.data.seasons.map((season) => (
@@ -172,7 +312,13 @@ export function PersonDetail() {
       {person.isPending && <Loading />}
       {person.data && (
         <>
-          <h1>{person.data.name}</h1>
+          <div className={styles.hero}>
+            <Artwork
+              id={person.data.photoAssetId}
+              className={styles.detailPoster}
+            />
+            <h1>{person.data.name}</h1>
+          </div>
           <p className={ui.muted}>
             来源：{person.data.source} · 当前媒体库中的作品
           </p>

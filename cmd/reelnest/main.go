@@ -46,9 +46,7 @@ func run() error {
 		}
 		password = strings.TrimRight(string(contents), "\r\n")
 	}
-	application, err := app.New(app.Config{ImportLegacyMetadata: func() app.LegacyMetadataCredentials {
-		return app.LegacyMetadataCredentials{TMDBToken: optionalSecret("TMDB_READ_ACCESS_TOKEN"), TVDBAPIKey: optionalSecret("TVDB_API_KEY"), TVDBPIN: optionalSecret("TVDB_PIN"), MetaTubeURL: os.Getenv("METATUBE_URL"), MetaTubeToken: optionalSecret("METATUBE_TOKEN")}
-	}, DataDir: env("DATA_DIR", "./data"), Username: os.Getenv("HOUSEHOLD_USERNAME"), Password: password, CookieSecure: os.Getenv("COOKIE_SECURE") == "true", Assets: web.Assets(), MediaRoots: filepath.SplitList(os.Getenv("MEDIA_ROOTS"))})
+	application, err := app.NewRuntime(context.Background(), app.RuntimeConfig{DataDir: env("DATA_DIR", "./data"), Username: os.Getenv("HOUSEHOLD_USERNAME"), Password: password, CookieSecure: os.Getenv("COOKIE_SECURE") == "true", Assets: web.Assets(), MediaRoots: filepath.SplitList(os.Getenv("MEDIA_ROOTS"))})
 	if err != nil {
 		return err
 	}

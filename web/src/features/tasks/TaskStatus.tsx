@@ -13,12 +13,15 @@ const subscribeVisibility = (callback: () => void) => {
 export function taskInterval(data?: Schema["MetadataStatus"], failed = false) {
   return !failed && data && data.queued + data.running > 0 ? 1500 : 30000;
 }
-export function useTaskStatus() {
-  const visible = useSyncExternalStore(
+export function usePageVisible() {
+  return useSyncExternalStore(
     subscribeVisibility,
     () => document.visibilityState !== "hidden",
     () => true,
   );
+}
+export function useTaskStatus() {
+  const visible = usePageVisible();
   const api = useAPI();
   const client = useQueryClient();
   const previous = useRef<number | undefined>(undefined);

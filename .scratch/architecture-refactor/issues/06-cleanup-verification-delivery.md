@@ -36,3 +36,5 @@ Parent: [全量重构技术方案](../spec.md)
 ## Comments
 
 - 2026-10-02：05 前端基础增量交接见 [frontend-foundation](../../../docs/architecture/frontend-foundation.md)。新增可核对清理线索：旧手写路由/请求、全库列表、metadata-updated/重复轮询、全局 CSS，以及阶段性 runtime HTML/双构建入口。它们现在仍有正式或测试消费者；本票仍受 05 阻塞，不认领、不提前删除旧安全回归或切换生产数据。
+
+- 2026-10-02：05 已 resolved，所有前置依赖已满足，本票仍保持 ready-for-agent、尚未认领。当前正式源码已为新 runtime + 新 UI；新 [完整交接](../../../docs/architecture/frontend-interactions.md) 含逐项消费者/替代证据。重点清理 `tests/legacy-server`/旧 `tests/server`、`vite.legacy.config.ts`/多构建、无引用的 `runtime.html`、旧 app 业务和旧前端；不要直接删除 97 个基线中的安全/正常重启证据。正式 CLI 的 `_FILE`、重启和旧目录拒绝已有新浏览器测试；保留新的本地 provider fixture。README/API 现已加切换警告，但完整当前态改写和最终性能复测仍属本票。05 门禁：37 unit/hook、39 浏览器、全量 Go race、新 runtime 三轮 36/36，详见 05 Answer；未部署或操作真实数据。

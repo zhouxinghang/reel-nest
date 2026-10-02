@@ -27,7 +27,9 @@ type Result<O> = O extends { responses: infer R }
       [S in keyof R]: S extends 200 | 201 | 202
         ? R[S] extends { content: { "application/json": infer D } }
           ? D
-          : never
+          : R[S] extends { content: { "text/vtt": string } }
+            ? string
+            : never
         : never;
     }[keyof R]
   : never;
@@ -132,6 +134,20 @@ export function createAPI(
       controller.signal.throwIfAborted();
       if (response.status === 401 && endpoint !== "/api/login")
         onUnauthorized();
+      if (response.ok && endpoint === "/api/media/{id}/subtitles/{subtitle}") {
+        const body = await response.text();
+        controller.signal.throwIfAborted();
+        if (
+          !response.headers.get("content-type")?.includes("text/vtt") ||
+          !body.startsWith("WEBVTT")
+        )
+          throw new APIError(
+            "INVALID_RESPONSE",
+            "字幕响应格式异常",
+            response.status,
+          );
+        return body as Result<Operation<M, P>>;
+      }
       let data: unknown;
       try {
         data = await response.json();

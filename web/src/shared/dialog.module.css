@@ -1,0 +1,40 @@
+.dialog {
+  color: #ededed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: min(620px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.dialog[data-wide="true"] {
+  width: min(1100px, calc(100vw - 24px));
+}
+.dialog::backdrop {
+  background: #000c;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.header button {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  font-size: 28px;
+  padding: 5px 12px;
+}
+@media (max-width: 760px) {
+  .dialog {
+    padding: 16px;
+  }
+}

@@ -6,6 +6,7 @@ import { Loading, QueryError, ui } from "../shared/ui";
 import { keys } from "../features/catalog/queries";
 import { categories, labels } from "../features/catalog/url";
 import { TaskStatus } from "../features/tasks/TaskStatus";
+import { ScanProvider, ScanSummary } from "../features/tasks/Scans";
 import styles from "./app.module.css";
 
 export function App() {
@@ -56,87 +57,87 @@ export function App() {
   const category =
     new URLSearchParams(location.search).get("category") || "all";
   return (
-    <div className={styles.shell}>
-      <a className={styles.skip} href="#main-content">
-        跳到主要内容
-      </a>
-      <aside className={styles.sidebar} data-open={open}>
-        <Link className={styles.brand} to="/">
-          reel<span>nest</span>
-        </Link>
-        <p className={ui.muted}>我的媒体</p>
-        <nav id="main-navigation" ref={navigation} aria-label="主导航">
-          <Link
-            to="/"
-            aria-current={location.pathname === "/" ? "page" : undefined}
-          >
-            首页
+    <ScanProvider>
+      <div className={styles.shell}>
+        <a className={styles.skip} href="#main-content">
+          跳到主要内容
+        </a>
+        <aside className={styles.sidebar} data-open={open}>
+          <Link className={styles.brand} to="/">
+            reel<span>nest</span>
           </Link>
-          {categories.map((c) => (
+          <p className={ui.muted}>我的媒体</p>
+          <nav id="main-navigation" ref={navigation} aria-label="主导航">
             <Link
-              key={c}
-              to={`/library?category=${c}`}
+              to="/"
+              aria-current={location.pathname === "/" ? "page" : undefined}
+            >
+              首页
+            </Link>
+            {categories.map((c) => (
+              <Link
+                key={c}
+                to={`/library?category=${c}`}
+                aria-current={
+                  location.pathname === "/library" && category === c
+                    ? "page"
+                    : undefined
+                }
+              >
+                {labels[c]}
+              </Link>
+            ))}
+            <Link to="/libraries">媒体库管理</Link>
+            <Link to="/tasks">影片资料任务</Link>
+            <Link
+              to="/settings/metadata"
               aria-current={
-                location.pathname === "/library" && category === c
-                  ? "page"
-                  : undefined
+                location.pathname === "/settings/metadata" ? "page" : undefined
               }
             >
-              {labels[c]}
+              影片资料源
             </Link>
-          ))}
-          <Link
-            to="/settings/metadata"
-            aria-current={
-              location.pathname === "/settings/metadata" ? "page" : undefined
-            }
-          >
-            影片资料源
-          </Link>
-        </nav>
-        <p className={styles.preview}>
-          开发预览 · 新契约
-          <br />
-          尚未切换正式入口
-        </p>
-      </aside>
-      {open && (
-        <button
-          className={styles.scrim}
-          aria-label="关闭导航"
-          onClick={() => {
-            setOpen(false);
-            menu.current?.focus();
-          }}
-        />
-      )}
-      <div className={styles.body}>
-        <header className={styles.header}>
+          </nav>
+        </aside>
+        {open && (
           <button
-            ref={menu}
-            className={styles.menu}
-            aria-label="打开导航"
-            aria-expanded={open}
-            aria-controls="main-navigation"
-            onClick={() => setOpen(!open)}
-          >
-            ☰
-          </button>
-          <TaskStatus />
-          <span className={ui.muted}>{session.data.username}</span>
-          <button
-            className={ui.button}
-            disabled={logout.isPending}
-            onClick={() => logout.mutate()}
-          >
-            退出
-          </button>
-        </header>
-        <main id="main-content" tabIndex={-1} className={styles.content}>
-          <QueryError error={logout.error} />
-          <Outlet />
-        </main>
+            className={styles.scrim}
+            aria-label="关闭导航"
+            onClick={() => {
+              setOpen(false);
+              menu.current?.focus();
+            }}
+          />
+        )}
+        <div className={styles.body}>
+          <header className={styles.header}>
+            <button
+              ref={menu}
+              className={styles.menu}
+              aria-label="打开导航"
+              aria-expanded={open}
+              aria-controls="main-navigation"
+              onClick={() => setOpen(!open)}
+            >
+              ☰
+            </button>
+            <TaskStatus />
+            <ScanSummary />
+            <span className={ui.muted}>{session.data.username}</span>
+            <button
+              className={ui.button}
+              disabled={logout.isPending}
+              onClick={() => logout.mutate()}
+            >
+              退出
+            </button>
+          </header>
+          <main id="main-content" tabIndex={-1} className={styles.content}>
+            <QueryError error={logout.error} />
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </ScanProvider>
   );
 }

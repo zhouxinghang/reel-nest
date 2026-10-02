@@ -1,0 +1,32 @@
+.video {
+  width: 100%;
+  max-height: 65dvh;
+  display: block;
+  background: #000;
+  margin-bottom: 18px;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.warning {
+  color: #ffd199;
+  border-left: 3px solid #d89545;
+  padding: 12px;
+  background: #362b1d;
+}
+.path {
+  overflow-wrap: anywhere;
+  font-family: monospace;
+}
+.external {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.external p {
+  color: var(--muted);
+}

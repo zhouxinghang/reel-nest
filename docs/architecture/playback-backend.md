@@ -1,5 +1,7 @@
 # 重构阶段 05：播放与文件操作后端增量
 
+> 历史增量记录：后续已在正式源码入口接入新 UI / runtime；当前实现与测试边界见 [frontend-interactions.md](frontend-interactions.md)。本文当时的“未接入/未切换”描述不代表当前状态，部署和真实数据切换仍未执行。
+
 日期：2026-10-02（Asia/Shanghai）。基线：`fc7b4c5`。对应 issue 05。
 
 **这是 05 的后端增量，不是整票完成或生产切换。** 新 `app.NewRuntime` 已装配播放、进度、串流、字幕和删除 HTTP；`cmd/reelnest` 与用户使用的 React 页面仍为旧路径。05 保持 `claimed`，06 仍受阻塞。没有导入、迁移或清空现有数据，没有重启用户服务。

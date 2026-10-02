@@ -94,7 +94,7 @@ export function Cards({
   layout = "grid",
 }: {
   items: Schema["Card"][];
-  layout?: "grid" | "list";
+  layout?: "grid" | "list" | "shelf";
 }) {
   return (
     <div className={styles.cards} data-layout={layout}>

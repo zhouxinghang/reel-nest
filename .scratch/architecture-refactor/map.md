@@ -3,9 +3,9 @@
 - 方案：[已通过的技术方案](./spec.md)
 - 审计：[现状与验证基线](./audit.md)
 - 评审：2026-10-02，用户确认“评审通过”。
-- 当前阶段：01–04 已完成；05 后端播放/文件操作及新前端路由/查询/基础页面增量已验证，完整前端/播放器切换尚待完成；06 仍等待 05。
-- 最近完成：[04：查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md)（resolved，最终完整回归与三档 HTTP 基准通过）。
-- Frontier（继续执行）：[05：前端、播放与交互切换](./issues/05-frontend-playback-interactions.md)（claimed；06 不可认领）。
+- 当前阶段：01–05 已完成；05 新前后端源码入口与完整交互已切换并验证，未部署或切换用户数据；06 清理与最终交付待执行。
+- 最近完成：[05：前端、播放与交互切换](./issues/05-frontend-playback-interactions.md)（resolved，37 unit/hook、39 浏览器、全量 Go race 和新 runtime 三轮复跑通过）。
+- Frontier（下一步）：[06：兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md)（ready-for-agent，前置依赖全部 resolved，尚未认领）。
 
 ## 任务与依赖
 
@@ -17,7 +17,7 @@
 | 02 | [文件安全、身份与媒体编目](./issues/02-mediafs-identity-catalog.md) | resolved | 01 |
 | 03 | [资料源、版本提交、人物与图片](./issues/03-metadata-providers-assets.md) | resolved | 01, 02 |
 | 04 | [查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md) | resolved | 02, 03 |
-| 05 | [前端、播放与交互切换](./issues/05-frontend-playback-interactions.md) | claimed | 03, 04 |
+| 05 | [前端、播放与交互切换](./issues/05-frontend-playback-interactions.md) | resolved | 03, 04 |
 | 06 | [兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md) | ready-for-agent | 02, 03, 04, 05 |
 
 ## 执行约定
@@ -45,3 +45,5 @@
 - 2026-10-02：05 认领并交付播放/进度/串流/分页字幕/两步删除后端，新增 15 个 Go 顶层测试及 1 个新 runtime 原生视频浏览器场景。全量 Go/race、28 个浏览器场景、最终四包三轮 race、原生视频三次重复与构建/vet/格式通过；详情见 05 Progress 与播放后端交接。05 保持 claimed（新前端/播放器队列/交互尚未完成），06 仍阻塞。没有切换、部署、重启或操作真实媒体数据。
 
 - 2026-10-02：继续 05，新增 Router/Query、生成契约请求、URL/分页、确认式收藏、单一资料任务订阅和冲突保草稿设置页；隔离新 UI 已通过 21 个 unit/hook、5 个浏览器场景三轮、全量 33 个浏览器回归及全量 Go race。详情见 05 本轮 Progress 与前端基础交接。05 仍 claimed（管理/扫描、匹配、播放器和文件操作 UI 待完成），06 仍阻塞；未切换正式入口或部署。
+
+- 2026-10-02：05 完成管理/扫描/任务、CAS 匹配/人物/图片、播放器状态机与有界进度、字幕/外部协议/两步删除，以及新 CLI + 嵌入 UI 源码切换。37 unit/hook、全量 39 浏览器、无缓存全量 Go race、12 个 runtime 场景三轮 36/36 与最终构建/vet/格式通过；完整结果及 06 清单见 05 Answer。05 resolved，06 解除阻塞但未认领。旧路径仅保留在隔离历史 harness 中等待 06 清理；没有部署、推送、操作真实凭据/媒体或现有 DATA_DIR。

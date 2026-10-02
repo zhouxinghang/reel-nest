@@ -1,0 +1,35 @@
+.panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.panel label {
+  display: block;
+  margin: 12px 0;
+}
+.panel fieldset {
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.path {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.actions,
+.source {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.source input {
+  margin-right: 10px;
+}
+@media (max-width: 760px) {
+  .panel {
+    padding: 16px;
+  }
+}

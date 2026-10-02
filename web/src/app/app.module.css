@@ -48,11 +48,6 @@
   background: #62c05218;
   color: var(--accent);
 }
-.preview {
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 30px;
-}
 .body {
   margin-left: 216px;
   min-width: 0;
@@ -97,7 +92,7 @@
     padding: 10px 16px;
     flex-wrap: wrap;
   }
-  .header > span {
+  .header > span:not([role="status"]) {
     display: none;
   }
   .content {

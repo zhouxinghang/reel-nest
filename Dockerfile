@@ -3,7 +3,7 @@ WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci --no-fund --no-audit
 COPY web ./web
-RUN npm run build
+RUN npm run build:web
 
 FROM golang:1.25-alpine AS backend
 WORKDIR /src

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config web/vite.config.ts",
-    "build": "npm run contracts:check && tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts && npm run build:runtime",
+    "build": "npm run contracts:check && npm run build:web && npm run build:runtime && npm run build:legacy-test",
     "test": "npm run build && npm run typecheck:tests && npm run test:unit && go test ./... && playwright test",
     "test:browser": "npm run build && playwright test",
     "format:check": "prettier --check web scripts tests playwright.config.ts package.json compose*.yaml api/openapi.yaml api/testdata/*.json docs/architecture/*.json",
@@ -15,7 +15,9 @@
     "verify:foundation": "npm run baseline:check && npm test && go test -race ./... && go vet ./... && npm run format:check && git diff --check",
     "build:runtime": "vite build --config web/vite.runtime.config.ts",
     "test:unit": "vitest run --config web/vitest.config.ts",
-    "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json && tsc --noEmit -p web/tsconfig.test.json"
+    "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json && tsc --noEmit -p web/tsconfig.test.json",
+    "build:legacy-test": "vite build --config web/vite.legacy.config.ts",
+    "build:web": "tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.90.5",

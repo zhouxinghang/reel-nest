@@ -1,5 +1,7 @@
 # Reel Nest
 
+> **源码入口变更（2026-10-02，重构 05）：** 当前 `cmd/reelnest` / 嵌入前端已使用新版契约，必须用新空 `DATA_DIR` 初始化，不导入旧状态，也不会清空或迁移旧目录。尚未部署或切换任何用户实例。当前接口以 [OpenAPI](api/openapi.yaml) 为准，使用边界与回退要求见[05 交接](docs/architecture/frontend-interactions.md)。以下旧版说明（含资料源环境导入、旧路由/升级行为）尚待 issue 06 完整重写，**不要据此升级现有数据目录**。
+
 面向局域网的家庭媒体库。一个家庭共享账号、一个 Go 应用、React/TypeScript 网页及本地 SQLite；不提供个人账号、注册或找回密码。
 
 ## 当前交付

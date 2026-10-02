@@ -1,5 +1,5 @@
 // This harness replaces only the external metadata origins. The production app,
-// embedded UI, authentication, SQLite, scanning and playback are unchanged.
+// legacy UI, authentication, SQLite, scanning and playback are retained for regression.
 package main
 
 import (
@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"reelnest/internal/app"
-	"reelnest/internal/web"
 )
 
 func main() {
@@ -22,7 +21,7 @@ func main() {
 	if os.Getenv("TEST_METATUBE") == "true" {
 		metaTubeURL = "http://127.0.0.1:18095"
 	}
-	application, err := app.New(app.Config{MetaTubeURL: metaTubeURL, MetaTubeToken: "isolated-browser-metatube-token", TVDBAPIKey: tvdbKey, TVDBAPIURL: "http://127.0.0.1:18094", TVDBImageURL: "http://127.0.0.1:18094/artwork", DataDir: os.Getenv("DATA_DIR"), MediaRoots: []string{os.Getenv("MEDIA_ROOTS")}, Username: "family", Password: "browser-test-password", Assets: web.Assets(), TMDBToken: "isolated-browser-token", TMDBAPIURL: "http://127.0.0.1:18092", TMDBImageURL: "http://127.0.0.1:18092/images"})
+	application, err := app.New(app.Config{MetaTubeURL: metaTubeURL, MetaTubeToken: "isolated-browser-metatube-token", TVDBAPIKey: tvdbKey, TVDBAPIURL: "http://127.0.0.1:18094", TVDBImageURL: "http://127.0.0.1:18094/artwork", DataDir: os.Getenv("DATA_DIR"), MediaRoots: []string{os.Getenv("MEDIA_ROOTS")}, Username: "family", Password: "browser-test-password", Assets: os.DirFS(".reelnest-test/legacy-web"), TMDBToken: "isolated-browser-token", TMDBAPIURL: "http://127.0.0.1:18092", TMDBImageURL: "http://127.0.0.1:18092/images"})
 	if err != nil {
 		log.Fatal(err)
 	}

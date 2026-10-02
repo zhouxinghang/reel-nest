@@ -12,9 +12,14 @@ if (!root || !basename(root).startsWith("reelnest-browser-"))
 mkdirSync(root, { recursive: true });
 mkdirSync(join(root, "media"), { recursive: true });
 const binary = join(root, "reelnest");
-execFileSync("go", ["build", "-o", binary, "./cmd/reelnest"], {
+execFileSync("go", ["build", "-o", binary, "./tests/legacy-server"], {
   stdio: "inherit",
 });
+execFileSync(
+  "go",
+  ["build", "-o", join(root, "reelnest-production"), "./cmd/reelnest"],
+  { stdio: "inherit" },
+);
 const metadataBinary = join(root, "reelnest-metadata");
 execFileSync("go", ["build", "-o", metadataBinary, "./tests/server"], {
   stdio: "inherit",

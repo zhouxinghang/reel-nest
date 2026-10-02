@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"net/http"
 	"sync"
 
@@ -13,14 +14,15 @@ import (
 	"reelnest/internal/playback"
 	"reelnest/internal/store"
 	transport "reelnest/internal/transport/http"
+	"reelnest/internal/web"
 )
 
-// RuntimeConfig belongs exclusively to the new schema. cmd/reelnest switches to
-// this assembly only after the remaining routes/UI land; no legacy DB fallback.
+// RuntimeConfig is the production assembly for the new schema; no legacy DB fallback.
 type RuntimeConfig struct {
 	DataDir, Username, Password string
 	MediaRoots                  []string
 	CookieSecure                bool
+	Assets                      fs.FS
 }
 type Runtime struct {
 	handler  http.Handler
@@ -67,6 +69,9 @@ func NewRuntime(ctx context.Context, config RuntimeConfig) (_ *Runtime, err erro
 	r.handler, e = transport.New(s, i, r.catalog, r.metadata, playback.New(s, fs, r.catalog), config.MediaRoots, config.CookieSecure)
 	if e != nil {
 		return nil, e
+	}
+	if config.Assets != nil {
+		r.handler = web.Handler(config.Assets, r.handler)
 	}
 	return r, nil
 }

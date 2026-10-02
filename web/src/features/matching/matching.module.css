@@ -1,0 +1,13 @@
+.candidates {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+.candidates section {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.candidates p {
+  color: var(--muted);
+}

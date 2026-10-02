@@ -13,6 +13,8 @@ import {
   SeriesDetail,
 } from "../features/catalog/Details";
 import { Settings } from "../features/settings/Settings";
+import { Libraries } from "../features/libraries/Libraries";
+import { Tasks } from "../features/tasks/Tasks";
 import "./tokens.css";
 
 const client = createQueryClient();
@@ -26,6 +28,8 @@ const router = createBrowserRouter([
       { path: "/media/:id", element: <MediaDetail /> },
       { path: "/series/:id", element: <SeriesDetail /> },
       { path: "/people/:id", element: <PersonDetail /> },
+      { path: "/libraries", element: <Libraries /> },
+      { path: "/tasks", element: <Tasks /> },
       { path: "/settings/metadata", element: <Settings /> },
       {
         path: "*",

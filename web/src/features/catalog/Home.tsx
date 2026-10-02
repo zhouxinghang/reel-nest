@@ -32,7 +32,7 @@ export function Home() {
               <h2>
                 <Link to="/library?category=continue">继续观看 →</Link>
               </h2>
-              <Cards items={query.data.continueWatching} />
+              <Cards layout="shelf" items={query.data.continueWatching} />
             </section>
           )}
           <section aria-label="我的媒体库">
@@ -51,7 +51,11 @@ export function Home() {
                     {library.name} →
                   </Link>
                 </h3>
-                {items.length ? <Cards items={items} /> : <Empty />}
+                {items.length ? (
+                  <Cards layout="shelf" items={items} />
+                ) : (
+                  <Empty />
+                )}
               </section>
             ))}
             <Pagination page={query.data.librariesPage} />
@@ -61,7 +65,7 @@ export function Home() {
               <Link to="/library?category=recent">最近添加 →</Link>
             </h2>
             {query.data.recent.length ? (
-              <Cards items={query.data.recent} />
+              <Cards layout="shelf" items={query.data.recent} />
             ) : (
               <Empty />
             )}
