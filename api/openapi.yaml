@@ -1,0 +1,2885 @@
+# Canonical future contract. Edit this file; generated TypeScript is read-only.
+openapi: 3.0.3
+info:
+  title: Reel Nest new contract
+  version: 1.0.0
+  description: >-
+    Issue 01 foundation, not the currently served legacy interface. R01–R12. No aliases or legacy
+    database import. JSON bodies <=16KiB; reject unknown fields, duplicate/unknown query parameters,
+    invalid enums and trailing JSON. Mutations require same-origin checks and household session
+    (login is same-origin but unauthenticated). All successful JSON is no-store.
+    Authentication/authorization and semantic filesystem/provider validation belong to
+    handlers/modules; schema validation is not authorization. Error status map: 400
+    INVALID_REQUEST/INVALID_MEDIA_PATH; 401 UNAUTHENTICATED; 403 FORBIDDEN; 404
+    NOT_FOUND/ASSET_UNAVAILABLE; 409
+    REVISION_CONFLICT/LIBRARY_BUSY/LIBRARY_OVERLAP/CURSOR_STALE/FILE_CHANGED/FILE_ACCESS_DENIED/CANDIDATE_STALE/DELETION_TARGET_CHANGED;
+    410 FILE_UNAVAILABLE/DELETION_PREVIEW_EXPIRED; 422 SUBTITLE_INVALID; 429 RATE_LIMITED; 503
+    PROVIDER_UNAVAILABLE/METADATA_UNAVAILABLE/DATABASE_UNAVAILABLE/NOT_READY; 500 INTERNAL_ERROR.
+    Deletion after possible unlink always uses DeleteResult and is never auto-retried.
+security:
+  - householdSession: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      tags:
+        - R01
+      description: Process liveness only, never configuration.
+      x-requirements:
+        - R01
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        default:
+          $ref: "#/components/responses/Error"
+      security: []
+  /readyz:
+    get:
+      operationId: ready
+      tags:
+        - R01
+      description: DB and worker readiness, 503 NOT_READY when unavailable; no settings leaked.
+      x-requirements:
+        - R01
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        default:
+          $ref: "#/components/responses/Error"
+      security: []
+  /api/login:
+    post:
+      operationId: login
+      tags:
+        - R01
+      description: login
+      x-requirements:
+        - R01
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Login"
+      security: []
+  /api/logout:
+    post:
+      operationId: logout
+      tags:
+        - R01
+      description: logout
+      x-requirements:
+        - R01
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OK"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Empty"
+  /api/session:
+    get:
+      operationId: session
+      tags:
+        - R01
+      description: session
+      x-requirements:
+        - R01
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/libraries:
+    get:
+      operationId: libraries
+      tags:
+        - R02
+      description: libraries
+      x-requirements:
+        - R02
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryPage"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createLibrary
+      tags:
+        - R02,R03
+      description: createLibrary
+      x-requirements:
+        - R02
+        - R03
+      parameters: []
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Library"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryCreate"
+  /api/libraries/{id}:
+    patch:
+      operationId: updateLibrary
+      tags:
+        - R02,R07
+      description: updateLibrary
+      x-requirements:
+        - R02
+        - R07
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Library"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryPatch"
+  /api/libraries/{id}/scans:
+    post:
+      operationId: startScan
+      tags:
+        - R03
+      description: startScan
+      x-requirements:
+        - R03
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scan"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Empty"
+  /api/scans/{id}:
+    get:
+      operationId: scan
+      tags:
+        - R03
+      description: scan
+      x-requirements:
+        - R03
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scan"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/home:
+    get:
+      operationId: home
+      tags:
+        - R05,R06
+      description: home
+      x-requirements:
+        - R05
+        - R06
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Home"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/catalog/groups:
+    get:
+      operationId: catalogGroups
+      tags:
+        - R05,R06
+      description: >-
+        Global browse/search/favorites grouped by library. recent/continue are ungrouped and
+        rejected here. One page of group summaries, not all child entries.
+      x-requirements:
+        - R05
+        - R06
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/Kind"
+        - $ref: "#/components/parameters/View"
+        - $ref: "#/components/parameters/Sort"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupPage"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/catalog:
+    get:
+      operationId: catalog
+      tags:
+        - R04,R05,R06
+      description: >-
+        Single-library entries, or global ungrouped recent/continue. Global browse/search/favorites
+        use groups then independent libraryId pages. Organized episodes collapse only for
+        browse/recent; unmatched includes raw organized files; favorites preserve independent
+        media/series favorites.
+      x-requirements:
+        - R04
+        - R05
+        - R06
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/LibraryID"
+        - $ref: "#/components/parameters/Kind"
+        - $ref: "#/components/parameters/View"
+        - $ref: "#/components/parameters/Sort"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogPage"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/media/{id}:
+    get:
+      operationId: mediaDetail
+      tags:
+        - R04,R07,R08
+      description: mediaDetail
+      x-requirements:
+        - R04
+        - R07
+        - R08
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaDetail"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/series/{id}:
+    get:
+      operationId: seriesDetail
+      tags:
+        - R04,R07,R08
+      description: seriesDetail
+      x-requirements:
+        - R04
+        - R07
+        - R08
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeriesDetail"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/series/{id}/seasons/{number}/episodes:
+    get:
+      operationId: episodes
+      tags:
+        - R04
+      description: episodes
+      x-requirements:
+        - R04
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 99999
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EpisodePage"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/favorites/{target}/{id}:
+    put:
+      operationId: setFavorite
+      tags:
+        - R06
+      description: setFavorite
+      x-requirements:
+        - R06
+      parameters:
+        - name: target
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - media
+              - series
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Favorite"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FavoriteWrite"
+  /api/metadata/subjects/{id}/candidates:
+    get:
+      operationId: candidates
+      tags:
+        - R07
+      description: candidates
+      x-requirements:
+        - R07
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 256
+            minLength: 1
+        - name: source
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/Source"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CandidatePage"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/metadata/subjects/{id}/selection:
+    put:
+      operationId: selectMetadata
+      tags:
+        - R07
+      description: selectMetadata
+      x-requirements:
+        - R07
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectMetadata"
+  /api/metadata/refresh:
+    post:
+      operationId: refreshMetadata
+      tags:
+        - R07
+      description: refreshMetadata
+      x-requirements:
+        - R07
+      parameters: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshAccepted"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Refresh"
+  /api/metadata/status:
+    get:
+      operationId: metadataStatus
+      tags:
+        - R07
+      description: metadataStatus
+      x-requirements:
+        - R07
+      parameters:
+        - $ref: "#/components/parameters/LibraryID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetadataStatus"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/settings/metadata:
+    get:
+      operationId: metadataSettings
+      tags:
+        - R09
+      description: metadataSettings
+      x-requirements:
+        - R09
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/settings/metadata/{source}:
+    patch:
+      operationId: updateMetadataSettings
+      tags:
+        - R09
+      description: updateMetadataSettings
+      x-requirements:
+        - R09
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Source"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderSettings"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsPatch"
+  /api/people/{id}:
+    get:
+      operationId: person
+      tags:
+        - R08
+      description: person
+      x-requirements:
+        - R08
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/people/{id}/works:
+    get:
+      operationId: personWorks
+      tags:
+        - R08
+      description: personWorks
+      x-requirements:
+        - R08
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonWorks"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/media/{id}/playback:
+    get:
+      operationId: playback
+      tags:
+        - R10
+      description: playback
+      x-requirements:
+        - R10
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playback"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/media/{id}/progress:
+    get:
+      operationId: progress
+      tags:
+        - R06,R10
+      description: progress
+      x-requirements:
+        - R06
+        - R10
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedProgress"
+        default:
+          $ref: "#/components/responses/Error"
+    put:
+      operationId: saveProgress
+      tags:
+        - R06,R10
+      description: saveProgress
+      x-requirements:
+        - R06
+        - R10
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Progress"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressWrite"
+  /api/media/{id}/stream-link:
+    post:
+      operationId: streamLink
+      tags:
+        - R11
+      description: streamLink
+      x-requirements:
+        - R11
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamLink"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Empty"
+  /api/media/{id}/subtitles:
+    get:
+      operationId: subtitles
+      tags:
+        - R11
+      description: subtitles
+      x-requirements:
+        - R11
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subtitles"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/media/{id}/deletion-preview:
+    post:
+      operationId: deletionPreview
+      tags:
+        - R12
+      description: deletionPreview
+      x-requirements:
+        - R12
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionPreview"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Empty"
+  /api/media/{id}/delete:
+    post:
+      operationId: deleteFile
+      tags:
+        - R12
+      description: deleteFile
+      x-requirements:
+        - R12
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteRequest"
+  /api/media/{id}/content:
+    get:
+      operationId: mediaContent
+      tags:
+        - R10
+      description: >-
+        Verify file/parent identity then stream from the same handle, no transcoding or whole-file
+        buffering.
+      x-requirements:
+        - R10
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: Range
+          in: header
+          schema:
+            type: string
+            maxLength: 1024
+        - name: If-Range
+          in: header
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        "200":
+          description: Content
+          content:
+            video/*:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                maxLength: 128
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+            ETag:
+              schema:
+                type: string
+                maxLength: 256
+            Accept-Ranges:
+              schema:
+                type: string
+                enum:
+                  - bytes
+        "206":
+          description: Single or multipart byte range
+          content:
+            video/*:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            multipart/byteranges:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        "416":
+          description: Unsatisfiable or malformed range; standard HTTP text permitted
+          content:
+            text/plain:
+              schema:
+                type: string
+                maxLength: 4096
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        default:
+          $ref: "#/components/responses/Error"
+    head:
+      operationId: mediaContentHead
+      tags:
+        - R10
+      description: >-
+        Verify file/parent identity then stream from the same handle, no transcoding or whole-file
+        buffering.
+      x-requirements:
+        - R10
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: Range
+          in: header
+          schema:
+            type: string
+            maxLength: 1024
+        - name: If-Range
+          in: header
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        "200":
+          description: Same headers, no body
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                maxLength: 128
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+            ETag:
+              schema:
+                type: string
+                maxLength: 256
+            Accept-Ranges:
+              schema:
+                type: string
+                enum:
+                  - bytes
+        "206":
+          description: Single or multipart byte range
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        "416":
+          description: Unsatisfiable or malformed range; standard HTTP text permitted
+          content:
+            text/plain:
+              schema:
+                type: string
+                maxLength: 4096
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        default:
+          $ref: "#/components/responses/Error"
+  /stream/{id}:
+    get:
+      operationId: streamContent
+      tags:
+        - R11
+      description: >-
+        Only token grants access to this file; Cookie never substitutes. No expiration, no progress
+        writes.
+      x-requirements:
+        - R11
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{64}$
+            minLength: 64
+            maxLength: 64
+        - name: Range
+          in: header
+          schema:
+            type: string
+            maxLength: 1024
+        - name: If-Range
+          in: header
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        "200":
+          description: Content
+          content:
+            video/*:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                maxLength: 128
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+            ETag:
+              schema:
+                type: string
+                maxLength: 256
+            Accept-Ranges:
+              schema:
+                type: string
+                enum:
+                  - bytes
+        "206":
+          description: Single or multipart byte range
+          content:
+            video/*:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            multipart/byteranges:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        "416":
+          description: Unsatisfiable or malformed range; standard HTTP text permitted
+          content:
+            text/plain:
+              schema:
+                type: string
+                maxLength: 4096
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        default:
+          $ref: "#/components/responses/Error"
+      security:
+        - streamToken: []
+    head:
+      operationId: streamContentHead
+      tags:
+        - R11
+      description: >-
+        Only token grants access to this file; Cookie never substitutes. No expiration, no progress
+        writes.
+      x-requirements:
+        - R11
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{64}$
+            minLength: 64
+            maxLength: 64
+        - name: Range
+          in: header
+          schema:
+            type: string
+            maxLength: 1024
+        - name: If-Range
+          in: header
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        "200":
+          description: Same headers, no body
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                maxLength: 128
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+            ETag:
+              schema:
+                type: string
+                maxLength: 256
+            Accept-Ranges:
+              schema:
+                type: string
+                enum:
+                  - bytes
+        "206":
+          description: Single or multipart byte range
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        "416":
+          description: Unsatisfiable or malformed range; standard HTTP text permitted
+          content:
+            text/plain:
+              schema:
+                type: string
+                maxLength: 4096
+          headers:
+            Content-Range:
+              schema:
+                type: string
+                maxLength: 256
+        default:
+          $ref: "#/components/responses/Error"
+      security:
+        - streamToken: []
+  /api/assets/{id}/content:
+    get:
+      operationId: assetContent
+      tags:
+        - R08
+      description: >-
+        Only current valid bounded content, requires household session. No arbitrary URL proxy;
+        cancellation is not negative cache.
+      x-requirements:
+        - R08
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Content
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                maxLength: 128
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+        default:
+          $ref: "#/components/responses/Error"
+    head:
+      operationId: assetContentHead
+      tags:
+        - R08
+      description: >-
+        Only current valid bounded content, requires household session. No arbitrary URL proxy;
+        cancellation is not negative cache.
+      x-requirements:
+        - R08
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Same headers, no body
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                maxLength: 128
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+        default:
+          $ref: "#/components/responses/Error"
+  /api/media/{id}/subtitles/{subtitle}:
+    get:
+      operationId: subtitleContent
+      tags:
+        - R11
+      description: subtitleContent
+      x-requirements:
+        - R11
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+        - name: subtitle
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ID"
+      responses:
+        "200":
+          description: Validated UTF-8 WebVTT, <=2MiB source. No source writes.
+          content:
+            text/vtt:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    householdSession:
+      type: apiKey
+      in: cookie
+      name: reelnest_session
+    streamToken:
+      type: apiKey
+      in: query
+      name: token
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      description: Default 50, hard maximum 100; response may use a smaller bound.
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        maxLength: 4096
+        minLength: 1
+    Query:
+      name: q
+      in: query
+      schema:
+        type: string
+        maxLength: 256
+      description: >-
+        Case-insensitive substring of filename/local title/fresh metadata. Episode filename matches
+        entire series without shrinking its counts.
+    LibraryID:
+      name: libraryId
+      in: query
+      schema:
+        $ref: "#/components/schemas/ID"
+    Kind:
+      name: kind
+      in: query
+      schema:
+        $ref: "#/components/schemas/Kind"
+    View:
+      name: view
+      in: query
+      schema:
+        type: string
+        enum:
+          - browse
+          - unmatched
+          - favorites
+          - continue
+          - recent
+        default: browse
+    Sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum:
+          - title
+          - recent
+          - favorite
+          - progress
+        default: title
+      description: >-
+        Server-stable Chinese/numeric title key or descending event time, then entryKey.
+        Favorites/continue/recent use their event-time order.
+  responses:
+    Error:
+      description: >-
+        Stable error code, redacted message, explicit retryability and request correlation; no
+        upstream payloads or secrets.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    ID:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: ^[A-Za-z0-9_-]+$
+      description: Opaque local identifier, not a path or an upstream ID. All JSON IDs are strings.
+    Revision:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    Timestamp:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+      description: Unix milliseconds. Not seconds; zero is not an unknown-time sentinel.
+    NullableTimestamp:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+      nullable: true
+      description: Unix milliseconds, or null when the event has not happened.
+    Source:
+      type: string
+      enum:
+        - tmdb
+        - tvdb
+        - metatube
+    Kind:
+      type: string
+      enum:
+        - movie
+        - series
+    Empty:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    ErrorCode:
+      type: string
+      enum:
+        - INVALID_REQUEST
+        - UNAUTHENTICATED
+        - FORBIDDEN
+        - NOT_FOUND
+        - RATE_LIMITED
+        - REVISION_CONFLICT
+        - LIBRARY_BUSY
+        - LIBRARY_OVERLAP
+        - INVALID_MEDIA_PATH
+        - CURSOR_STALE
+        - FILE_UNAVAILABLE
+        - FILE_CHANGED
+        - FILE_ACCESS_DENIED
+        - SUBTITLE_INVALID
+        - PROVIDER_UNAVAILABLE
+        - CANDIDATE_STALE
+        - METADATA_UNAVAILABLE
+        - ASSET_UNAVAILABLE
+        - DELETION_PREVIEW_EXPIRED
+        - DELETION_TARGET_CHANGED
+        - DATABASE_UNAVAILABLE
+        - NOT_READY
+        - INTERNAL_ERROR
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              $ref: "#/components/schemas/ErrorCode"
+            message:
+              type: string
+              maxLength: 1024
+            retryable:
+              type: boolean
+            requestId:
+              $ref: "#/components/schemas/ID"
+          required:
+            - code
+            - message
+            - retryable
+            - requestId
+      required:
+        - error
+    Health:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - not_ready
+      required:
+        - status
+    Session:
+      type: object
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          maxLength: 80
+      required:
+        - username
+    Login:
+      type: object
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          maxLength: 80
+          minLength: 1
+        password:
+          type: string
+          maxLength: 4096
+          minLength: 1
+      required:
+        - username
+        - password
+    OK:
+      type: object
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum:
+            - true
+      required:
+        - ok
+    PageInfo:
+      type: object
+      additionalProperties: false
+      properties:
+        nextCursor:
+          type: string
+          maxLength: 4096
+          nullable: true
+        expiresAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+      required:
+        - nextCursor
+        - expiresAt
+      description: >-
+        Keyset cursor TTL <= 5 minutes and no later than the nearest relevant metadata expiry.
+        CURSOR_STALE on query/revision/TTL mismatch. Catalog revision for browsing, plus
+        favorites/progress revision only for those views.
+    Favorite:
+      type: object
+      additionalProperties: false
+      properties:
+        favorite:
+          type: boolean
+        favoritedAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+      required:
+        - favorite
+        - favoritedAt
+    Progress:
+      type: object
+      additionalProperties: false
+      properties:
+        position:
+          type: number
+          minimum: 0
+          maximum: 31622400
+        duration:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 31622400
+        completed:
+          type: boolean
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - position
+        - duration
+        - completed
+        - updatedAt
+    ProgressWrite:
+      type: object
+      additionalProperties: false
+      properties:
+        position:
+          type: number
+          minimum: 0
+          maximum: 31622400
+        duration:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 31622400
+        completed:
+          type: boolean
+      required:
+        - position
+        - duration
+        - completed
+      description: >-
+        Finite seconds; position <= duration. completed=true requires position >= duration - 0.5;
+        browser sends it only after native ended. Last valid server-received update wins.
+    Sources:
+      type: array
+      items:
+        $ref: "#/components/schemas/Source"
+      maxItems: 3
+      uniqueItems: true
+      description: Ordered per-library priority. [] disables automatic fetching. No cross-source merging.
+    ProviderStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          $ref: "#/components/schemas/Source"
+        name:
+          type: string
+          maxLength: 80
+        configured:
+          type: boolean
+        cooldownUntil:
+          $ref: "#/components/schemas/NullableTimestamp"
+      required:
+        - source
+        - name
+        - configured
+        - cooldownUntil
+    Library:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+        path:
+          type: string
+          maxLength: 4096
+        kind:
+          $ref: "#/components/schemas/Kind"
+        revision:
+          $ref: "#/components/schemas/Revision"
+        policyRevision:
+          $ref: "#/components/schemas/Revision"
+        sources:
+          $ref: "#/components/schemas/Sources"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        latestScanId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+      required:
+        - id
+        - name
+        - path
+        - kind
+        - revision
+        - policyRevision
+        - sources
+        - createdAt
+        - latestScanId
+    LibraryCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+        path:
+          type: string
+          maxLength: 4096
+          minLength: 1
+        kind:
+          $ref: "#/components/schemas/Kind"
+        sources:
+          $ref: "#/components/schemas/Sources"
+      required:
+        - name
+        - path
+        - kind
+      description: >-
+        Trim name, 1–80 Unicode characters, no controls. Path must be inside configured roots,
+        non-symlink, non-overlapping with libraries or DATA_DIR. Omitted sources defaults to
+        [tmdb,tvdb]. Creates and queues first scan atomically.
+    LibraryPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          $ref: "#/components/schemas/Revision"
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+        sources:
+          $ref: "#/components/schemas/Sources"
+      required:
+        - revision
+      description: >-
+        At least one changed field. Rename never modifies disk; sources affect automatic evaluation,
+        not manual choice. Revision conflict is 409.
+    Scan:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+        libraryId:
+          $ref: "#/components/schemas/ID"
+        state:
+          type: string
+          enum:
+            - queued
+            - running
+            - completed
+            - failed
+            - interrupted
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        startedAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+        finishedAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+        discoveredCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        errorCode:
+          oneOf:
+            - $ref: "#/components/schemas/ErrorCode"
+            - type: string
+              nullable: true
+              enum:
+                - null
+      required:
+        - id
+        - libraryId
+        - state
+        - requestedAt
+        - startedAt
+        - finishedAt
+        - discoveredCount
+        - errorCode
+    RemoteRef:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          $ref: "#/components/schemas/Source"
+        catalogId:
+          $ref: "#/components/schemas/ID"
+        namespace:
+          type: string
+          maxLength: 128
+          minLength: 1
+        kind:
+          $ref: "#/components/schemas/Kind"
+        remoteId:
+          type: string
+          maxLength: 1024
+          minLength: 1
+        providerRevision:
+          $ref: "#/components/schemas/Revision"
+      required:
+        - source
+        - catalogId
+        - namespace
+        - kind
+        - remoteId
+        - providerRevision
+      description: >-
+        Upstream remoteId is an exact case-sensitive string, never hashed/coerced to integer.
+        TMDB/TVDB namespace equals source. MetaTube namespace is normalized upstream provider, movie
+        only; catalogId changes with normalized service URL, not token rotation.
+    Artwork:
+      type: object
+      additionalProperties: false
+      properties:
+        primary:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+        thumb:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+        backdrop:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+      required:
+        - primary
+        - thumb
+        - backdrop
+    MetadataSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 512
+        originalTitle:
+          type: string
+          maxLength: 512
+        year:
+          type: integer
+          minimum: 1
+          maximum: 9999
+          nullable: true
+        source:
+          $ref: "#/components/schemas/Source"
+        artwork:
+          $ref: "#/components/schemas/Artwork"
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - title
+        - originalTitle
+        - year
+        - source
+        - artwork
+        - expiresAt
+    EpisodePosition:
+      type: object
+      additionalProperties: false
+      properties:
+        seriesId:
+          $ref: "#/components/schemas/ID"
+        seriesTitle:
+          type: string
+          maxLength: 512
+        seasonNumber:
+          type: integer
+          minimum: 0
+          maximum: 99999
+        episodeNumber:
+          type: integer
+          minimum: 1
+          maximum: 99999
+      required:
+        - seriesId
+        - seriesTitle
+        - seasonNumber
+        - episodeNumber
+    MediaCard:
+      type: object
+      additionalProperties: false
+      properties:
+        entryType:
+          type: string
+          enum:
+            - media
+        id:
+          $ref: "#/components/schemas/ID"
+        entryKey:
+          type: string
+          maxLength: 256
+        libraryId:
+          $ref: "#/components/schemas/ID"
+        kind:
+          $ref: "#/components/schemas/Kind"
+        title:
+          type: string
+          maxLength: 512
+        filename:
+          type: string
+          maxLength: 1024
+        state:
+          type: string
+          enum:
+            - available
+            - deleted
+        addedAt:
+          $ref: "#/components/schemas/Timestamp"
+        favorite:
+          $ref: "#/components/schemas/Favorite"
+        progress:
+          oneOf:
+            - $ref: "#/components/schemas/Progress"
+            - type: object
+              nullable: true
+              enum:
+                - null
+        episode:
+          oneOf:
+            - $ref: "#/components/schemas/EpisodePosition"
+            - type: object
+              nullable: true
+              enum:
+                - null
+        metadata:
+          oneOf:
+            - $ref: "#/components/schemas/MetadataSummary"
+            - type: object
+              nullable: true
+              enum:
+                - null
+      required:
+        - entryType
+        - id
+        - entryKey
+        - libraryId
+        - kind
+        - title
+        - filename
+        - state
+        - addedAt
+        - favorite
+        - progress
+        - episode
+        - metadata
+    SeriesCard:
+      type: object
+      additionalProperties: false
+      properties:
+        entryType:
+          type: string
+          enum:
+            - series
+        id:
+          $ref: "#/components/schemas/ID"
+        entryKey:
+          type: string
+          maxLength: 256
+        libraryId:
+          $ref: "#/components/schemas/ID"
+        kind:
+          type: string
+          enum:
+            - series
+        title:
+          type: string
+          maxLength: 512
+        addedAt:
+          $ref: "#/components/schemas/Timestamp"
+        seasonCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        episodeCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        fileCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        availableFileCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        favorite:
+          $ref: "#/components/schemas/Favorite"
+        metadata:
+          oneOf:
+            - $ref: "#/components/schemas/MetadataSummary"
+            - type: object
+              nullable: true
+              enum:
+                - null
+      required:
+        - entryType
+        - id
+        - entryKey
+        - libraryId
+        - kind
+        - title
+        - addedAt
+        - seasonCount
+        - episodeCount
+        - fileCount
+        - availableFileCount
+        - favorite
+        - metadata
+    Card:
+      oneOf:
+        - $ref: "#/components/schemas/MediaCard"
+        - $ref: "#/components/schemas/SeriesCard"
+      discriminator:
+        propertyName: entryType
+        mapping:
+          media: "#/components/schemas/MediaCard"
+          series: "#/components/schemas/SeriesCard"
+    Credit:
+      type: object
+      additionalProperties: false
+      properties:
+        personId:
+          $ref: "#/components/schemas/ID"
+        name:
+          type: string
+          maxLength: 512
+        role:
+          type: string
+          enum:
+            - actor
+            - director
+        characters:
+          type: array
+          items:
+            type: string
+            maxLength: 512
+          maxItems: 50
+        photoAssetId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+      required:
+        - personId
+        - name
+        - role
+        - characters
+        - photoAssetId
+    Credits:
+      type: object
+      additionalProperties: false
+      properties:
+        state:
+          type: string
+          enum:
+            - missing
+            - ready
+            - failed
+        actors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Credit"
+          maxItems: 100
+        directors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Credit"
+          maxItems: 50
+        retryAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+      required:
+        - state
+        - actors
+        - directors
+        - retryAt
+    MetadataDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        summary:
+          $ref: "#/components/schemas/MetadataSummary"
+        remote:
+          $ref: "#/components/schemas/RemoteRef"
+        identifier:
+          type: string
+          maxLength: 512
+        overview:
+          type: string
+          maxLength: 32768
+        sourceUrl:
+          type: string
+          maxLength: 2048
+        fetchedAt:
+          $ref: "#/components/schemas/Timestamp"
+        revision:
+          $ref: "#/components/schemas/Revision"
+        credits:
+          $ref: "#/components/schemas/Credits"
+        artworkState:
+          type: string
+          enum:
+            - missing
+            - ready
+            - failed
+        artworkRetryAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+      required:
+        - summary
+        - remote
+        - identifier
+        - overview
+        - sourceUrl
+        - fetchedAt
+        - revision
+        - credits
+        - artworkState
+        - artworkRetryAt
+    Selection:
+      type: object
+      additionalProperties: false
+      properties:
+        remote:
+          $ref: "#/components/schemas/RemoteRef"
+        mode:
+          type: string
+          enum:
+            - automatic
+            - manual
+        revision:
+          $ref: "#/components/schemas/Revision"
+      required:
+        - remote
+        - mode
+        - revision
+    Match:
+      type: object
+      additionalProperties: false
+      properties:
+        subjectId:
+          $ref: "#/components/schemas/ID"
+        subjectRevision:
+          $ref: "#/components/schemas/Revision"
+        bindingRevision:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        selection:
+          oneOf:
+            - $ref: "#/components/schemas/Selection"
+            - type: object
+              nullable: true
+              enum:
+                - null
+        cacheState:
+          type: string
+          enum:
+            - absent
+            - fresh
+            - expired
+        attemptState:
+          type: string
+          enum:
+            - never
+            - succeeded
+            - failed
+        attemptedAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+        errorCode:
+          oneOf:
+            - $ref: "#/components/schemas/ErrorCode"
+            - type: string
+              nullable: true
+              enum:
+                - null
+        metadata:
+          oneOf:
+            - $ref: "#/components/schemas/MetadataDetail"
+            - type: object
+              nullable: true
+              enum:
+                - null
+      required:
+        - subjectId
+        - subjectRevision
+        - bindingRevision
+        - selection
+        - cacheState
+        - attemptState
+        - attemptedAt
+        - errorCode
+        - metadata
+      description: >-
+        Selection survives absent/expired content. Only fresh metadata is returned; expired metadata
+        is null. Organized episodes share their series subject. A failed refresh never clears manual
+        selection.
+    MediaDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        card:
+          $ref: "#/components/schemas/MediaCard"
+        relativePath:
+          type: string
+          maxLength: 4096
+        path:
+          type: string
+          maxLength: 4096
+        size:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        modifiedAt:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        organizationReason:
+          type: string
+          maxLength: 512
+        match:
+          $ref: "#/components/schemas/Match"
+      required:
+        - card
+        - relativePath
+        - path
+        - size
+        - modifiedAt
+        - organizationReason
+        - match
+    SeasonSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        number:
+          type: integer
+          minimum: 0
+          maximum: 99999
+        episodeCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        fileCount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+        - number
+        - episodeCount
+        - fileCount
+    SeriesDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        card:
+          $ref: "#/components/schemas/SeriesCard"
+        match:
+          $ref: "#/components/schemas/Match"
+        seasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeasonSummary"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - card
+        - match
+        - seasons
+        - page
+      description: >-
+        Only season summaries, no embedded episode tree. Season summaries also page to avoid
+        unbounded detail.
+    EpisodeFile:
+      type: object
+      additionalProperties: false
+      properties:
+        episodeNumber:
+          type: integer
+          minimum: 1
+          maximum: 99999
+        file:
+          $ref: "#/components/schemas/MediaCard"
+      required:
+        - episodeNumber
+        - file
+      description: >-
+        One row per file version, ordered by episode number then stable file ID. Versions may span
+        pages; never truncate a files array silently.
+    Person:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+        name:
+          type: string
+          maxLength: 512
+        source:
+          $ref: "#/components/schemas/Source"
+        catalogId:
+          $ref: "#/components/schemas/ID"
+        photoAssetId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+      required:
+        - id
+        - name
+        - source
+        - catalogId
+        - photoAssetId
+    PersonWork:
+      type: object
+      additionalProperties: false
+      properties:
+        card:
+          $ref: "#/components/schemas/Card"
+        roles:
+          type: array
+          items:
+            type: string
+            enum:
+              - actor
+              - director
+          maxItems: 2
+        characters:
+          type: array
+          items:
+            type: string
+            maxLength: 512
+          maxItems: 50
+      required:
+        - card
+        - roles
+        - characters
+      description: >-
+        Only current bindings + unexpired snapshots + local subjects. One representative per remote
+        title, available files first; a series is not repeated per episode.
+    Candidate:
+      type: object
+      additionalProperties: false
+      properties:
+        ref:
+          $ref: "#/components/schemas/RemoteRef"
+        title:
+          type: string
+          maxLength: 512
+        originalTitle:
+          type: string
+          maxLength: 512
+        year:
+          type: integer
+          minimum: 1
+          maximum: 9999
+          nullable: true
+        overview:
+          type: string
+          maxLength: 4096
+      required:
+        - ref
+        - title
+        - originalTitle
+        - year
+        - overview
+    CandidatePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candidate"
+          maxItems: 100
+        complete:
+          type: boolean
+        subjectRevision:
+          $ref: "#/components/schemas/Revision"
+        bindingRevision:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+        - items
+        - complete
+        - subjectRevision
+        - bindingRevision
+      description: >-
+        Search is read-only: no persistent ID bridge. Incomplete/truncated results can never
+        establish uniqueness. Candidate carries source/catalog/config revision.
+    SelectMetadata:
+      type: object
+      additionalProperties: false
+      properties:
+        subjectRevision:
+          $ref: "#/components/schemas/Revision"
+        expectedRevision:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        ref:
+          $ref: "#/components/schemas/RemoteRef"
+      required:
+        - subjectRevision
+        - expectedRevision
+        - ref
+      description: >-
+        expectedRevision=0 means no binding. Fetch and verify real upstream title before commit. Any
+        subject/binding/policy/config/catalog mismatch returns CANDIDATE_STALE or REVISION_CONFLICT;
+        failure retains previous selection.
+    Refresh:
+      type: object
+      additionalProperties: false
+      properties:
+        libraryId:
+          $ref: "#/components/schemas/ID"
+      required: []
+      description: >-
+        Explicit refresh, optionally scoped to one library; not a filesystem scan. Valid caches
+        retained; bounded retries and per-subject generation coalescing.
+    RefreshAccepted:
+      type: object
+      additionalProperties: false
+      properties:
+        queued:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+        - queued
+    Job:
+      type: object
+      additionalProperties: false
+      properties:
+        subjectId:
+          $ref: "#/components/schemas/ID"
+        state:
+          type: string
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+            - superseded
+        requestedGeneration:
+          $ref: "#/components/schemas/Revision"
+        claimedGeneration:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+          nullable: true
+        attempts:
+          type: integer
+          minimum: 0
+          maximum: 3
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        startedAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+        finishedAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+        nextAttemptAt:
+          $ref: "#/components/schemas/NullableTimestamp"
+        errorCode:
+          oneOf:
+            - $ref: "#/components/schemas/ErrorCode"
+            - type: string
+              nullable: true
+              enum:
+                - null
+      required:
+        - subjectId
+        - state
+        - requestedGeneration
+        - claimedGeneration
+        - attempts
+        - requestedAt
+        - startedAt
+        - finishedAt
+        - nextAttemptAt
+        - errorCode
+    MetadataStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderStatus"
+          maxItems: 3
+        queued:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        running:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        succeeded:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        failed:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        superseded:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        revision:
+          $ref: "#/components/schemas/Revision"
+        failures:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - sources
+        - queued
+        - running
+        - succeeded
+        - failed
+        - superseded
+        - revision
+        - failures
+        - page
+    ProviderSettings:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          $ref: "#/components/schemas/Source"
+        name:
+          type: string
+          maxLength: 80
+        url:
+          type: string
+          maxLength: 2048
+          nullable: true
+        catalogId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_-]+$
+          nullable: true
+        credentialSet:
+          type: boolean
+        pinSet:
+          type: boolean
+        configured:
+          type: boolean
+        revision:
+          $ref: "#/components/schemas/Revision"
+      required:
+        - source
+        - name
+        - url
+        - catalogId
+        - credentialSet
+        - pinSet
+        - configured
+        - revision
+      description: No secrets or masked values. configured does not claim successful connectivity.
+    SettingsPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          $ref: "#/components/schemas/Revision"
+        credential:
+          type: string
+          maxLength: 4096
+          nullable: true
+        clearCredential:
+          type: boolean
+        pin:
+          type: string
+          maxLength: 4096
+          nullable: true
+        clearPin:
+          type: boolean
+        url:
+          type: string
+          maxLength: 2048
+          nullable: true
+      required:
+        - revision
+      description: >-
+        Omitted/null/blank secrets preserve existing values; explicit clear deletes. Trimmed
+        secret/PIN <=4096 UTF-8 bytes with no internal whitespace/control characters. Only TVDB
+        accepts pin/clearPin, only MetaTube accepts url. URL <=2048 bytes, HTTP(S) with optional
+        prefix, no userinfo/query/fragment. Changing address with an old token requires a
+        replacement or explicit clear; cannot transfer token. Saving never waits for upstream
+        requests.
+    Playback:
+      type: object
+      additionalProperties: false
+      properties:
+        mediaId:
+          $ref: "#/components/schemas/ID"
+        contentPath:
+          type: string
+          maxLength: 512
+        progress:
+          oneOf:
+            - $ref: "#/components/schemas/Progress"
+            - type: object
+              nullable: true
+              enum:
+                - null
+      required:
+        - mediaId
+        - contentPath
+        - progress
+      description: Preflight opens verified local file. Does not claim browser codec support or write progress.
+    StreamLink:
+      type: object
+      additionalProperties: false
+      properties:
+        path:
+          type: string
+          maxLength: 1024
+          pattern: ^/stream/[A-Za-z0-9_-]+\?token=[a-f0-9]{64}$
+      required:
+        - path
+      description: >-
+        Relative origin-independent path; non-expiring read-only single-file credential. No session
+        fallback, subtitles or writes; not logged.
+    Subtitle:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+        filename:
+          type: string
+          maxLength: 1024
+        format:
+          type: string
+          enum:
+            - srt
+            - vtt
+      required:
+        - id
+        - filename
+        - format
+    DeletionPreview:
+      type: object
+      additionalProperties: false
+      properties:
+        mediaId:
+          $ref: "#/components/schemas/ID"
+        path:
+          type: string
+          maxLength: 4096
+        confirmation:
+          type: string
+          maxLength: 4096
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+        warning:
+          type: string
+          maxLength: 1024
+      required:
+        - mediaId
+        - path
+        - confirmation
+        - expiresAt
+        - warning
+      description: >-
+        Signed short-lived exact file/parent identity material, not authorization. UI displays
+        absolute path and irreversible risk before second confirmation.
+    DeleteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        confirmation:
+          type: string
+          maxLength: 4096
+          minLength: 1
+        confirm:
+          type: boolean
+          enum:
+            - true
+      required:
+        - confirmation
+        - confirm
+    DeleteResult:
+      type: object
+      additionalProperties: false
+      properties:
+        fileOutcome:
+          type: string
+          enum:
+            - deleted
+            - not_deleted
+            - unknown
+        indexOutcome:
+          type: string
+          enum:
+            - updated
+            - pending
+        message:
+          type: string
+          maxLength: 1024
+        retryable:
+          type: boolean
+          enum:
+            - false
+        requestId:
+          $ref: "#/components/schemas/ID"
+      required:
+        - fileOutcome
+        - indexOutcome
+        - message
+        - retryable
+        - requestId
+      description: >-
+        HTTP 200 also covers deleted/index pending and unknown outcomes. Never auto-retry. Once
+        unlink may have happened, use this outcome instead of an ordinary retryable error.
+        Disconnect means unknown to client. Rescan/recheck; subtitles/images/directories untouched.
+    CatalogPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+    EpisodePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EpisodeFile"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+    PersonWorks:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonWork"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+    LibrarySummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+        name:
+          type: string
+          maxLength: 80
+        kind:
+          $ref: "#/components/schemas/Kind"
+      required:
+        - id
+        - name
+        - kind
+    LibraryPreview:
+      type: object
+      additionalProperties: false
+      properties:
+        library:
+          $ref: "#/components/schemas/LibrarySummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+          maxItems: 6
+      required:
+        - library
+        - items
+    LibraryPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Library"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+        allowedRoots:
+          type: array
+          items:
+            type: string
+            maxLength: 4096
+          maxItems: 100
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderStatus"
+          maxItems: 3
+      required:
+        - items
+        - page
+        - allowedRoots
+        - sources
+    Group:
+      type: object
+      additionalProperties: false
+      properties:
+        library:
+          $ref: "#/components/schemas/LibrarySummary"
+        total:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        entriesCursor:
+          type: string
+          maxLength: 4096
+          nullable: true
+      required:
+        - library
+        - total
+        - entriesCursor
+      description: >-
+        Order derives from the first item of the complete matching set, then library ID, never from
+        loaded child pages. Fetch entries independently by libraryId; entriesCursor binds group
+        filters/revision. Empty libraries remain available in library/home pages.
+    GroupPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+    Home:
+      type: object
+      additionalProperties: false
+      properties:
+        libraries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LibraryPreview"
+          maxItems: 20
+        librariesPage:
+          $ref: "#/components/schemas/PageInfo"
+        continueWatching:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaCard"
+          maxItems: 20
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+          maxItems: 20
+      required:
+        - libraries
+        - librariesPage
+        - continueWatching
+        - recent
+      description: >-
+        Recent is a single global top-20, series aggregate max current file addedAt; continue
+        watching is per file. Empty libraries included. Cards omit credits, absolute paths, episode
+        trees and BLOBs. Target <=256KiB.
+    FavoriteWrite:
+      type: object
+      additionalProperties: false
+      properties:
+        favorite:
+          type: boolean
+      required:
+        - favorite
+    Settings:
+      type: object
+      additionalProperties: false
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderSettings"
+          maxItems: 3
+      required:
+        - sources
+    SavedProgress:
+      type: object
+      additionalProperties: false
+      properties:
+        progress:
+          oneOf:
+            - $ref: "#/components/schemas/Progress"
+            - type: object
+              nullable: true
+              enum:
+                - null
+      required:
+        - progress
+    Subtitles:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subtitle"
+          maxItems: 100
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page

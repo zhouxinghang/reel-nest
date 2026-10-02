@@ -1,0 +1,692 @@
+{
+  "Empty": {},
+  "Health": {
+    "status": "ok"
+  },
+  "Session": {
+    "username": "family"
+  },
+  "Login": {
+    "username": "family",
+    "password": "synthetic-only"
+  },
+  "OK": {
+    "ok": true
+  },
+  "Library": {
+    "id": "lib-1",
+    "name": "合成媒体库",
+    "path": "/synthetic/media",
+    "kind": "movie",
+    "revision": 1,
+    "policyRevision": 1,
+    "sources": ["tmdb", "tvdb"],
+    "createdAt": 1790800000000,
+    "latestScanId": null
+  },
+  "LibraryCreate": {
+    "name": "合成媒体库",
+    "path": "/synthetic/media",
+    "kind": "movie"
+  },
+  "LibraryPatch": {
+    "revision": 1,
+    "name": "Renamed"
+  },
+  "Scan": {
+    "id": "scan-1",
+    "libraryId": "lib-1",
+    "state": "queued",
+    "requestedAt": 1790800000000,
+    "startedAt": null,
+    "finishedAt": null,
+    "discoveredCount": 0,
+    "errorCode": null
+  },
+  "LibraryPage": {
+    "items": [
+      {
+        "id": "lib-1",
+        "name": "合成媒体库",
+        "path": "/synthetic/media",
+        "kind": "movie",
+        "revision": 1,
+        "policyRevision": 1,
+        "sources": ["tmdb", "tvdb"],
+        "createdAt": 1790800000000,
+        "latestScanId": null
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    },
+    "allowedRoots": ["/synthetic"],
+    "sources": [
+      {
+        "source": "tmdb",
+        "name": "TMDB",
+        "configured": false,
+        "cooldownUntil": null
+      }
+    ]
+  },
+  "Home": {
+    "libraries": [
+      {
+        "library": {
+          "id": "lib-1",
+          "name": "合成媒体库",
+          "kind": "movie"
+        },
+        "items": [
+          {
+            "entryType": "media",
+            "id": "id-1",
+            "entryKey": "media:id-1",
+            "libraryId": "lib-1",
+            "kind": "movie",
+            "title": "合成电影 2",
+            "filename": "Synthetic-2.webm",
+            "state": "available",
+            "addedAt": 1790800000000,
+            "favorite": {
+              "favorite": false,
+              "favoritedAt": null
+            },
+            "progress": null,
+            "episode": null,
+            "metadata": {
+              "title": "合成电影 2",
+              "originalTitle": "Synthetic 2",
+              "year": 2026,
+              "source": "tmdb",
+              "artwork": {
+                "primary": null,
+                "thumb": null,
+                "backdrop": null
+              },
+              "expiresAt": 1790900000000
+            }
+          }
+        ]
+      }
+    ],
+    "librariesPage": {
+      "nextCursor": null,
+      "expiresAt": null
+    },
+    "continueWatching": [],
+    "recent": [
+      {
+        "entryType": "series",
+        "id": "series-1",
+        "entryKey": "series:series-1",
+        "libraryId": "lib-2",
+        "kind": "series",
+        "title": "合成电视剧",
+        "addedAt": 1790800000000,
+        "seasonCount": 1,
+        "episodeCount": 1,
+        "fileCount": 2,
+        "availableFileCount": 2,
+        "favorite": {
+          "favorite": false,
+          "favoritedAt": null
+        },
+        "metadata": null
+      },
+      {
+        "entryType": "media",
+        "id": "id-1",
+        "entryKey": "media:id-1",
+        "libraryId": "lib-1",
+        "kind": "movie",
+        "title": "合成电影 2",
+        "filename": "Synthetic-2.webm",
+        "state": "available",
+        "addedAt": 1790800000000,
+        "favorite": {
+          "favorite": false,
+          "favoritedAt": null
+        },
+        "progress": null,
+        "episode": null,
+        "metadata": {
+          "title": "合成电影 2",
+          "originalTitle": "Synthetic 2",
+          "year": 2026,
+          "source": "tmdb",
+          "artwork": {
+            "primary": null,
+            "thumb": null,
+            "backdrop": null
+          },
+          "expiresAt": 1790900000000
+        }
+      }
+    ]
+  },
+  "GroupPage": {
+    "items": [
+      {
+        "library": {
+          "id": "lib-1",
+          "name": "合成媒体库",
+          "kind": "movie"
+        },
+        "total": 1,
+        "entriesCursor": null
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "CatalogPage": {
+    "items": [
+      {
+        "entryType": "media",
+        "id": "id-1",
+        "entryKey": "media:id-1",
+        "libraryId": "lib-1",
+        "kind": "movie",
+        "title": "合成电影 2",
+        "filename": "Synthetic-2.webm",
+        "state": "available",
+        "addedAt": 1790800000000,
+        "favorite": {
+          "favorite": false,
+          "favoritedAt": null
+        },
+        "progress": null,
+        "episode": null,
+        "metadata": {
+          "title": "合成电影 2",
+          "originalTitle": "Synthetic 2",
+          "year": 2026,
+          "source": "tmdb",
+          "artwork": {
+            "primary": null,
+            "thumb": null,
+            "backdrop": null
+          },
+          "expiresAt": 1790900000000
+        }
+      },
+      {
+        "entryType": "series",
+        "id": "series-1",
+        "entryKey": "series:series-1",
+        "libraryId": "lib-2",
+        "kind": "series",
+        "title": "合成电视剧",
+        "addedAt": 1790800000000,
+        "seasonCount": 1,
+        "episodeCount": 1,
+        "fileCount": 2,
+        "availableFileCount": 2,
+        "favorite": {
+          "favorite": false,
+          "favoritedAt": null
+        },
+        "metadata": null
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "MediaDetail": {
+    "card": {
+      "entryType": "media",
+      "id": "id-1",
+      "entryKey": "media:id-1",
+      "libraryId": "lib-1",
+      "kind": "movie",
+      "title": "合成电影 2",
+      "filename": "Synthetic-2.webm",
+      "state": "available",
+      "addedAt": 1790800000000,
+      "favorite": {
+        "favorite": false,
+        "favoritedAt": null
+      },
+      "progress": null,
+      "episode": null,
+      "metadata": {
+        "title": "合成电影 2",
+        "originalTitle": "Synthetic 2",
+        "year": 2026,
+        "source": "tmdb",
+        "artwork": {
+          "primary": null,
+          "thumb": null,
+          "backdrop": null
+        },
+        "expiresAt": 1790900000000
+      }
+    },
+    "relativePath": "Synthetic-2.webm",
+    "path": "/synthetic/media/Synthetic-2.webm",
+    "size": 1000,
+    "modifiedAt": 1790800000000,
+    "organizationReason": "",
+    "match": {
+      "subjectId": "subject-1",
+      "subjectRevision": 1,
+      "bindingRevision": 1,
+      "selection": {
+        "remote": {
+          "source": "tmdb",
+          "catalogId": "tmdb",
+          "namespace": "tmdb",
+          "kind": "movie",
+          "remoteId": "AbC-001",
+          "providerRevision": 1
+        },
+        "mode": "manual",
+        "revision": 1
+      },
+      "cacheState": "fresh",
+      "attemptState": "succeeded",
+      "attemptedAt": 1790800000000,
+      "errorCode": null,
+      "metadata": {
+        "summary": {
+          "title": "合成电影 2",
+          "originalTitle": "Synthetic 2",
+          "year": 2026,
+          "source": "tmdb",
+          "artwork": {
+            "primary": null,
+            "thumb": null,
+            "backdrop": null
+          },
+          "expiresAt": 1790900000000
+        },
+        "remote": {
+          "source": "tmdb",
+          "catalogId": "tmdb",
+          "namespace": "tmdb",
+          "kind": "movie",
+          "remoteId": "AbC-001",
+          "providerRevision": 1
+        },
+        "identifier": "",
+        "overview": "Synthetic only",
+        "sourceUrl": "https://example.invalid/2",
+        "fetchedAt": 1790800000000,
+        "revision": 1,
+        "credits": {
+          "state": "ready",
+          "actors": [],
+          "directors": [],
+          "retryAt": null
+        },
+        "artworkState": "missing",
+        "artworkRetryAt": null
+      }
+    }
+  },
+  "SeriesDetail": {
+    "card": {
+      "entryType": "series",
+      "id": "series-1",
+      "entryKey": "series:series-1",
+      "libraryId": "lib-2",
+      "kind": "series",
+      "title": "合成电视剧",
+      "addedAt": 1790800000000,
+      "seasonCount": 1,
+      "episodeCount": 1,
+      "fileCount": 2,
+      "availableFileCount": 2,
+      "favorite": {
+        "favorite": false,
+        "favoritedAt": null
+      },
+      "metadata": null
+    },
+    "match": {
+      "subjectId": "subject-s",
+      "subjectRevision": 1,
+      "bindingRevision": 0,
+      "selection": null,
+      "cacheState": "absent",
+      "attemptState": "never",
+      "attemptedAt": null,
+      "errorCode": null,
+      "metadata": null
+    },
+    "seasons": [
+      {
+        "number": 1,
+        "episodeCount": 1,
+        "fileCount": 2
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "EpisodePage": {
+    "items": [
+      {
+        "episodeNumber": 1,
+        "file": {
+          "entryType": "media",
+          "id": "id-1",
+          "entryKey": "media:id-1",
+          "libraryId": "lib-1",
+          "kind": "series",
+          "title": "合成电影 2",
+          "filename": "Synthetic-2.webm",
+          "state": "available",
+          "addedAt": 1790800000000,
+          "favorite": {
+            "favorite": false,
+            "favoritedAt": null
+          },
+          "progress": null,
+          "episode": {
+            "seriesId": "series-1",
+            "seriesTitle": "合成电视剧",
+            "seasonNumber": 1,
+            "episodeNumber": 1
+          },
+          "metadata": {
+            "title": "合成电影 2",
+            "originalTitle": "Synthetic 2",
+            "year": 2026,
+            "source": "tmdb",
+            "artwork": {
+              "primary": null,
+              "thumb": null,
+              "backdrop": null
+            },
+            "expiresAt": 1790900000000
+          }
+        }
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "Favorite": {
+    "favorite": false,
+    "favoritedAt": null
+  },
+  "FavoriteWrite": {
+    "favorite": true
+  },
+  "CandidatePage": {
+    "items": [
+      {
+        "ref": {
+          "source": "tmdb",
+          "catalogId": "tmdb",
+          "namespace": "tmdb",
+          "kind": "movie",
+          "remoteId": "AbC-001",
+          "providerRevision": 1
+        },
+        "title": "Synthetic",
+        "originalTitle": "Synthetic",
+        "year": 2026,
+        "overview": ""
+      }
+    ],
+    "complete": true,
+    "subjectRevision": 1,
+    "bindingRevision": 0
+  },
+  "SelectMetadata": {
+    "subjectRevision": 1,
+    "expectedRevision": 0,
+    "ref": {
+      "source": "tmdb",
+      "catalogId": "tmdb",
+      "namespace": "tmdb",
+      "kind": "movie",
+      "remoteId": "AbC-001",
+      "providerRevision": 1
+    }
+  },
+  "Match": {
+    "subjectId": "subject-1",
+    "subjectRevision": 1,
+    "bindingRevision": 1,
+    "selection": {
+      "remote": {
+        "source": "tmdb",
+        "catalogId": "tmdb",
+        "namespace": "tmdb",
+        "kind": "movie",
+        "remoteId": "AbC-001",
+        "providerRevision": 1
+      },
+      "mode": "manual",
+      "revision": 1
+    },
+    "cacheState": "fresh",
+    "attemptState": "succeeded",
+    "attemptedAt": 1790800000000,
+    "errorCode": null,
+    "metadata": {
+      "summary": {
+        "title": "合成电影 2",
+        "originalTitle": "Synthetic 2",
+        "year": 2026,
+        "source": "tmdb",
+        "artwork": {
+          "primary": null,
+          "thumb": null,
+          "backdrop": null
+        },
+        "expiresAt": 1790900000000
+      },
+      "remote": {
+        "source": "tmdb",
+        "catalogId": "tmdb",
+        "namespace": "tmdb",
+        "kind": "movie",
+        "remoteId": "AbC-001",
+        "providerRevision": 1
+      },
+      "identifier": "",
+      "overview": "Synthetic only",
+      "sourceUrl": "https://example.invalid/2",
+      "fetchedAt": 1790800000000,
+      "revision": 1,
+      "credits": {
+        "state": "ready",
+        "actors": [],
+        "directors": [],
+        "retryAt": null
+      },
+      "artworkState": "missing",
+      "artworkRetryAt": null
+    }
+  },
+  "Refresh": {},
+  "RefreshAccepted": {
+    "queued": 1
+  },
+  "MetadataStatus": {
+    "sources": [
+      {
+        "source": "tmdb",
+        "name": "TMDB",
+        "configured": false,
+        "cooldownUntil": null
+      }
+    ],
+    "queued": 0,
+    "running": 0,
+    "succeeded": 0,
+    "failed": 1,
+    "superseded": 0,
+    "revision": 1,
+    "failures": [
+      {
+        "subjectId": "subject-1",
+        "state": "failed",
+        "requestedGeneration": 1,
+        "claimedGeneration": 1,
+        "attempts": 3,
+        "requestedAt": 1790800000000,
+        "startedAt": 1790800000001,
+        "finishedAt": 1790800000002,
+        "nextAttemptAt": null,
+        "errorCode": "PROVIDER_UNAVAILABLE"
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "Settings": {
+    "sources": [
+      {
+        "source": "tmdb",
+        "name": "TMDB",
+        "url": null,
+        "catalogId": "tmdb",
+        "credentialSet": false,
+        "pinSet": false,
+        "configured": false,
+        "revision": 1
+      }
+    ]
+  },
+  "ProviderSettings": {
+    "source": "tmdb",
+    "name": "TMDB",
+    "url": null,
+    "catalogId": "tmdb",
+    "credentialSet": false,
+    "pinSet": false,
+    "configured": false,
+    "revision": 1
+  },
+  "SettingsPatch": {
+    "revision": 1,
+    "credential": "synthetic-only"
+  },
+  "Person": {
+    "id": "person-1",
+    "name": "合成人物",
+    "source": "tmdb",
+    "catalogId": "tmdb",
+    "photoAssetId": null
+  },
+  "PersonWorks": {
+    "items": [
+      {
+        "card": {
+          "entryType": "media",
+          "id": "id-1",
+          "entryKey": "media:id-1",
+          "libraryId": "lib-1",
+          "kind": "movie",
+          "title": "合成电影 2",
+          "filename": "Synthetic-2.webm",
+          "state": "available",
+          "addedAt": 1790800000000,
+          "favorite": {
+            "favorite": false,
+            "favoritedAt": null
+          },
+          "progress": null,
+          "episode": null,
+          "metadata": {
+            "title": "合成电影 2",
+            "originalTitle": "Synthetic 2",
+            "year": 2026,
+            "source": "tmdb",
+            "artwork": {
+              "primary": null,
+              "thumb": null,
+              "backdrop": null
+            },
+            "expiresAt": 1790900000000
+          }
+        },
+        "roles": ["actor"],
+        "characters": ["合成角色"]
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "Playback": {
+    "mediaId": "id-1",
+    "contentPath": "/api/media/id-1/content",
+    "progress": null
+  },
+  "SavedProgress": {
+    "progress": null
+  },
+  "Progress": {
+    "position": 20,
+    "duration": 60,
+    "completed": false,
+    "updatedAt": 1790800000000
+  },
+  "ProgressWrite": {
+    "position": 20,
+    "duration": 60,
+    "completed": false
+  },
+  "StreamLink": {
+    "path": "/stream/id-1?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "Subtitles": {
+    "items": [
+      {
+        "id": "sub-1",
+        "filename": "Synthetic-2.zh.srt",
+        "format": "srt"
+      }
+    ],
+    "page": {
+      "nextCursor": null,
+      "expiresAt": null
+    }
+  },
+  "DeletionPreview": {
+    "mediaId": "id-1",
+    "path": "/synthetic/media/Synthetic-2.webm",
+    "confirmation": "synthetic-confirmation",
+    "expiresAt": 1790800000000,
+    "warning": "永久删除，本系统无法恢复"
+  },
+  "DeleteRequest": {
+    "confirmation": "synthetic-confirmation",
+    "confirm": true
+  },
+  "DeleteResult": {
+    "fileOutcome": "deleted",
+    "indexOutcome": "pending",
+    "message": "源文件已删除，索引待核查；请重新扫描",
+    "retryable": false,
+    "requestId": "request-1"
+  },
+  "Error": {
+    "error": {
+      "code": "REVISION_CONFLICT",
+      "message": "状态已变化，请重新读取",
+      "retryable": false,
+      "requestId": "request-1"
+    }
+  }
+}

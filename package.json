@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config web/vite.config.ts",
-    "build": "tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts",
+    "build": "npm run contracts:check && tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts",
     "test": "npm run build && go test ./... && playwright test",
     "test:browser": "npm run build && playwright test",
-    "format:check": "prettier --check web scripts tests playwright.config.ts package.json compose*.yaml"
+    "format:check": "prettier --check web scripts tests playwright.config.ts package.json compose*.yaml api/openapi.yaml api/testdata/*.json docs/architecture/*.json",
+    "contracts:generate": "node scripts/contracts.mjs",
+    "contracts:check": "node scripts/contracts.mjs --check && go test ./api",
+    "baseline:check": "node scripts/check-regression-inventory.mjs",
+    "verify:foundation": "npm run baseline:check && npm test && go test -race ./... && go vet ./... && npm run format:check && git diff --check"
   },
   "dependencies": {
     "react": "19.1.1",
@@ -19,6 +23,7 @@
     "@types/react": "19.1.16",
     "@types/react-dom": "19.1.9",
     "@vitejs/plugin-react": "5.0.4",
+    "openapi-typescript": "7.13.0",
     "prettier": "3.6.2",
     "typescript": "5.9.3",
     "vite": "7.1.7"

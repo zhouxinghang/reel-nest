@@ -1,0 +1,781 @@
+{
+  "baselineCommit": "4dffbaacf0be73846e714de048b514917a2e3a20",
+  "entries": [
+    {
+      "file": "cmd/reelnest/main_test.go",
+      "test": "TestOptionalMetadataSecrets",
+      "requirements": ["R09"],
+      "action": "remove-legacy-only",
+      "state": "present",
+      "notes": "仅覆盖旧资料源环境变量/_FILE 导入；删除 optionalSecret 时退役。家庭账号 _FILE 不属于此测试，必须另保留启动覆盖。"
+    },
+    {
+      "file": "internal/app/app_test.go",
+      "test": "TestHouseholdLoginAndLogout",
+      "requirements": ["R01"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/app_test.go",
+      "test": "TestPersistedHouseholdSurvivesRestartAndSharesState",
+      "requirements": ["R01"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/app_test.go",
+      "test": "TestLoginRejectsCrossSiteAndMalformedRequests",
+      "requirements": ["R01"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/deletion_test.go",
+      "test": "TestPermanentDeletionOnlyRemovesConfirmedSingleFile",
+      "requirements": ["R01", "R03", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/deletion_test.go",
+      "test": "TestDeletionRequiresSessionAndExactConfirmation",
+      "requirements": ["R01", "R03", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/deletion_test.go",
+      "test": "TestDeletionRejectsChangedMissingAndUnsafeTargets",
+      "requirements": ["R01", "R03", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/deletion_test.go",
+      "test": "TestDeletionRejectsCorruptIndexedPaths",
+      "requirements": ["R01", "R03", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/deletion_test.go",
+      "test": "TestDeletionReportsRealIndexWriteFailureAndScanRepairs",
+      "requirements": ["R01", "R03", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/deletion_test.go",
+      "test": "TestConcurrentDeletionAndScanCannotResurrectFile",
+      "requirements": ["R01", "R03", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/directory_libraries_test.go",
+      "test": "TestNamedLibrariesValidationIsolationAndRename",
+      "requirements": ["R02", "R05"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/directory_libraries_test.go",
+      "test": "TestDirectoryNameMigrationWorksOfflineAndIsIdempotent",
+      "requirements": ["R02", "R05"],
+      "action": "remove-legacy-only",
+      "state": "present",
+      "notes": "仅旧目录名回填；建库校验/改名/正常离线重启由其他保留回归覆盖。"
+    },
+    {
+      "file": "internal/app/discovery_test.go",
+      "test": "TestHouseholdFavoritesPersistAndDoNotWriteProgress",
+      "requirements": ["R03", "R05", "R06"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/discovery_test.go",
+      "test": "TestNewEpisodesRefreshRecentSeriesAndMissingTargetsRemoveFavorites",
+      "requirements": ["R03", "R05", "R06"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/discovery_test.go",
+      "test": "TestRecentAdditionsKeepFirstDiscoveryAcrossRescans",
+      "requirements": ["R03", "R05", "R06"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/discovery_test.go",
+      "test": "TestDiscoveryMigrationPreservesOldRecordsWithoutInventingDates",
+      "requirements": ["R03", "R05", "R06"],
+      "action": "remove-legacy-only",
+      "state": "present",
+      "notes": "仅旧收录日期未知值迁移；新库真实首次收录时间/重扫不变必须保留。"
+    },
+    {
+      "file": "internal/app/library_test.go",
+      "test": "TestDirectoryAutomaticAndManualScanKeepsFileIdentity",
+      "requirements": ["R01", "R02", "R03"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/library_test.go",
+      "test": "TestSuccessfulRescanRemovesMissingMediaFromLibrary",
+      "requirements": ["R01", "R02", "R03"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/library_test.go",
+      "test": "TestFailedScanPreservesRecordsAndCompleteScanRemovesMissing",
+      "requirements": ["R01", "R02", "R03"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/library_test.go",
+      "test": "TestDirectoryAuthorizationAndFilesystemBoundaries",
+      "requirements": ["R01", "R02", "R03"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/library_test.go",
+      "test": "TestPermissionFailureDoesNotReconcilePartialScan",
+      "requirements": ["R01", "R02", "R03"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/matching_test.go",
+      "test": "TestManualMatchingPreservesFilesVersionsProgressAndChoice",
+      "requirements": ["R01", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/matching_test.go",
+      "test": "TestMetadataManagementRequiresHouseholdSession",
+      "requirements": ["R01", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/matching_test.go",
+      "test": "TestManualMatchingFailureWithoutCredentialsOrDuringTimeout",
+      "requirements": ["R01", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/matching_test.go",
+      "test": "TestManualChoiceSurvivesCacheExpiryAndFailedRefresh",
+      "requirements": ["R01", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_artwork_test.go",
+      "test": "TestTitleArtworkTypesSourcesPersistenceAndExpiry",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_artwork_test.go",
+      "test": "TestTitleArtworkBackfillPreservesManualMetadataAndBackoff",
+      "requirements": ["R07", "R08"],
+      "action": "split-preserve",
+      "state": "present",
+      "notes": "删旧 payload 的兼容回填；保留手动资料、有效期、图片失败退避/重试，不借刷新延长 TTL。"
+    },
+    {
+      "file": "internal/app/metadata_artwork_test.go",
+      "test": "TestTitleArtworkMissingOrUnsafeReferences",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_artwork_test.go",
+      "test": "TestTitleArtworkDownloadsBoundedCoalescedAndNegativeCached",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_credits_test.go",
+      "test": "TestCreditsSourcesMoviesSeriesAndManualPersistence",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_credits_test.go",
+      "test": "TestCreditsEmptyBoundedAndFailureDoesNotLoseTitle",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_credits_test.go",
+      "test": "TestCreditsUpgradePreservesManualTitlePosterProgressAndBackoff",
+      "requirements": ["R07", "R08"],
+      "action": "split-preserve",
+      "state": "present",
+      "notes": "删旧 payload 补齐启动路径；保留手动选择、标题/进度不变、可选演职员失败及退避/重试。"
+    },
+    {
+      "file": "internal/app/metadata_settings_test.go",
+      "test": "TestMetadataSettingsLiveProvidersAndValidation",
+      "requirements": ["R01", "R07", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_settings_test.go",
+      "test": "TestMetadataSettingsMigrationEncryptionAndRestart",
+      "requirements": ["R01", "R07", "R09"],
+      "action": "split-preserve",
+      "state": "present",
+      "notes": "删旧环境一次导入断言；保留加密/0600、空值保持/显式清除、正常重启、密钥缺失拒绝启动。"
+    },
+    {
+      "file": "internal/app/metadata_settings_test.go",
+      "test": "TestMetadataSettingsConflictsAndPersistenceFailure",
+      "requirements": ["R01", "R07", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_settings_test.go",
+      "test": "TestMetadataSettingsConcurrentReadersAndUpdates",
+      "requirements": ["R01", "R07", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_settings_test.go",
+      "test": "TestMetadataSettingsDoNotRaceAssociationWrites",
+      "requirements": ["R01", "R07", "R09"],
+      "action": "split-preserve",
+      "state": "present",
+      "notes": "把旧全局锁/忙冲突断言换成版本提交；保留并发设置与关联一致性，加慢网络下保存不阻塞。"
+    },
+    {
+      "file": "internal/app/metadata_sources_test.go",
+      "test": "TestDirectoryMetadataPriorityIsolationAndReordering",
+      "requirements": ["R02", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_sources_test.go",
+      "test": "TestMetadataSourcesFallbackAndIndependentCooldowns",
+      "requirements": ["R02", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_sources_test.go",
+      "test": "TestTVDBMovieSeriesLocalizationAndUnsafeArtwork",
+      "requirements": ["R02", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_sources_test.go",
+      "test": "TestSourceAwareManualMatchingAndValidation",
+      "requirements": ["R02", "R07"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_sources_test.go",
+      "test": "TestLegacyTMDBCacheAndDirectoryMigration",
+      "requirements": ["R02", "R07"],
+      "action": "remove-legacy-only",
+      "state": "present",
+      "notes": "仅旧 TMDB 表/目录配置迁入；新库明确拒绝旧 schema。"
+    },
+    {
+      "file": "internal/app/metadata_test.go",
+      "test": "TestTMDBAutomaticChineseMetadataPersistsWithoutChangingMedia",
+      "requirements": ["R07", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_test.go",
+      "test": "TestTMDBSeriesAndEnglishFallback",
+      "requirements": ["R07", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_test.go",
+      "test": "TestTMDBFailuresNeverBlockLocalFiles",
+      "requirements": ["R07", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metadata_test.go",
+      "test": "TestTMDBExpiredCacheFallsBackButKeepsProgressAndAssociation",
+      "requirements": ["R07", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeMatchingImagesAndRestart",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeManualIdentityAndAtomicFailure",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeFallbackAndSafeErrors",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeEmptyAndUnsupportedSeries",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeBadArtworkDoesNotLoseMetadata",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeConfigAndNoAuthentication",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/metatube_test.go",
+      "test": "TestMetaTubeAmbiguityAndMalformedCandidatesAreNotAutoMatched",
+      "requirements": ["R07", "R08", "R09"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/people_test.go",
+      "test": "TestPeopleLargeLibraryLookupIsIndexed",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/people_test.go",
+      "test": "TestPeoplePhotosWorksIdentityAndPersistence",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/people_test.go",
+      "test": "TestPeoplePhotoFailuresAreBoundedAndDoNotBreakMetadata",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/people_test.go",
+      "test": "TestPeopleDualRolesAndExpiredPhotos",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/people_test.go",
+      "test": "TestPeopleUpgradeRetainsNamesOnFailureAndRetries",
+      "requirements": ["R07", "R08"],
+      "action": "split-preserve",
+      "state": "present",
+      "notes": "删外改旧 JSON 的启动索引修补；保留照片失败仍有人名、受控有效刷新、重试、正常重启。"
+    },
+    {
+      "file": "internal/app/people_test.go",
+      "test": "TestPeopleIgnoreOldMatchesExpiredCachesAndRemovedMedia",
+      "requirements": ["R07", "R08"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/playback_test.go",
+      "test": "TestPlaybackHTTPRangesAndSharedPersistentProgress",
+      "requirements": ["R01", "R06", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/playback_test.go",
+      "test": "TestPlaybackRejectsChangedMissingAndUnsafeFiles",
+      "requirements": ["R01", "R06", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/process_test.go",
+      "test": "TestMain",
+      "requirements": ["R01", "R03"],
+      "action": "retain-harness",
+      "state": "present",
+      "notes": "真实进程中断 harness，非单独测试。保留，不以兼容清理删除。"
+    },
+    {
+      "file": "internal/app/process_test.go",
+      "test": "TestInterruptedScanRetainsCommittedLibraryAfterProcessRestart",
+      "requirements": ["R01", "R03"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/series_test.go",
+      "test": "TestSeriesSeasonNavigationSortsNumericallyAndKeepsVersions",
+      "requirements": ["R03", "R04"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/series_test.go",
+      "test": "TestEpisodeRecognitionIsConservativeAndIndependentOfFolderLayout",
+      "requirements": ["R03", "R04"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/series_test.go",
+      "test": "TestNumericEpisodeFilenameUsesSeriesFolderAndEmptySeriesIsRemoved",
+      "requirements": ["R03", "R04"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/series_test.go",
+      "test": "TestSeriesOrganizationSurvivesRescanAndOfflineRestart",
+      "requirements": ["R03", "R04"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/series_test.go",
+      "test": "TestSeriesAuthorizationAndSameTitleDirectoryIsolation",
+      "requirements": ["R03", "R04"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/stream_test.go",
+      "test": "TestReadOnlyStreamsPersistWithoutSessionsAndCannotChangeTarget",
+      "requirements": ["R01", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/subtitles_test.go",
+      "test": "TestSidecarSubtitlesConversionValidationAndNoSourceWrites",
+      "requirements": ["R01", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "internal/app/subtitles_test.go",
+      "test": "TestSubtitlesAreSessionOnlyBoundToMediaAndRejectChanges",
+      "requirements": ["R01", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/deletion.spec.ts",
+      "test": "单文件删除：真实播放、取消/Escape、路径风险二次确认、关联文件保留",
+      "requirements": ["R01", "R10", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/deletion.spec.ts",
+      "test": "删除失败：真实权限错误及确认后目标替换不误删",
+      "requirements": ["R01", "R10", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/deletion.spec.ts",
+      "test": "文件已删除但真实 SQLite 写锁阻止索引更新：明确反馈并重扫修复",
+      "requirements": ["R01", "R10", "R12"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/household.spec.ts",
+      "test": "家庭共享账号、扫描、电影与电视剧季集导航、失联恢复和退出闭环",
+      "requirements": ["R01", "R02", "R03", "R04"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/libraries.spec.ts",
+      "test": "具名媒体库：创建、目录分组、隔离浏览、搜索、改名、空库和窄屏",
+      "requirements": ["R02", "R05", "R06"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/libraries.spec.ts",
+      "test": "最近添加：跨目录统一排序、首页总量上限和完整列表",
+      "requirements": ["R02", "R05", "R06"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "人物照片与本地关联作品：演员、导演、电影和电视剧导航",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "人物照片失败占位，关联作品与真实播放不受影响",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "资料源：人物照片与关联作品按来源隔离，长姓名窄屏展示",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "TMDB 成功匹配的海报墙、中文详情、电视剧与真实播放",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "手动匹配搜索、取消、无结果、确认、海报墙与电视剧更新",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "TMDB 服务失败仍能扫描、浏览并真实解码本地视频",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "资料源：目录排序、独立配置、重载与同 ID 手动选择",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "资料源：TVDB 故障按优先级回退 TMDB，仍可实际播放",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "资料源：TVDB 演员导演、窄屏长名单、空态与演职员故障仍可播放",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "资料源多类型图片：${source} 海报、横版封面和详情背景",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "多类型图片缺失仍可浏览播放且不把海报拉伸成背景",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "MetaTube 目录启用、编号匹配、图片、人物及手动选择",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/metadata.spec.ts",
+      "test": "页面配置影片资料源：即时生效、凭据隐藏、冲突恢复与窄屏",
+      "requirements": ["R07", "R08", "R09", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/playback.spec.ts",
+      "test": "真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件错误",
+      "requirements": ["R06", "R10", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/playback.spec.ts",
+      "test": "外部播放器协议编码、可复制兜底与无会话只读串流",
+      "requirements": ["R06", "R10", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/playback.spec.ts",
+      "test": "真实字幕渲染、SRT/VTT 切换、时间轴定位、关闭与错误不阻断视频",
+      "requirements": ["R06", "R10", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/playback.spec.ts",
+      "test": "自动播放拦截可重试、退出保存进度、串流失败重试和剪贴板兜底",
+      "requirements": ["R06", "R10", "R11"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/ui.spec.ts",
+      "test": "Emby 风格媒体视图：分类、排序、续播卡片、键盘与移动端导航",
+      "requirements": ["R04", "R05", "R06", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/ui.spec.ts",
+      "test": "Emby 详情页：全宽布局、续播与从头播放、图标操作、季集和窄屏",
+      "requirements": ["R04", "R05", "R06", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    },
+    {
+      "file": "tests/ui.spec.ts",
+      "test": "Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添加排序",
+      "requirements": ["R04", "R05", "R06", "R10"],
+      "action": "rewrite-contract",
+      "state": "present",
+      "notes": "保留测试语义与真实临时文件/SQLite/HTTP seam；只按新路由、DTO、毫秒/null 和有界分页改写。"
+    }
+  ]
+}

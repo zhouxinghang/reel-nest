@@ -1,0 +1,232 @@
+{
+  "environment": {
+    "arch": "arm64",
+    "cpuCount": 18,
+    "cpuModel": "Apple M5 Pro",
+    "generatedAt": "2026-10-02T03:22:02Z",
+    "go": "go1.25.12",
+    "memoryBytes": "51539607552",
+    "node": "v26.7.0",
+    "note": "schema probes only; row JSON is not HTTP DTO; first read after reopening SQLite with OS cache uncontrolled; no end-to-end performance claims",
+    "os": "darwin",
+    "samples": 30
+  },
+  "datasets": [
+    {
+      "creditsPerSubject": 150,
+      "files": 1000,
+      "generationMs": 2679,
+      "libraries": 10,
+      "results": [
+        {
+          "name": "detail-target",
+          "sql": "SELECT m.id,m.relative_path,m.size,b.selection,s.title,s.overview FROM media_files m JOIN file_organization o ON o.media_file_id=m.id JOIN metadata_subjects sub ON sub.series_id=o.series_id LEFT JOIN metadata_bindings b ON b.subject_id=sub.id LEFT JOIN metadata_snapshots s ON s.remote_title_id=b.remote_title_id AND s.expires_at\u003e? WHERE m.id=?",
+          "args": [1790800000100, "file-00000"],
+          "rowsReturned": 1,
+          "rowJSONBytes": 1350,
+          "firstReadMs": 0.725,
+          "warmP50Ms": 0.028,
+          "warmP95Ms": 0.042,
+          "queryPlan": [
+            "SEARCH m USING INDEX sqlite_autoindex_media_files_3 (id=?)",
+            "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_3 (series_id=?)",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN"
+          ]
+        },
+        {
+          "name": "library-first-page",
+          "sql": "SELECT e.entry_key,e.local_title,e.added_at,e.file_count,s.title FROM catalog_entries e LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots s ON s.remote_title_id=b.remote_title_id AND s.expires_at\u003e? WHERE e.library_id=? AND e.series_id IS NOT NULL ORDER BY e.title_sort_key,e.entry_key LIMIT 50",
+          "args": [1790800000100, "lib-00"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 7301,
+          "firstReadMs": 0.412,
+          "warmP50Ms": 0.131,
+          "warmP95Ms": 0.144,
+          "queryPlan": [
+            "SEARCH e USING INDEX entries_library_title (library_id=?)",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN"
+          ]
+        },
+        {
+          "name": "person-50-local-works",
+          "sql": "SELECT DISTINCT r.id,s.title FROM title_credits c JOIN remote_titles r ON r.id=c.remote_title_id JOIN metadata_snapshots s ON s.remote_title_id=r.id AND s.expires_at\u003e? JOIN metadata_bindings b ON b.remote_title_id=r.id JOIN metadata_subjects sub ON sub.id=b.subject_id WHERE c.catalog_id='tmdb' AND c.person_id=? ORDER BY r.id LIMIT 50",
+          "args": [1790800000100, "person-000"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 3051,
+          "firstReadMs": 2.144,
+          "warmP50Ms": 1.485,
+          "warmP95Ms": 1.537,
+          "queryPlan": [
+            "SEARCH c USING COVERING INDEX credits_person_works (catalog_id=? AND person_id=?)",
+            "SEARCH r USING COVERING INDEX sqlite_autoindex_remote_titles_1 (id=?)",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH sub USING COVERING INDEX sqlite_autoindex_metadata_subjects_5 (id=?)",
+            "USE TEMP B-TREE FOR DISTINCT",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        {
+          "name": "substring-search",
+          "sql": "SELECT entry_key,local_title FROM catalog_entries WHERE local_search_key LIKE ? AND series_id IS NOT NULL ORDER BY title_sort_key,entry_key LIMIT 50",
+          "args": ["%000%"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 3701,
+          "firstReadMs": 0.245,
+          "warmP50Ms": 0.19,
+          "warmP95Ms": 0.302,
+          "queryPlan": ["SCAN catalog_entries USING INDEX entries_title"]
+        }
+      ],
+      "subjects": 1000
+    },
+    {
+      "creditsPerSubject": 150,
+      "files": 10000,
+      "generationMs": 16055,
+      "libraries": 10,
+      "results": [
+        {
+          "name": "detail-target",
+          "sql": "SELECT m.id,m.relative_path,m.size,b.selection,s.title,s.overview FROM media_files m JOIN file_organization o ON o.media_file_id=m.id JOIN metadata_subjects sub ON sub.series_id=o.series_id LEFT JOIN metadata_bindings b ON b.subject_id=sub.id LEFT JOIN metadata_snapshots s ON s.remote_title_id=b.remote_title_id AND s.expires_at\u003e? WHERE m.id=?",
+          "args": [1790800000100, "file-00000"],
+          "rowsReturned": 1,
+          "rowJSONBytes": 1350,
+          "firstReadMs": 0.103,
+          "warmP50Ms": 0.029,
+          "warmP95Ms": 0.033,
+          "queryPlan": [
+            "SEARCH m USING INDEX sqlite_autoindex_media_files_3 (id=?)",
+            "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_3 (series_id=?)",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN"
+          ]
+        },
+        {
+          "name": "library-first-page",
+          "sql": "SELECT e.entry_key,e.local_title,e.added_at,e.file_count,s.title FROM catalog_entries e LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots s ON s.remote_title_id=b.remote_title_id AND s.expires_at\u003e? WHERE e.library_id=? AND e.series_id IS NOT NULL ORDER BY e.title_sort_key,e.entry_key LIMIT 50",
+          "args": [1790800000100, "lib-00"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 7301,
+          "firstReadMs": 1.162,
+          "warmP50Ms": 0.628,
+          "warmP95Ms": 0.738,
+          "queryPlan": [
+            "SEARCH e USING INDEX entries_library_title (library_id=?)",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN"
+          ]
+        },
+        {
+          "name": "person-50-local-works",
+          "sql": "SELECT DISTINCT r.id,s.title FROM title_credits c JOIN remote_titles r ON r.id=c.remote_title_id JOIN metadata_snapshots s ON s.remote_title_id=r.id AND s.expires_at\u003e? JOIN metadata_bindings b ON b.remote_title_id=r.id JOIN metadata_subjects sub ON sub.id=b.subject_id WHERE c.catalog_id='tmdb' AND c.person_id=? ORDER BY r.id LIMIT 50",
+          "args": [1790800000100, "person-000"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 3051,
+          "firstReadMs": 10.036,
+          "warmP50Ms": 9.425,
+          "warmP95Ms": 9.83,
+          "queryPlan": [
+            "SEARCH c USING COVERING INDEX credits_person_works (catalog_id=? AND person_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH r USING COVERING INDEX sqlite_autoindex_remote_titles_1 (id=?)",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?)",
+            "SEARCH sub USING COVERING INDEX sqlite_autoindex_metadata_subjects_1 (id=?)",
+            "USE TEMP B-TREE FOR DISTINCT",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        {
+          "name": "substring-search",
+          "sql": "SELECT entry_key,local_title FROM catalog_entries WHERE local_search_key LIKE ? AND series_id IS NOT NULL ORDER BY title_sort_key,entry_key LIMIT 50",
+          "args": ["%000%"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 3701,
+          "firstReadMs": 3.259,
+          "warmP50Ms": 3.074,
+          "warmP95Ms": 3.183,
+          "queryPlan": ["SCAN catalog_entries USING INDEX entries_title"]
+        }
+      ],
+      "subjects": 5000
+    },
+    {
+      "creditsPerSubject": 150,
+      "files": 50000,
+      "generationMs": 23343,
+      "libraries": 10,
+      "results": [
+        {
+          "name": "detail-target",
+          "sql": "SELECT m.id,m.relative_path,m.size,b.selection,s.title,s.overview FROM media_files m JOIN file_organization o ON o.media_file_id=m.id JOIN metadata_subjects sub ON sub.series_id=o.series_id LEFT JOIN metadata_bindings b ON b.subject_id=sub.id LEFT JOIN metadata_snapshots s ON s.remote_title_id=b.remote_title_id AND s.expires_at\u003e? WHERE m.id=?",
+          "args": [1790800000100, "file-00000"],
+          "rowsReturned": 1,
+          "rowJSONBytes": 1350,
+          "firstReadMs": 0.123,
+          "warmP50Ms": 0.03,
+          "warmP95Ms": 0.034,
+          "queryPlan": [
+            "SEARCH m USING INDEX sqlite_autoindex_media_files_3 (id=?)",
+            "SEARCH o USING INDEX sqlite_autoindex_file_organization_1 (media_file_id=?)",
+            "SEARCH sub USING INDEX sqlite_autoindex_metadata_subjects_3 (series_id=?)",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN"
+          ]
+        },
+        {
+          "name": "library-first-page",
+          "sql": "SELECT e.entry_key,e.local_title,e.added_at,e.file_count,s.title FROM catalog_entries e LEFT JOIN metadata_bindings b ON b.subject_id=e.subject_id LEFT JOIN metadata_snapshots s ON s.remote_title_id=b.remote_title_id AND s.expires_at\u003e? WHERE e.library_id=? AND e.series_id IS NOT NULL ORDER BY e.title_sort_key,e.entry_key LIMIT 50",
+          "args": [1790800000100, "lib-00"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 7351,
+          "firstReadMs": 3.786,
+          "warmP50Ms": 3.119,
+          "warmP95Ms": 3.4,
+          "queryPlan": [
+            "SEARCH e USING INDEX entries_library_title (library_id=?)",
+            "SEARCH b USING INDEX sqlite_autoindex_metadata_bindings_1 (subject_id=?) LEFT-JOIN",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?) LEFT-JOIN"
+          ]
+        },
+        {
+          "name": "person-50-local-works",
+          "sql": "SELECT DISTINCT r.id,s.title FROM title_credits c JOIN remote_titles r ON r.id=c.remote_title_id JOIN metadata_snapshots s ON s.remote_title_id=r.id AND s.expires_at\u003e? JOIN metadata_bindings b ON b.remote_title_id=r.id JOIN metadata_subjects sub ON sub.id=b.subject_id WHERE c.catalog_id='tmdb' AND c.person_id=? ORDER BY r.id LIMIT 50",
+          "args": [1790800000100, "person-000"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 3051,
+          "firstReadMs": 10.107,
+          "warmP50Ms": 9.878,
+          "warmP95Ms": 10.239,
+          "queryPlan": [
+            "SEARCH c USING COVERING INDEX credits_person_works (catalog_id=? AND person_id=?)",
+            "SEARCH b USING COVERING INDEX bindings_title (remote_title_id=?)",
+            "SEARCH r USING COVERING INDEX sqlite_autoindex_remote_titles_1 (id=?)",
+            "SEARCH s USING INDEX sqlite_autoindex_metadata_snapshots_1 (remote_title_id=?)",
+            "SEARCH sub USING COVERING INDEX sqlite_autoindex_metadata_subjects_1 (id=?)",
+            "USE TEMP B-TREE FOR DISTINCT",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        {
+          "name": "substring-search",
+          "sql": "SELECT entry_key,local_title FROM catalog_entries WHERE local_search_key LIKE ? AND series_id IS NOT NULL ORDER BY title_sort_key,entry_key LIMIT 50",
+          "args": ["%000%"],
+          "rowsReturned": 50,
+          "rowJSONBytes": 3701,
+          "firstReadMs": 0.955,
+          "warmP50Ms": 0.659,
+          "warmP95Ms": 0.704,
+          "queryPlan": [
+            "SEARCH catalog_entries USING INDEX sqlite_autoindex_catalog_entries_3 (series_id\u003e?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      ],
+      "subjects": 5000
+    }
+  ]
+}
