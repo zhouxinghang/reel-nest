@@ -326,3 +326,36 @@ func TestOpenRejectsFIFOAndUnlinkPermissionFailureDoesNotDelete(t *testing.T) {
 		t.Fatal("permission failure deleted video", e)
 	}
 }
+
+func TestSidecarEnumerationRejectsMovedParentAndCancellation(t *testing.T) {
+	fs, root, dir := setup(t)
+	parent := filepath.Join(dir, "parent")
+	write(t, filepath.Join(parent, "movie.mp4"), "video")
+	write(t, filepath.Join(parent, "movie.srt"), "subtitle")
+	ref := refs(t, fs, root)["parent/movie.mp4"]
+	ctx, cancel := context.WithCancel(context.Background())
+	e := fs.Sidecars(ctx, ref, func([]mediafs.Sidecar) error { cancel(); return nil })
+	if !errors.Is(e, context.Canceled) {
+		t.Fatal(e)
+	}
+	moved := false
+	e = fs.Sidecars(context.Background(), ref, func([]mediafs.Sidecar) error {
+		if moved {
+			return nil
+		}
+		moved = true
+		old := filepath.Join(dir, "old-parent")
+		if e := os.Rename(parent, old); e != nil {
+			return e
+		}
+		if e := os.Mkdir(parent, 0700); e != nil {
+			return e
+		}
+		// Even when the same video inode can still be opened at the new pathname,
+		// a listing from the previous pinned parent must not be returned as current.
+		return os.Link(filepath.Join(old, "movie.mp4"), filepath.Join(parent, "movie.mp4"))
+	})
+	if !errors.Is(e, mediafs.ErrChanged) {
+		t.Fatal(e)
+	}
+}

@@ -2,7 +2,9 @@ package integration_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -11,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"reelnest/internal/app"
 	"reelnest/internal/store"
@@ -60,6 +63,33 @@ func TestNewRuntimePersistsAndOwnsDataDirectoryLifecycle(t *testing.T) {
 		}
 		t.Fatal("second runtime opened same data directory", e)
 	}
+	var library struct{ ID, LatestScanID string }
+	if e = json.Unmarshal([]byte(call("POST", "/api/libraries", fmt.Sprintf(`{"name":"重启验证","path":%q,"kind":"movie","sources":[]}`, root), 201)), &library); e != nil {
+		t.Fatal(e)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var scan struct{ State string }
+		if e = json.Unmarshal([]byte(call("GET", "/api/scans/"+library.LatestScanID, "", 200)), &scan); e != nil {
+			t.Fatal(e)
+		}
+		if scan.State == "completed" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("scan timeout", scan)
+		}
+		time.Sleep(time.Millisecond)
+	}
+	var page struct{ Items []struct{ ID string } }
+	if e = json.Unmarshal([]byte(call("GET", "/api/catalog?libraryId="+library.ID, "", 200)), &page); e != nil || len(page.Items) != 1 {
+		t.Fatal(page, e)
+	}
+	mediaBase := "/api/media/" + page.Items[0].ID
+	call("GET", mediaBase+"/playback", "", 200)
+	call("PUT", mediaBase+"/progress", `{"position":12.5,"duration":60,"completed":false}`, 200)
+	savedProgress := call("GET", mediaBase+"/progress", "", 200)
+	stream := call("POST", mediaBase+"/stream-link", "{}", 200)
 	call("GET", "/readyz", "", 200)
 	server.Close()
 	if e = runtime.Close(); e != nil {
@@ -82,6 +112,27 @@ func TestNewRuntimePersistsAndOwnsDataDirectoryLifecycle(t *testing.T) {
 		t.Fatal(body)
 	}
 	call("GET", "/api/libraries", "", 200)
+	if got := call("GET", mediaBase+"/progress", "", 200); got != savedProgress {
+		t.Fatal("restart reset progress", got)
+	}
+	if got := call("POST", mediaBase+"/stream-link", "{}", 200); got != stream {
+		t.Fatal("restart rotated credential", got)
+	}
+	var link struct{ Path string }
+	if e = json.Unmarshal([]byte(stream), &link); e != nil {
+		t.Fatal(e)
+	}
+	// A sessionless client can still read only the originally issued file.
+	resp, e := http.Get(server.URL + link.Path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	b, e := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if e != nil || resp.StatusCode != 200 || string(b) != "temporary media" {
+		t.Fatal(string(b), resp.StatusCode, e)
+	}
+
 	if got := call("GET", "/api/settings/metadata", "", 200); got != settings {
 		t.Fatal("restart changed provider settings")
 	}

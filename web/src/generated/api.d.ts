@@ -1924,6 +1924,20 @@ export interface operations {
           "multipart/byteranges": string;
         };
       };
+      /** @description Conditional GET/HEAD matched; no body. */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conditional request precondition failed; no body. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description Unsatisfiable or malformed range; standard HTTP text permitted */
       416: {
         headers: {
@@ -1966,6 +1980,20 @@ export interface operations {
       206: {
         headers: {
           "Content-Range"?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conditional GET/HEAD matched; no body. */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conditional request precondition failed; no body. */
+      412: {
+        headers: {
           [name: string]: unknown;
         };
         content?: never;
@@ -2025,6 +2053,20 @@ export interface operations {
           "multipart/byteranges": string;
         };
       };
+      /** @description Conditional GET/HEAD matched; no body. */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conditional request precondition failed; no body. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description Unsatisfiable or malformed range; standard HTTP text permitted */
       416: {
         headers: {
@@ -2069,6 +2111,20 @@ export interface operations {
       206: {
         headers: {
           "Content-Range"?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conditional GET/HEAD matched; no body. */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conditional request precondition failed; no body. */
+      412: {
+        headers: {
           [name: string]: unknown;
         };
         content?: never;

@@ -1,7 +1,7 @@
 // Package http provides explicit contract DTOs and authentication adapters.
 // This assembly is not exposed by cmd/reelnest until the remaining routes and
 // UI land. It mounts identity/library/scan, bounded catalog reads, metadata,
-// people and asset routes; playback and final UI integration are still pending.
+// people, assets and playback/file operations; final UI integration is pending.
 package http
 
 import (
@@ -23,6 +23,7 @@ import (
 	"reelnest/internal/mediafs"
 	"reelnest/internal/metadata"
 	"reelnest/internal/model"
+	"reelnest/internal/playback"
 	"reelnest/internal/store"
 )
 
@@ -31,18 +32,19 @@ type Transport struct {
 	identity  *identity.Identity
 	catalog   *catalog.Catalog
 	metadata  *metadata.Service
+	playback  *playback.Service
 	contract  *api.Contract
 	roots     []string
 	secure    bool
 	cursorKey [32]byte
 }
 
-func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, m *metadata.Service, roots []string, secure bool) (http.Handler, error) {
+func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, m *metadata.Service, p *playback.Service, roots []string, secure bool) (http.Handler, error) {
 	contract, e := api.Load()
 	if e != nil {
 		return nil, e
 	}
-	t := &Transport{store: s, identity: i, catalog: c, metadata: m, contract: contract, roots: append([]string{}, roots...), secure: secure, cursorKey: s.Keys().Stream}
+	t := &Transport{store: s, identity: i, catalog: c, metadata: m, playback: p, contract: contract, roots: append([]string{}, roots...), secure: secure, cursorKey: s.Keys().Stream}
 	mux := http.NewServeMux()
 	register := func(pattern string, auth bool, handler http.HandlerFunc) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +84,28 @@ func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, m *metadata.S
 	register("GET /api/catalog", true, t.catalogEntries)
 	register("GET /api/catalog/groups", true, t.catalogGroups)
 	register("GET /api/media/{id}", true, t.catalogMedia)
+	register("GET /api/media/{id}/playback", true, t.playbackStatus)
+	register("GET /api/media/{id}/content", true, t.mediaContent)
+	register("GET /api/media/{id}/progress", true, t.mediaProgress)
+	register("PUT /api/media/{id}/progress", true, t.saveMediaProgress)
+	register("POST /api/media/{id}/stream-link", true, t.streamLink)
+	register("GET /api/media/{id}/subtitles", true, t.mediaSubtitles)
+	register("GET /api/media/{id}/subtitles/{subtitle}", true, t.subtitleContent)
+	register("POST /api/media/{id}/deletion-preview", true, t.deletionPreview)
+	register("POST /api/media/{id}/delete", true, t.deleteMedia)
+	// Authenticate before shape validation; a household session never substitutes.
+	mux.HandleFunc("GET /stream/{id}", func(w http.ResponseWriter, r *http.Request) {
+		tokens := r.URL.Query()["token"]
+		if len(tokens) != 1 || !p.ValidStreamToken(r.PathValue("id"), tokens[0]) {
+			t.fail(w, identity.ErrUnauthorized)
+			return
+		}
+		if e := contract.ValidateRequest(r.Context(), r); e != nil {
+			t.fail(w, model.ErrInvalid)
+			return
+		}
+		t.mediaContent(w, r)
+	})
 	register("GET /api/series/{id}", true, t.catalogSeries)
 	register("GET /api/series/{id}/seasons/{number}/episodes", true, t.catalogEpisodes)
 	register("PUT /api/favorites/{kind}/{id}", true, t.catalogFavorite)
@@ -148,6 +172,9 @@ type errorResponse struct {
 }
 
 func (t *Transport) fail(w http.ResponseWriter, e error) {
+	t.failWithRetry(w, e, true)
+}
+func (t *Transport) failWithRetry(w http.ResponseWriter, e error, allowRetry bool) {
 	code, status, message := "DATABASE_UNAVAILABLE", 500, "操作失败，请稍后重试"
 	switch {
 	case errors.Is(e, identity.ErrUnauthorized):
@@ -155,6 +182,18 @@ func (t *Transport) fail(w http.ResponseWriter, e error) {
 	case errors.Is(e, identity.ErrLimited):
 		code, status, message = "RATE_LIMITED", 429, "登录过于频繁，请稍后重试"
 		w.Header().Set("Retry-After", "300")
+	case errors.Is(e, playback.ErrUnavailable):
+		code, status, message = "FILE_UNAVAILABLE", 410, "媒体文件已删除或缺失，请检查媒体目录并重新扫描"
+	case errors.Is(e, playback.ErrChanged):
+		code, status, message = "FILE_CHANGED", 409, "媒体文件或目录已变化，拒绝读取其他版本；请重新扫描"
+	case errors.Is(e, playback.ErrAccess):
+		code, status, message = "FILE_ACCESS_DENIED", 409, "媒体文件不可访问，请检查挂载、权限或只读设置"
+	case errors.Is(e, playback.ErrSubtitle):
+		code, status, message = "SUBTITLE_INVALID", 422, "字幕不可用：仅支持不超过 2 MiB 的有效 UTF-8 SRT/VTT；视频仍可播放"
+	case errors.Is(e, playback.ErrPreviewExpired):
+		code, status, message = "DELETION_PREVIEW_EXPIRED", 410, "未删除：确认已过期，请重新核对目标"
+	case errors.Is(e, playback.ErrTargetChanged):
+		code, status, message = "DELETION_TARGET_CHANGED", 409, "未删除：确认无效或目标及父目录已变化，请重新核对"
 	case errors.Is(e, model.ErrCandidate):
 		code, status, message = "CANDIDATE_STALE", 409, "候选已失效，请重新搜索"
 	case errors.Is(e, model.ErrProvider):
@@ -185,7 +224,7 @@ func (t *Transport) fail(w http.ResponseWriter, e error) {
 			code, status, message = "INVALID_MEDIA_PATH", 400, "媒体目录不可访问"
 		}
 	}
-	respond(w, status, errorResponse{errorBody{code, message, status >= 500, model.NewID()}})
+	respond(w, status, errorResponse{errorBody{code, message, allowRetry && status >= 500, model.NewID()}})
 }
 func (t *Transport) sameOrigin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

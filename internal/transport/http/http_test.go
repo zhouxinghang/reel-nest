@@ -21,6 +21,7 @@ import (
 	"reelnest/internal/mediafs"
 	"reelnest/internal/metadata"
 	"reelnest/internal/model"
+	"reelnest/internal/playback"
 	"reelnest/internal/store"
 	transport "reelnest/internal/transport/http"
 )
@@ -32,6 +33,7 @@ type harness struct {
 	catalog  *catalog.Catalog
 	fs       *mediafs.FS
 	root     string
+	data     string
 	contract *api.Contract
 }
 
@@ -59,7 +61,7 @@ func start(t *testing.T) *harness {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := transport.New(s, i, c, m, []string{root}, false)
+	handler, e := transport.New(s, i, c, m, playback.New(s, fs, c), []string{root}, false)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -69,7 +71,7 @@ func start(t *testing.T) *harness {
 	if e != nil {
 		t.Fatal(e)
 	}
-	h := &harness{server, &http.Client{Jar: jar, Timeout: 15 * time.Second}, s, c, fs, root, contract}
+	h := &harness{server, &http.Client{Jar: jar, Timeout: 15 * time.Second}, s, c, fs, root, data, contract}
 	t.Cleanup(func() {
 		server.Close()
 		if e := c.Close(); e != nil {

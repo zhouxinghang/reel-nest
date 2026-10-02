@@ -19,6 +19,11 @@ const metadataBinary = join(root, "reelnest-metadata");
 execFileSync("go", ["build", "-o", metadataBinary, "./tests/server"], {
   stdio: "inherit",
 });
+execFileSync(
+  "go",
+  ["build", "-o", join(root, "reelnest-runtime"), "./tests/runtime-server"],
+  { stdio: "inherit" },
+);
 const fixture = await startTMDBFixture();
 const tvdbFixture = await startTVDBFixture();
 const metaTubeFixture = await startMetaTubeFixture();

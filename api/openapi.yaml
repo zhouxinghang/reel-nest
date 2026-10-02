@@ -930,6 +930,10 @@ paths:
               schema:
                 type: string
                 maxLength: 256
+        "304":
+          description: Conditional GET/HEAD matched; no body.
+        "412":
+          description: Conditional request precondition failed; no body.
         default:
           $ref: "#/components/responses/Error"
     head:
@@ -998,6 +1002,10 @@ paths:
               schema:
                 type: string
                 maxLength: 256
+        "304":
+          description: Conditional GET/HEAD matched; no body.
+        "412":
+          description: Conditional request precondition failed; no body.
         default:
           $ref: "#/components/responses/Error"
   /stream/{id}:
@@ -1097,6 +1105,10 @@ paths:
               schema:
                 type: string
                 maxLength: 256
+        "304":
+          description: Conditional GET/HEAD matched; no body.
+        "412":
+          description: Conditional request precondition failed; no body.
         default:
           $ref: "#/components/responses/Error"
       security:
@@ -1175,6 +1187,10 @@ paths:
               schema:
                 type: string
                 maxLength: 256
+        "304":
+          description: Conditional GET/HEAD matched; no body.
+        "412":
+          description: Conditional request precondition failed; no body.
         default:
           $ref: "#/components/responses/Error"
       security:

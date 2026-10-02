@@ -22,6 +22,7 @@ import (
 	"reelnest/internal/identity"
 	"reelnest/internal/mediafs"
 	"reelnest/internal/metadata"
+	"reelnest/internal/playback"
 	"reelnest/internal/store"
 	transport "reelnest/internal/transport/http"
 )
@@ -78,7 +79,7 @@ func TestCatalogHTTPPerformance(t *testing.T) {
 				if e != nil {
 					t.Fatal(e)
 				}
-				handler, e := transport.New(s, identity, c, m, []string{root}, false)
+				handler, e := transport.New(s, identity, c, m, playback.New(s, fs, c), []string{root}, false)
 				if e != nil {
 					t.Fatal(e)
 				}

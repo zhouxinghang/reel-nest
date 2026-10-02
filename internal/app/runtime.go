@@ -10,6 +10,7 @@ import (
 	"reelnest/internal/identity"
 	"reelnest/internal/mediafs"
 	"reelnest/internal/metadata"
+	"reelnest/internal/playback"
 	"reelnest/internal/store"
 	transport "reelnest/internal/transport/http"
 )
@@ -63,7 +64,7 @@ func NewRuntime(ctx context.Context, config RuntimeConfig) (_ *Runtime, err erro
 	if e = r.metadata.Start(); e != nil {
 		return nil, e
 	}
-	r.handler, e = transport.New(s, i, r.catalog, r.metadata, config.MediaRoots, config.CookieSecure)
+	r.handler, e = transport.New(s, i, r.catalog, r.metadata, playback.New(s, fs, r.catalog), config.MediaRoots, config.CookieSecure)
 	if e != nil {
 		return nil, e
 	}

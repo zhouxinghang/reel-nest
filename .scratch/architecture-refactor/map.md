@@ -3,9 +3,9 @@
 - 方案：[已通过的技术方案](./spec.md)
 - 审计：[现状与验证基线](./audit.md)
 - 评审：2026-10-02，用户确认“评审通过”。
-- 当前阶段：01–04 已完成；05 已解除阻塞，06 仍等待 05。
+- 当前阶段：01–04 已完成；05 后端播放/文件操作增量已通过验证，前端切换尚待完成；06 仍等待 05。
 - 最近完成：[04：查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md)（resolved，最终完整回归与三档 HTTP 基准通过）。
-- Frontier（新的认领）：[05：前端、播放与交互切换](./issues/05-frontend-playback-interactions.md)（ready-for-agent，尚未认领）。
+- Frontier（继续执行）：[05：前端、播放与交互切换](./issues/05-frontend-playback-interactions.md)（claimed；06 不可认领）。
 
 ## 任务与依赖
 
@@ -17,7 +17,7 @@
 | 02 | [文件安全、身份与媒体编目](./issues/02-mediafs-identity-catalog.md) | resolved | 01 |
 | 03 | [资料源、版本提交、人物与图片](./issues/03-metadata-providers-assets.md) | resolved | 01, 02 |
 | 04 | [查询投影、分组分页与性能](./issues/04-catalog-queries-performance.md) | resolved | 02, 03 |
-| 05 | [前端、播放与交互切换](./issues/05-frontend-playback-interactions.md) | ready-for-agent | 03, 04 |
+| 05 | [前端、播放与交互切换](./issues/05-frontend-playback-interactions.md) | claimed | 03, 04 |
 | 06 | [兼容清理、完整验证与交付文档](./issues/06-cleanup-verification-delivery.md) | ready-for-agent | 02, 03, 04, 05 |
 
 ## 执行约定
@@ -41,3 +41,5 @@
 - 2026-10-02：03 完整后端已完成并通过最终全量 Go/race、27 个旧 UI 场景和三轮专项 race；22 个新增顶层测试覆盖三源、CAS、重启、人物、图片和新 HTTP。详见 03 Answer 与资料流水线交接。Frontier 更新为 04；没有自动认领 04、切换或部署。
 
 - 2026-10-02：04 完成轻量投影、定向详情、全局分组/独立分页、子串搜索、独立收藏/续播、人物批量读取及 TTL/revision 游标。修复基准发现的无用资料 JOIN 退化；最终三档真实 HTTP（每场景 30 样本）、全量 Go race、27 个浏览器场景及格式/vet 全部通过。详见 04 Answer、查询交接及原始 JSON。Frontier 为 05；没有自动认领、切换、部署或操作现有媒体数据。
+
+- 2026-10-02：05 认领并交付播放/进度/串流/分页字幕/两步删除后端，新增 15 个 Go 顶层测试及 1 个新 runtime 原生视频浏览器场景。全量 Go/race、28 个浏览器场景、最终四包三轮 race、原生视频三次重复与构建/vet/格式通过；详情见 05 Progress 与播放后端交接。05 保持 claimed（新前端/播放器队列/交互尚未完成），06 仍阻塞。没有切换、部署、重启或操作真实媒体数据。
