@@ -25,3 +25,5 @@ artwork or real TMDB content. The controlled external-service fixture serves it
 so browser tests verify actual image decoding through the authenticated cache
 endpoint, separately from real TMDB connectivity. Each metadata browser flow
 starts a fresh real app process/SQLite database; only the external TMDB is faked.
+
+`tmdb-thumb.png` / `tmdb-backdrop.png` 为本地程序生成的 640×360 几何风景图片，分别用于横版封面及详情背景的真实图片解码/比例测试。不是远程下载的媒体，也不代表真实 TMDB/TVDB 资料。

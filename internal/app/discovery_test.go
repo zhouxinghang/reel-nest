@@ -112,7 +112,7 @@ func TestHouseholdFavoritesPersistAndDoNotWriteProgress(t *testing.T) {
 	}
 }
 
-func TestNewEpisodesRefreshRecentSeriesAndIndependentFavorites(t *testing.T) {
+func TestNewEpisodesRefreshRecentSeriesAndMissingTargetsRemoveFavorites(t *testing.T) {
 	root, data := t.TempDir(), t.TempDir()
 	firstPath := filepath.Join(root, "First.S01E01.mp4")
 	writeMedia(t, firstPath, "first episode")
@@ -155,7 +155,29 @@ func TestNewEpisodesRefreshRecentSeriesAndIndependentFavorites(t *testing.T) {
 			t.Fatal("removing series favorite removed independent episode favorite")
 		}
 	}
-
+	request(t, a.client, "POST", a.server.URL+"/api/favorites/series/"+first.ID, map[string]bool{"favorite": true}, 200)
+	for _, path := range []string{firstPath, nextPath} {
+		if err := os.Remove(path); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rescan(t, a, dir.ID)
+	awaitScan(t, a, dir.ID, "completed")
+	remaining := readDiscovery(t, a)
+	if len(remaining.Items) != 1 || len(remaining.Series) != 1 || remaining.Series[0].Title != "Second" {
+		t.Fatal("missing media/series were not removed")
+	}
+	request(t, a.client, "POST", a.server.URL+"/api/favorites/media/"+episode.ID, map[string]bool{"favorite": true}, 404)
+	request(t, a.client, "POST", a.server.URL+"/api/favorites/series/"+first.ID, map[string]bool{"favorite": true}, 404)
+	db, err := sql.Open("sqlite", filepath.Join(data, "reelnest.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var count int
+	if err = db.QueryRow("SELECT (SELECT COUNT(*) FROM media_favorites) + (SELECT COUNT(*) FROM series_favorites)").Scan(&count); err != nil || count != 0 {
+		t.Fatalf("orphaned favorites remain after scan: count=%d err=%v", count, err)
+	}
 }
 
 func TestRecentAdditionsKeepFirstDiscoveryAcrossRescans(t *testing.T) {

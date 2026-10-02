@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
+	"sort"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 )
@@ -19,11 +16,11 @@ import (
 // Only this adapter knows TMDB's wire format. Requests are bounded, paced and
 // never retried automatically; the local library never waits on this client.
 type tmdbClient struct {
-	token, apiURL, imageURL string
-	client                  *http.Client
-	gate                    chan struct{}
-	mu                      sync.Mutex
-	next, cooldown          time.Time
+	*metadataHTTP
+	token        string
+	photoHTTP    *metadataHTTP
+	thumbHTTP    *metadataHTTP
+	backdropHTTP *metadataHTTP
 }
 
 type tmdbTitle struct {
@@ -38,20 +35,6 @@ type tmdbTitle struct {
 	PosterPath    string `json:"poster_path"`
 }
 
-type TitleMetadata struct {
-	Source        string `json:"source"`
-	TMDBID        int64  `json:"tmdbId"`
-	Kind          string `json:"kind"`
-	Title         string `json:"title"`
-	OriginalTitle string `json:"originalTitle"`
-	Year          string `json:"year"`
-	Overview      string `json:"overview"`
-	PosterURL     string `json:"posterUrl"`
-	SourceURL     string `json:"sourceUrl"`
-	FetchedAt     int64  `json:"fetchedAt"`
-	ExpiresAt     int64  `json:"expiresAt"`
-}
-
 func newTMDB(config Config) (*tmdbClient, error) {
 	apiURL, imageURL := config.TMDBAPIURL, config.TMDBImageURL
 	if apiURL == "" {
@@ -60,100 +43,43 @@ func newTMDB(config Config) (*tmdbClient, error) {
 	if imageURL == "" {
 		imageURL = "https://image.tmdb.org/t/p/w500"
 	}
-	for _, endpoint := range []string{apiURL, imageURL} {
-		u, err := url.Parse(endpoint)
-		if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost" || u.Hostname() == "::1"))) {
-			return nil, errors.New("TMDB 服务地址必须是 HTTPS，或仅用于隔离测试的本机 HTTP 地址")
-		}
+	client, err := newMetadataHTTP("TMDB", apiURL, imageURL, config.TMDBTimeout)
+	if err != nil {
+		return nil, err
 	}
-	timeout := config.TMDBTimeout
-	if timeout <= 0 {
-		timeout = 5 * time.Second
+	profileURL := config.TMDBImageURL
+	if profileURL == "" {
+		profileURL = "https://image.tmdb.org/t/p/w185"
 	}
-	return &tmdbClient{token: strings.TrimSpace(config.TMDBToken), apiURL: strings.TrimRight(apiURL, "/"), imageURL: strings.TrimRight(imageURL, "/"), gate: make(chan struct{}, 1), client: &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
+	photoHTTP, err := newMetadataHTTP("TMDB 人物照片", apiURL, profileURL, config.TMDBTimeout)
+	if err != nil {
+		return nil, err
+	}
+	thumbURL, backdropURL := config.TMDBImageURL, config.TMDBImageURL
+	if thumbURL == "" {
+		thumbURL, backdropURL = "https://image.tmdb.org/t/p/w780", "https://image.tmdb.org/t/p/w1280"
+	}
+	thumbHTTP, err := newMetadataHTTP("TMDB 横版封面", apiURL, thumbURL, config.TMDBTimeout)
+	if err != nil {
+		return nil, err
+	}
+	backdropHTTP, err := newMetadataHTTP("TMDB 背景图", apiURL, backdropURL, config.TMDBTimeout)
+	if err != nil {
+		return nil, err
+	}
+	return &tmdbClient{metadataHTTP: client, token: strings.TrimSpace(config.TMDBToken), photoHTTP: photoHTTP, thumbHTTP: thumbHTTP, backdropHTTP: backdropHTTP}, nil
 }
 
+func (c *tmdbClient) configured() bool { return c.token != "" }
 func (c *tmdbClient) get(ctx context.Context, endpoint string, authenticated bool, limit int64) ([]byte, string, error) {
-	if c.token == "" {
+	if !c.configured() {
 		return nil, "", errors.New("未配置 TMDB 凭据；本地浏览与播放不受影响")
 	}
-	select {
-	case c.gate <- struct{}{}:
-		defer func() { <-c.gate }()
-	case <-ctx.Done():
-		return nil, "", errors.New("TMDB 请求已取消或超时")
-	}
-	c.mu.Lock()
-	cooldown, next := c.cooldown, c.next
-	c.mu.Unlock()
-	if time.Now().Before(cooldown) {
-		return nil, "", errors.New("TMDB 请求处于冷却期，请稍后重试；本地播放不受影响")
-	}
-	if delay := time.Until(next); delay > 0 {
-		timer := time.NewTimer(delay)
-		defer timer.Stop()
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
-			return nil, "", errors.New("TMDB 请求已取消或超时")
-		}
-	}
-	c.mu.Lock()
-	c.next = time.Now().Add(250 * time.Millisecond)
-	c.mu.Unlock()
-	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
-	if err != nil {
-		return nil, "", errors.New("TMDB 请求地址无效")
-	}
+	token := ""
 	if authenticated {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+		token = c.token
 	}
-	if authenticated {
-		req.Header.Set("Accept", "application/json")
-	} else {
-		req.Header.Set("Accept", "image/jpeg, image/png, image/webp")
-	}
-	response, err := c.client.Do(req)
-	if err != nil {
-		return nil, "", errors.New("TMDB 网络不可用或请求超时；本地播放不受影响")
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		if response.StatusCode == 429 || response.StatusCode >= 500 || response.StatusCode == 401 || response.StatusCode == 403 {
-			delay := time.Minute
-			if response.StatusCode == 429 {
-				if seconds, err := strconv.ParseInt(response.Header.Get("Retry-After"), 10, 64); err == nil && seconds >= 0 {
-					// Avoid integer overflow; never send another request sooner than advised.
-					if seconds > int64((time.Duration(1<<63-1))/time.Second) {
-						seconds = int64((time.Duration(1<<63 - 1)) / time.Second)
-					}
-					if time.Duration(seconds)*time.Second > delay {
-						delay = time.Duration(seconds) * time.Second
-					}
-				} else if date, err := http.ParseTime(response.Header.Get("Retry-After")); err == nil && time.Until(date) > delay {
-					delay = time.Until(date)
-				}
-			}
-			c.mu.Lock()
-			c.cooldown = time.Now().Add(delay)
-			c.mu.Unlock()
-		}
-		switch response.StatusCode {
-		case 401, 403:
-			return nil, "", errors.New("TMDB 凭据无效或无权限，请部署者检查设置")
-		case 429:
-			return nil, "", errors.New("TMDB 请求受限，已进入冷却期，请稍后重试")
-		case 404:
-			return nil, "", errors.New("TMDB 未找到该作品")
-		default:
-			return nil, "", errors.New("TMDB 服务错误；本地浏览与播放不受影响")
-		}
-	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, limit+1))
-	if err != nil || int64(len(body)) > limit {
-		return nil, "", errors.New("TMDB 响应不完整或过大")
-	}
-	return body, response.Header.Get("Content-Type"), nil
+	return c.request(ctx, "GET", endpoint, token, nil, limit)
 }
 
 func tmdbKind(kind string) string {
@@ -176,7 +102,7 @@ func (t tmdbTitle) metadata(kind string) TitleMetadata {
 	if len(date) >= 4 {
 		year = date[:4]
 	}
-	return TitleMetadata{Source: "TMDB", TMDBID: t.ID, Kind: kind, Title: first(t.Title, t.Name, t.OriginalTitle, t.OriginalName), OriginalTitle: first(t.OriginalTitle, t.OriginalName), Year: year, Overview: t.Overview, SourceURL: fmt.Sprintf("https://www.themoviedb.org/%s/%d", tmdbKind(kind), t.ID)}
+	return TitleMetadata{Source: "TMDB", SourceID: t.ID, TMDBID: t.ID, Kind: kind, Title: first(t.Title, t.Name, t.OriginalTitle, t.OriginalName), OriginalTitle: first(t.OriginalTitle, t.OriginalName), Year: year, Overview: t.Overview, SourceURL: fmt.Sprintf("https://www.themoviedb.org/%s/%d", tmdbKind(kind), t.ID)}
 }
 
 func (c *tmdbClient) json(ctx context.Context, path string, query url.Values, target any) error {
@@ -251,7 +177,7 @@ func (c *tmdbClient) details(ctx context.Context, kind string, id int64) (TitleM
 	contentType := ""
 	if posterPath.MatchString(title.PosterPath) {
 		data, typ, err := c.get(ctx, c.imageURL+title.PosterPath, false, 5<<20)
-		if err == nil && (strings.Split(typ, ";")[0] == "image/jpeg" || strings.Split(typ, ";")[0] == "image/png" || strings.Split(typ, ";")[0] == "image/webp") {
+		if err == nil && validImage(data, strings.Split(typ, ";")[0]) {
 			poster, contentType = data, strings.Split(typ, ";")[0]
 			m.PosterURL = fmt.Sprintf("/api/metadata/posters/%s/%d", kind, id)
 		} else {
@@ -259,6 +185,72 @@ func (c *tmdbClient) details(ctx context.Context, kind string, id int64) (TitleM
 		}
 	}
 	return m, poster, contentType, warning, nil
+}
+
+func (c *tmdbClient) credits(ctx context.Context, kind string, id int64) (TitleCredits, error) {
+	var result struct {
+		ID   int64 `json:"id"`
+		Cast []struct {
+			ID           int64                        `json:"id"`
+			Name         string                       `json:"name"`
+			OriginalName string                       `json:"original_name"`
+			ProfilePath  string                       `json:"profile_path"`
+			Character    string                       `json:"character"`
+			Order        int                          `json:"order"`
+			Roles        []struct{ Character string } `json:"roles"`
+		} `json:"cast"`
+		Crew []struct {
+			ProfilePath string                 `json:"profile_path"`
+			ID          int64                  `json:"id"`
+			Name        string                 `json:"name"`
+			Job         string                 `json:"job"`
+			Jobs        []struct{ Job string } `json:"jobs"`
+		} `json:"crew"`
+	}
+	endpoint := "credits"
+	if kind == "series" {
+		endpoint = "aggregate_credits"
+	}
+	if err := c.json(ctx, fmt.Sprintf("/%s/%d/%s", tmdbKind(kind), id, endpoint), url.Values{"language": {"zh-CN"}}, &result); err != nil {
+		return TitleCredits{}, err
+	}
+	if result.ID != id || (result.Cast == nil && result.Crew == nil) {
+		return TitleCredits{}, errors.New("TMDB 返回无效的演职员资料")
+	}
+	sort.SliceStable(result.Cast, func(i, j int) bool { return result.Cast[i].Order < result.Cast[j].Order })
+	entries := []creditEntry{}
+	for _, person := range result.Cast {
+		roles := []string{person.Character}
+		for _, role := range person.Roles {
+			roles = append(roles, role.Character)
+		}
+		photo := ""
+		if posterPath.MatchString(person.ProfilePath) {
+			photo = person.ProfilePath
+		}
+		entries = append(entries, creditEntry{CreditPerson: CreditPerson{ID: person.ID, Name: first(person.Name, person.OriginalName), PhotoPath: photo}, Roles: roles})
+	}
+	for _, person := range result.Crew {
+		director := person.Job == "Director"
+		for _, job := range person.Jobs {
+			director = director || job.Job == "Director"
+		}
+		if director {
+			photo := ""
+			if posterPath.MatchString(person.ProfilePath) {
+				photo = person.ProfilePath
+			}
+			entries = append(entries, creditEntry{CreditPerson: CreditPerson{ID: person.ID, Name: person.Name, PhotoPath: photo}, Director: true})
+		}
+	}
+	return normalizeCredits(entries), nil
+}
+
+func (c *tmdbClient) photo(ctx context.Context, ref string) ([]byte, string, error) {
+	if !posterPath.MatchString(ref) {
+		return nil, "", errors.New("人物照片地址无效")
+	}
+	return c.photoHTTP.request(ctx, "GET", c.photoHTTP.imageURL+ref, "", nil, 5<<20)
 }
 
 func normalizedTitle(title string) string {

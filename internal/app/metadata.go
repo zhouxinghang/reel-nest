@@ -13,8 +13,31 @@ import (
 	"time"
 )
 
+type TitleMetadata struct {
+	Source        string        `json:"source"`
+	SourceID      int64         `json:"sourceId"`
+	TMDBID        int64         `json:"tmdbId"`
+	Kind          string        `json:"kind"`
+	Title         string        `json:"title"`
+	OriginalTitle string        `json:"originalTitle"`
+	Number        string        `json:"number,omitempty"`
+	Provider      string        `json:"provider,omitempty"`
+	Year          string        `json:"year"`
+	Overview      string        `json:"overview"`
+	PosterURL     string        `json:"posterUrl"`
+	ThumbURL      string        `json:"thumbUrl"`
+	BackdropURL   string        `json:"backdropUrl"`
+	Artwork       *TitleArtwork `json:"artwork,omitempty"`
+	SourceURL     string        `json:"sourceUrl"`
+	FetchedAt     int64         `json:"fetchedAt"`
+	ExpiresAt     int64         `json:"expiresAt"`
+	Credits       *TitleCredits `json:"credits,omitempty"`
+}
+
 type metadataService struct {
-	client    *tmdbClient
+	imageGate chan struct{} // Title images never queue behind metadata or person photos.
+	photoGate chan struct{} // Coalesce lazy artwork downloads without blocking metadata writes.
+	providers map[string]metadataProvider
 	wake      chan struct{}
 	operation sync.Mutex // Serialize association changes, not library reads.
 	mu        sync.Mutex
@@ -24,7 +47,7 @@ type metadataService struct {
 	revision  int64
 }
 
-type metadataTarget struct{ Kind, ID, Title string }
+type metadataTarget struct{ Kind, ID, Title, DirectoryID string }
 type metadataAssociation struct {
 	Metadata  *TitleMetadata `json:"metadata"`
 	Selection string         `json:"selection"`
@@ -33,28 +56,29 @@ type metadataAssociation struct {
 }
 
 func (a *App) initializeMetadata() error {
-	_, err := a.db.Exec(`CREATE TABLE IF NOT EXISTS metadata_matches (
-  kind TEXT NOT NULL CHECK(kind IN ('movie','series')), target_id TEXT NOT NULL,
-  tmdb_id INTEGER NOT NULL DEFAULT 0, selection TEXT NOT NULL DEFAULT 'automatic',
-  status TEXT NOT NULL, error TEXT NOT NULL DEFAULT '', PRIMARY KEY(kind,target_id)
- );
- CREATE TABLE IF NOT EXISTS metadata_cache (
-  kind TEXT NOT NULL, tmdb_id INTEGER NOT NULL, payload TEXT NOT NULL,
-  expires_at INTEGER NOT NULL, poster BLOB, poster_type TEXT NOT NULL,
-  PRIMARY KEY(kind,tmdb_id)
- );`)
+	if err := a.initializeMetadataStorage(); err != nil {
+		return err
+	}
+	if _, err := a.db.Exec("DELETE FROM metadata_cache WHERE expires_at<=?", time.Now().Unix()); err != nil {
+		return err
+	}
+	if err := a.initializePeopleIndex(); err != nil {
+		return err
+	}
+	tmdb, err := newTMDB(a.config)
 	if err != nil {
 		return err
 	}
-	client, err := newTMDB(a.config)
+	tvdb, err := newTVDB(a.config)
 	if err != nil {
 		return err
 	}
-	a.config.TMDBToken = ""
-	a.metadata = &metadataService{client: client, wake: make(chan struct{}, 1)}
-	if _, err = a.db.Exec("DELETE FROM metadata_cache WHERE expires_at<=?", time.Now().Unix()); err != nil {
+	metatube, err := newMetaTube(a.config, a.db)
+	if err != nil {
 		return err
 	}
+	a.config.TMDBToken, a.config.TVDBAPIKey, a.config.TVDBPIN, a.config.MetaTubeToken = "", "", "", ""
+	a.metadata = &metadataService{providers: map[string]metadataProvider{"tmdb": tmdb, "tvdb": tvdb, "metatube": metatube}, wake: make(chan struct{}, 1), photoGate: make(chan struct{}, 1), imageGate: make(chan struct{}, 1)}
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -65,6 +89,7 @@ func (a *App) initializeMetadata() error {
 			case <-a.ctx.Done():
 				return
 			case <-ticker.C:
+				_, _ = a.db.ExecContext(a.ctx, "DELETE FROM person_photos WHERE expires_at<=? AND retry_at<=?", time.Now().Unix(), time.Now().Unix())
 				// Cache housekeeping is not a media-directory scan. Never serve expired
 				// payloads, even between purges or while the upstream service is offline.
 				if result, err := a.db.ExecContext(a.ctx, "DELETE FROM metadata_cache WHERE expires_at<=?", time.Now().Unix()); err == nil {
@@ -84,7 +109,7 @@ func (a *App) initializeMetadata() error {
 }
 
 func (a *App) queueMetadata() {
-	if a.metadata == nil || a.metadata.client.token == "" {
+	if a.metadata == nil || !a.metadata.configured() {
 		return
 	}
 	select {
@@ -98,13 +123,15 @@ func (a *App) metadataStatus(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	running, lastError, finished, revision := s.running, s.lastError, s.finished, s.revision
 	s.mu.Unlock()
-	s.client.mu.Lock()
-	cooldown := s.client.cooldown.Unix()
-	s.client.mu.Unlock()
-	if cooldown < 0 {
-		cooldown = 0
+	sources := s.sources()
+	var cooldown int64
+	firstConfigured := true
+	for _, source := range sources {
+		if source.Configured && (firstConfigured || source.CooldownUntil < cooldown) {
+			cooldown, firstConfigured = source.CooldownUntil, false
+		}
 	}
-	respond(w, 200, map[string]any{"configured": s.client.token != "", "running": running || len(s.wake) > 0, "error": lastError, "finishedAt": finished, "revision": revision, "cooldownUntil": cooldown})
+	respond(w, 200, map[string]any{"configured": s.configured(), "sources": sources, "running": running || len(s.wake) > 0, "error": lastError, "finishedAt": finished, "revision": revision, "cooldownUntil": cooldown})
 }
 
 func (a *App) refreshMetadata(w http.ResponseWriter, r *http.Request) {
@@ -112,8 +139,8 @@ func (a *App) refreshMetadata(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	if a.metadata.client.token == "" {
-		fail(w, 503, "未配置 TMDB 凭据；本地浏览与播放不受影响")
+	if !a.metadata.configured() {
+		fail(w, 503, "未配置影片资料源（TMDB / TVDB / MetaTube）；本地浏览与播放不受影响")
 		return
 	}
 	a.metadata.mu.Lock()
@@ -128,9 +155,9 @@ func (a *App) refreshMetadata(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) metadataTargets(ctx context.Context) ([]metadataTarget, error) {
-	rows, err := a.db.QueryContext(ctx, `SELECT 'movie', f.id, f.filename FROM media_files f JOIN media_directories d ON d.id=f.directory_id WHERE d.kind='movie' AND f.available=1
- UNION SELECT 'series',s.id,s.title FROM series s JOIN file_organization o ON o.series_id=s.id JOIN media_files f ON f.id=o.media_file_id WHERE f.available=1
- UNION SELECT 'series',f.id,f.filename FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id JOIN metadata_matches m ON m.kind='series' AND m.target_id=f.id WHERE f.available=1 AND d.kind='series' AND o.series_id IS NULL AND m.tmdb_id>0 ORDER BY 1,2`)
+	rows, err := a.db.QueryContext(ctx, `SELECT 'movie', f.id, f.filename, f.directory_id FROM media_files f JOIN media_directories d ON d.id=f.directory_id WHERE d.kind='movie' AND f.available=1
+ UNION SELECT 'series',s.id,s.title,s.directory_id FROM series s JOIN file_organization o ON o.series_id=s.id JOIN media_files f ON f.id=o.media_file_id WHERE f.available=1
+ UNION SELECT 'series',f.id,f.filename,f.directory_id FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id JOIN metadata_matches m ON m.kind='series' AND m.target_id=f.id WHERE f.available=1 AND d.kind='series' AND o.series_id IS NULL AND m.source_id>0 ORDER BY 1,2`)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +165,7 @@ func (a *App) metadataTargets(ctx context.Context) ([]metadataTarget, error) {
 	targets := []metadataTarget{}
 	for rows.Next() {
 		var target metadataTarget
-		if err := rows.Scan(&target.Kind, &target.ID, &target.Title); err != nil {
+		if err := rows.Scan(&target.Kind, &target.ID, &target.Title, &target.DirectoryID); err != nil {
 			return nil, err
 		}
 		if target.Kind == "movie" {
@@ -168,7 +195,7 @@ func (a *App) matchLibrary() {
 			return
 		}
 		s.operation.Lock()
-		ctx, cancel := context.WithTimeout(a.ctx, 20*time.Second)
+		ctx, cancel := context.WithTimeout(a.ctx, 65*time.Second)
 		err := a.matchTarget(ctx, target)
 		cancel()
 		s.operation.Unlock()
@@ -181,56 +208,150 @@ func (a *App) matchLibrary() {
 }
 
 func (a *App) matchTarget(ctx context.Context, target metadataTarget) error {
-	var id int64
-	var selection string
-	err := a.db.QueryRowContext(ctx, "SELECT tmdb_id,selection FROM metadata_matches WHERE kind=? AND target_id=?", target.Kind, target.ID).Scan(&id, &selection)
+	sources, policy, err := a.directorySources(ctx, target.DirectoryID)
+	if err != nil {
+		return err
+	}
+	if len(sources) == 0 {
+		return nil
+	}
+	var oldID int64
+	var oldSource, selection, oldPolicy string
+	err = a.db.QueryRowContext(ctx, "SELECT source,source_id,selection,policy_key FROM metadata_matches WHERE kind=? AND target_id=?", target.Kind, target.ID).Scan(&oldSource, &oldID, &selection, &oldPolicy)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return errors.New("无法读取影片资料关联")
 	}
-	if id > 0 {
-		var valid int
-		if err := a.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM metadata_cache WHERE kind=? AND tmdb_id=? AND expires_at>?", target.Kind, id, time.Now().Unix()).Scan(&valid); err != nil {
-			return errors.New("无法读取影片资料缓存")
-		}
-		if valid > 0 {
+	if selection == "manual" {
+		// Even a priority change must never silently replace a household's choice.
+		if !sourceEnabled(sources, oldSource) {
 			return nil
 		}
-	} else {
-		query, year := matchQuery(target.Title)
-		candidates, complete, err := a.metadata.client.search(ctx, target.Kind, query)
-		if err != nil {
-			return a.metadataFailure(ctx, target, "failed", err)
+		sources = []string{oldSource}
+	}
+	if oldID > 0 && (oldPolicy == policy || selection == "manual") {
+		// Read only the JSON, never the (potentially 5 MiB) poster, to upgrade
+		// older caches without discarding still-valid title information.
+		var payload string
+		err := a.db.QueryRowContext(ctx, "SELECT payload FROM metadata_cache WHERE source=? AND kind=? AND source_id=? AND expires_at>?", oldSource, target.Kind, oldID, time.Now().Unix()).Scan(&payload)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
 		}
-		if complete && normalizedTitle(query) != "" {
-			for _, candidate := range candidates {
-				if (normalizedTitle(candidate.Title) == normalizedTitle(query) || normalizedTitle(candidate.OriginalTitle) == normalizedTitle(query)) && (year == "" || year == candidate.Year) {
-					if id != 0 {
-						id = 0
-						break
+		var m TitleMetadata
+		if err == nil && json.Unmarshal([]byte(payload), &m) == nil {
+			client := a.metadata.providers[oldSource]
+			if (creditsDue(m.Credits) || artworkDue(m.Artwork)) && sourceEnabled(sources, oldSource) && client != nil && client.configured() {
+				if artworkDue(m.Artwork) {
+					m.Artwork = fetchTitleArtwork(ctx, client, target.Kind, oldID, m.Artwork)
+					decorateArtwork(&m)
+				}
+				if creditsDue(m.Credits) {
+					m.Credits = fetchTitleCredits(ctx, client, target.Kind, oldID, m.Credits)
+				}
+				updated, err := json.Marshal(m)
+				if err != nil {
+					return err
+				}
+				// Do not extend the original TTL or change the chosen association.
+				tx, err := a.db.BeginTx(ctx, nil)
+				if err != nil {
+					return err
+				}
+				defer tx.Rollback()
+				result, err := tx.ExecContext(ctx, "UPDATE metadata_cache SET payload=? WHERE source=? AND kind=? AND source_id=? AND expires_at>?", string(updated), oldSource, target.Kind, oldID, time.Now().Unix())
+				if err != nil {
+					return err
+				}
+				if changed, _ := result.RowsAffected(); changed > 0 {
+					if err = replaceMetadataPeople(ctx, tx, oldSource, target.Kind, oldID, m); err != nil {
+						return err
 					}
-					id = candidate.TMDBID
+				}
+				return tx.Commit()
+			}
+			return nil
+		}
+	}
+	failures := []string{}
+	failed := false
+	for _, source := range sources {
+		client := a.metadata.providers[source]
+		if !client.configured() {
+			failures = append(failures, strings.ToUpper(source)+" 未配置凭据")
+			failed = true
+			continue
+		}
+		// Per-source budget: a slow primary must leave time for the fallback.
+		sourceCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		id := int64(0)
+		if oldSource == source {
+			id = oldID
+		}
+		var sourceErr error
+		if id == 0 {
+			query, year := matchQuery(target.Title)
+			candidates, complete, err := client.search(sourceCtx, target.Kind, query)
+			sourceErr = err
+			if err == nil && complete && normalizedTitle(query) != "" {
+				for _, candidate := range candidates {
+					if (normalizedTitle(candidate.Title) == normalizedTitle(query) || normalizedTitle(candidate.OriginalTitle) == normalizedTitle(query) || normalizedTitle(candidate.Number) == normalizedTitle(query)) && (year == "" || year == candidate.Year) {
+						if id != 0 {
+							id = 0
+							break
+						}
+						id = candidate.SourceID
+					}
 				}
 			}
 		}
-		if id == 0 {
-			return a.metadataFailure(ctx, target, "unmatched", errors.New("没有唯一可靠的匹配，请手动搜索并选择影片资料"))
+		if sourceErr != nil || id == 0 {
+			cancel()
+			if sourceErr != nil {
+				failed = true
+				failures = append(failures, sourceErr.Error())
+			} else {
+				failures = append(failures, strings.ToUpper(source)+" 没有唯一可靠的匹配")
+			}
+			continue
 		}
+		m, poster, typ, valid, sourceErr := a.cachedMetadata(sourceCtx, source, target.Kind, id)
+		warning := ""
+		if sourceErr == nil && !valid {
+			m, poster, typ, warning, sourceErr = fetchMetadataDetails(sourceCtx, client, target.Kind, id)
+		} else if sourceErr == nil {
+			if artworkDue(m.Artwork) {
+				m.Artwork = fetchTitleArtwork(sourceCtx, client, target.Kind, id, m.Artwork)
+				decorateArtwork(&m)
+			}
+			if creditsDue(m.Credits) {
+				m.Credits = fetchTitleCredits(sourceCtx, client, target.Kind, id, m.Credits)
+			}
+		}
+		cancel()
+		if sourceErr != nil {
+			failed = true
+			failures = append(failures, sourceErr.Error())
+			continue
+		}
+		if len(failures) > 0 {
+			warning = strings.Join(append(failures, "已使用 "+m.Source, warning), "；")
+		}
+		if selection == "" {
+			selection = "automatic"
+		}
+		if err := a.saveMetadata(ctx, target, m, poster, typ, selection, strings.TrimRight(warning, "；")); err != nil {
+			return errors.New("无法保存影片资料，本地媒体未改变")
+		}
+		return nil
 	}
-	m, poster, typ, warning, err := a.metadata.client.details(ctx, target.Kind, id)
-	if err != nil {
-		return a.metadataFailure(ctx, target, "failed", err)
+	status := "unmatched"
+	if failed {
+		status = "failed"
 	}
-	if selection == "" {
-		selection = "automatic"
-	}
-	if err := a.saveMetadata(ctx, target, m, poster, typ, selection, warning); err != nil {
-		return errors.New("无法保存影片资料，本地媒体未改变")
-	}
-	return nil
+	return a.metadataFailure(ctx, target, status, errors.New(strings.Join(failures, "；")+"；请检查目录资料源或手动匹配"))
 }
 
 func (a *App) metadataFailure(ctx context.Context, target metadataTarget, status string, cause error) error {
-	// Preserve the chosen ID even if the cache expires or TMDB stops responding.
+	// Preserve the chosen ID even if the cache expires or the provider stops responding.
 	// In particular, an explicit manual choice must never revert to auto-search.
 	_, err := a.db.ExecContext(ctx, `INSERT INTO metadata_matches(kind,target_id,status,error) VALUES(?,?,?,?) ON CONFLICT(kind,target_id) DO UPDATE SET status=excluded.status,error=excluded.error`, target.Kind, target.ID, status, cause.Error())
 	if err != nil {
@@ -240,6 +361,11 @@ func (a *App) metadataFailure(ctx context.Context, target metadataTarget, status
 }
 
 func (a *App) saveMetadata(ctx context.Context, target metadataTarget, m TitleMetadata, poster []byte, typ, selection, warning string) error {
+	_, policy, err := a.directorySources(ctx, target.DirectoryID)
+	if err != nil {
+		return err
+	}
+	source := strings.ToLower(m.Source)
 	payload, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -249,17 +375,20 @@ func (a *App) saveMetadata(ctx context.Context, target metadataTarget, m TitleMe
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `INSERT INTO metadata_cache(kind,tmdb_id,payload,expires_at,poster,poster_type) VALUES(?,?,?,?,?,?) ON CONFLICT(kind,tmdb_id) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at,poster=excluded.poster,poster_type=excluded.poster_type`, target.Kind, m.TMDBID, string(payload), m.ExpiresAt, poster, typ); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO metadata_cache(source,kind,source_id,payload,expires_at,poster,poster_type) VALUES(?,?,?,?,?,?,?) ON CONFLICT(source,kind,source_id) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at,poster=excluded.poster,poster_type=excluded.poster_type`, source, target.Kind, m.SourceID, string(payload), m.ExpiresAt, poster, typ); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO metadata_matches(kind,target_id,tmdb_id,selection,status,error) VALUES(?,?,?,?,'matched',?) ON CONFLICT(kind,target_id) DO UPDATE SET tmdb_id=excluded.tmdb_id,selection=excluded.selection,status=excluded.status,error=excluded.error`, target.Kind, target.ID, m.TMDBID, selection, warning); err != nil {
+	if err = replaceMetadataPeople(ctx, tx, source, target.Kind, m.SourceID, m); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO metadata_matches(kind,target_id,source,source_id,policy_key,selection,status,error) VALUES(?,?,?,?,?,?,'matched',?) ON CONFLICT(kind,target_id) DO UPDATE SET source=excluded.source,source_id=excluded.source_id,policy_key=excluded.policy_key,selection=excluded.selection,status=excluded.status,error=excluded.error`, target.Kind, target.ID, source, m.SourceID, policy, selection, warning); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
 func (a *App) attachMetadata(ctx context.Context, files []MediaFile) error {
-	rows, err := a.db.QueryContext(ctx, `SELECT m.kind,m.target_id,m.selection,m.status,m.error,COALESCE(c.payload,'') FROM metadata_matches m LEFT JOIN metadata_cache c ON c.kind=m.kind AND c.tmdb_id=m.tmdb_id AND c.expires_at>?`, time.Now().Unix())
+	rows, err := a.db.QueryContext(ctx, `SELECT m.kind,m.target_id,m.selection,m.status,m.error,COALESCE(c.payload,'') FROM metadata_matches m LEFT JOIN metadata_cache c ON c.source=m.source AND c.kind=m.kind AND c.source_id=m.source_id AND c.expires_at>?`, time.Now().Unix())
 	if err != nil {
 		return err
 	}
@@ -274,6 +403,10 @@ func (a *App) attachMetadata(ctx context.Context, files []MediaFile) error {
 		if payload != "" {
 			var m TitleMetadata
 			if json.Unmarshal([]byte(payload), &m) == nil {
+				if m.SourceID == 0 {
+					m.SourceID = m.TMDBID
+				}
+				decoratePeople(&m)
 				association.Metadata = &m
 			}
 		}
@@ -307,9 +440,13 @@ func (a *App) metadataPoster(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "海报不可用")
 		return
 	}
+	source := r.PathValue("source")
+	if source == "" {
+		source = "tmdb"
+	}
 	var poster []byte
 	var typ string
-	err = a.db.QueryRowContext(r.Context(), "SELECT poster,poster_type FROM metadata_cache WHERE kind=? AND tmdb_id=? AND expires_at>?", r.PathValue("kind"), id, time.Now().Unix()).Scan(&poster, &typ)
+	err = a.db.QueryRowContext(r.Context(), "SELECT poster,poster_type FROM metadata_cache WHERE source=? AND kind=? AND source_id=? AND expires_at>?", source, r.PathValue("kind"), id, time.Now().Unix()).Scan(&poster, &typ)
 	if err != nil || len(poster) == 0 {
 		fail(w, 404, "海报不可用或已到期")
 		return

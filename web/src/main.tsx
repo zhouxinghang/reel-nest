@@ -12,6 +12,7 @@ import {
   type LibraryFilter,
 } from "./library";
 import { SeriesDetails } from "./series";
+import { PersonDetails } from "./people";
 import { Icon } from "./icons";
 
 import { MetadataStatus, TMDBCredits } from "./metadata";
@@ -190,7 +191,8 @@ function App() {
   const mediaId = path.startsWith("/media/")
     ? path.slice("/media/".length)
     : null;
-  const detailPage = Boolean(mediaId || seriesId);
+  const personRoute = path.match(/^\/people\/(tmdb|tvdb|metatube)\/([^/]+)$/);
+  const detailPage = Boolean(mediaId || seriesId || personRoute);
   const libraryPage = !detailPage && !directoryPage;
   return (
     <div
@@ -376,6 +378,11 @@ function App() {
           <>
             {directoryPage ? (
               <Directories />
+            ) : personRoute ? (
+              <PersonDetails
+                source={personRoute[1]}
+                personKey={personRoute[2]}
+              />
             ) : seriesId ? (
               <SeriesDetails id={seriesId} />
             ) : mediaId ? (

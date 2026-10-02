@@ -411,19 +411,20 @@ export function Library({
                       onClick={() => onFilterChange(value)}
                     >
                       <span className="library-tile-art" aria-hidden="true">
-                        {collection.some(
-                          (entry) => entry.metadata?.posterUrl,
-                        ) ? (
-                          collection
-                            .filter((entry) => entry.metadata?.posterUrl)
-                            .slice(0, 3)
-                            .map((entry) => (
-                              <img
-                                key={entry.id}
-                                src={entry.metadata!.posterUrl}
-                                alt=""
-                              />
-                            ))
+                        {collection.some((entry) => entry.metadata) ? (
+                          <Poster
+                            landscape
+                            metadata={
+                              collection.find(
+                                (entry) =>
+                                  entry.metadata?.thumbUrl ||
+                                  entry.metadata?.backdropUrl,
+                              )?.metadata ||
+                              collection.find((entry) => entry.metadata)
+                                ?.metadata
+                            }
+                            title={label}
+                          />
                         ) : (
                           <Icon name={icon} />
                         )}
@@ -443,6 +444,7 @@ export function Library({
                     >
                       <div className="continue-art">
                         <Poster
+                          landscape
                           metadata={file.match.metadata}
                           title={file.match.metadata?.title || file.filename}
                         />

@@ -38,6 +38,12 @@ func fakeTMDB(t *testing.T) *tmdbFixture {
 		f.requests = append(f.requests, r.URL.String())
 		f.mu.Unlock()
 		if strings.HasPrefix(r.URL.Path, "/images/") {
+			if (strings.HasSuffix(r.URL.Path, "/thumb.png") || strings.HasSuffix(r.URL.Path, "/backdrop.png")) && serveArtworkImageFailure(w, r, mode) {
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/person.png") && servePhotoFailure(w, r, mode) {
+				return
+			}
 			if r.Header.Get("Authorization") != "" {
 				t.Error("credential sent to image server")
 			}
@@ -70,6 +76,14 @@ func fakeTMDB(t *testing.T) *tmdbFixture {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		series := strings.Contains(r.URL.Path, "/tv")
+		if strings.HasSuffix(r.URL.Path, "/images") {
+			serveTMDBArtwork(w, r, mode, series)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/credits") || strings.HasSuffix(r.URL.Path, "/aggregate_credits") {
+			serveTMDBCredits(t, w, r, mode, series)
+			return
+		}
 		if strings.Contains(r.URL.Path, "/search/") {
 			query := r.URL.Query().Get("query")
 			if r.URL.Query().Get("language") != "zh-CN" || r.URL.Query().Get("include_adult") != "false" {

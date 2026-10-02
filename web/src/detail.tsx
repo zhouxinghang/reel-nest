@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { MetadataAssociation } from "./media";
-import { MetadataInfo, Poster } from "./metadata";
+import { DetailBackdrop, MetadataInfo, Poster } from "./metadata";
+import { CreditsInfo } from "./credits";
 
 /** Shared, data-backed presentation for movies, series and individual files. */
 export function DetailHero({
@@ -20,23 +21,38 @@ export function DetailHero({
 }) {
   const metadata = match.metadata;
   return (
-    <section className="detail-hero" aria-label="影片详情">
-      <Poster detail metadata={metadata} title={posterTitle} />
-      <div className="detail-summary">
-        <h1>{title}</h1>
-        {metadata?.originalTitle && metadata.originalTitle !== title && (
-          <p className="detail-original-title">{metadata.originalTitle}</p>
-        )}
-        <div className="detail-facts">
-          {metadata?.year && <span>{metadata.year}</span>}
-          <span>{kind}</span>
-          {facts}
-          {!metadata && <span className="detail-tag">未匹配媒体</span>}
+    <>
+      <DetailBackdrop
+        key={`${metadata?.source}:${metadata?.sourceId}:${metadata?.fetchedAt}`}
+        metadata={metadata}
+      />
+      <section className="detail-hero" aria-label="影片详情">
+        <Poster detail metadata={metadata} title={posterTitle} />
+        <div className="detail-summary">
+          <h1>{title}</h1>
+          {metadata?.originalTitle && metadata.originalTitle !== title && (
+            <p className="detail-original-title">{metadata.originalTitle}</p>
+          )}
+          <div className="detail-facts">
+            {metadata?.year && <span>{metadata.year}</span>}
+            <span>{kind}</span>
+            {facts}
+            {!metadata && <span className="detail-tag">未匹配媒体</span>}
+          </div>
+          {children}
+          <MetadataInfo
+            key={
+              metadata ? `${metadata.source}:${metadata.sourceId}` : "unmatched"
+            }
+            match={match}
+          />
         </div>
-        {children}
-        <MetadataInfo key={metadata?.tmdbId || "unmatched"} match={match} />
-      </div>
-    </section>
+      </section>
+      <CreditsInfo
+        key={metadata ? `${metadata.source}:${metadata.sourceId}` : "unmatched"}
+        metadata={metadata}
+      />
+    </>
   );
 }
 

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,36 @@ var videoExtensions = map[string]bool{".mp4": true, ".m4v": true, ".mkv": true, 
 type discoveredFile struct {
 	relative string
 	info     os.FileInfo
+}
+
+func (a *App) removeMissingMedia(tx *sql.Tx, directoryID string) error {
+	queries := []string{
+		`DELETE FROM watch_progress WHERE media_file_id IN (
+  SELECT id FROM media_files WHERE directory_id=? AND available=0
+)`,
+		`DELETE FROM metadata_matches WHERE kind='movie' AND target_id IN (
+    SELECT f.id FROM media_files f JOIN media_directories d ON d.id=f.directory_id
+    WHERE f.directory_id=? AND f.available=0 AND d.kind='movie'
+)`,
+		`DELETE FROM metadata_matches WHERE kind='series' AND target_id IN (
+    SELECT f.id FROM media_files f JOIN media_directories d ON d.id=f.directory_id
+    LEFT JOIN file_organization o ON o.media_file_id=f.id
+    WHERE f.directory_id=? AND f.available=0 AND d.kind='series' AND o.series_id IS NULL
+)`,
+		`DELETE FROM media_files WHERE directory_id=? AND available=0`,
+		`DELETE FROM metadata_matches WHERE kind='series' AND target_id IN (
+  SELECT s.id FROM series s WHERE s.directory_id=?
+  AND NOT EXISTS (SELECT 1 FROM file_organization o WHERE o.series_id=s.id)
+)`,
+		`DELETE FROM series WHERE directory_id=?
+  AND NOT EXISTS (SELECT 1 FROM file_organization o WHERE o.series_id=series.id)`,
+	}
+	for _, query := range queries {
+		if _, err := tx.ExecContext(a.ctx, query, directoryID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // collect visits actual directory handles, never symlinks, and only reads metadata.
@@ -136,6 +167,9 @@ func (a *App) scanFiles(d Directory) error {
 				return err
 			}
 		}
+	}
+	if err = a.removeMissingMedia(tx, d.ID); err != nil {
+		return err
 	}
 	if _, err = tx.ExecContext(a.ctx, "UPDATE media_directories SET scan_status='completed',scan_error='',scan_finished=? WHERE id=?", time.Now().Unix(), d.ID); err != nil {
 		return err

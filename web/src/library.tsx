@@ -12,7 +12,15 @@ import { DetailHero, fileSize } from "./detail";
 import { Icon } from "./icons";
 import { FavoriteButton } from "./favorite";
 
+import {
+  SourceOrder,
+  DirectorySources,
+  type MetadataSource,
+  type SourceStatus,
+} from "./metadata-sources";
+
 type Directory = {
+  metadataSources: MetadataSource[];
   id: string;
   path: string;
   kind: "movie" | "series";
@@ -21,7 +29,11 @@ type Directory = {
   scanStarted: number;
   scanFinished: number;
 };
-type DirectoriesResponse = { directories: Directory[]; allowedRoots: string[] };
+type DirectoriesResponse = {
+  directories: Directory[];
+  allowedRoots: string[];
+  metadataSources: SourceStatus[];
+};
 const scanLabels = {
   pending: "等待扫描",
   running: "扫描中",
@@ -36,6 +48,7 @@ export function Directories() {
   const [data, setData] = useState<DirectoriesResponse | null>(null);
   const [path, setPath] = useState("");
   const [kind, setKind] = useState("movie");
+  const [sources, setSources] = useState<MetadataSource[]>(["tmdb", "tvdb"]);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,7 +79,7 @@ export function Directories() {
     setBusy(true);
     setError("");
     try {
-      await api("/api/directories", { path, kind });
+      await api("/api/directories", { path, kind, metadataSources: sources });
       setData(await api("/api/directories"));
     } catch (error) {
       setError(message(error));
@@ -142,6 +155,12 @@ export function Directories() {
                   <option value="series">电视剧</option>
                 </select>
               </div>
+              <SourceOrder
+                value={sources}
+                onChange={setSources}
+                statuses={data?.metadataSources || []}
+                disabled={busy}
+              />
               <button className="primary" disabled={busy || !data}>
                 {busy ? "正在接入…" : "添加并扫描"}
               </button>
@@ -153,6 +172,11 @@ export function Directories() {
             {error}
           </p>
         )}
+        <p className="fine">
+          凭据由部署者配置：TMDB_READ_ACCESS_TOKEN_FILE、TVDB_API_KEY_FILE，以及需要订阅时的
+          TVDB_PIN_FILE；MetaTube 使用 METATUBE_URL 和 METATUBE_TOKEN_FILE（或
+          METATUBE_TOKEN）。更改配置后重启应用。
+        </p>
         <p className="fine directory-tip">
           新增后自动扫描一次，之后由你手动重新扫描。不会上传、改名或移动源文件。
         </p>
@@ -195,6 +219,13 @@ export function Directories() {
                 重新扫描
               </button>
             </div>
+            <DirectorySources
+              key={`${dir.id}:${JSON.stringify(dir.metadataSources)}`}
+              id={dir.id}
+              sources={dir.metadataSources}
+              statuses={data.metadataSources}
+              saved={async () => setData(await api("/api/directories"))}
+            />
             {dir.scanError && (
               <p role="alert" className="error">
                 {dir.scanError}

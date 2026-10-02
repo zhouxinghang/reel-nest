@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import type { SourceStatus } from "./metadata-sources";
 import { Icon } from "./icons";
 import { api, message } from "./api";
 import type { MetadataAssociation, TitleMetadata } from "./media";
@@ -7,29 +8,53 @@ export function Poster({
   metadata,
   title,
   detail = false,
+  landscape = false,
   children,
 }: {
   metadata?: TitleMetadata | null;
   title: string;
   detail?: boolean;
+  landscape?: boolean;
   children?: ReactNode;
 }) {
-  const [failed, setFailed] = useState("");
+  const [failed, setFailed] = useState<string[]>([]);
+  useEffect(
+    () => setFailed([]),
+    [
+      metadata?.source,
+      metadata?.sourceId,
+      metadata?.fetchedAt,
+      metadata?.artwork?.fetchedAt,
+    ],
+  );
+  const candidates = landscape
+    ? [
+        { url: metadata?.thumbUrl, type: "thumb", label: "横版封面" },
+        { url: metadata?.backdropUrl, type: "backdrop", label: "背景图" },
+        { url: metadata?.posterUrl, type: "poster", label: "海报" },
+      ]
+    : [{ url: metadata?.posterUrl, type: "poster", label: "海报" }];
+  const selected = candidates.find(
+    (image) => image.url && !failed.includes(image.url),
+  );
   return (
     <div
-      className={`poster-placeholder${detail ? " detail-poster" : ""}`}
+      className={`poster-placeholder${detail ? " detail-poster" : ""}${landscape ? " landscape-artwork" : ""}`}
+      data-image-type={selected?.type || "placeholder"}
       data-tone={
         Array.from(title).reduce((sum, char) => sum + char.codePointAt(0)!, 0) %
         5
       }
     >
-      {metadata?.posterUrl && failed !== metadata.posterUrl ? (
+      {selected?.url ? (
         <img
           className="poster-image"
-          src={metadata.posterUrl}
-          alt={`${title} 海报`}
-          loading="lazy"
-          onError={() => setFailed(metadata.posterUrl)}
+          key={selected.url}
+          src={selected.url}
+          alt={`${title} ${selected.label}`}
+          loading={detail ? "eager" : "lazy"}
+          decoding="async"
+          onError={() => setFailed((urls) => [...urls, selected.url!])}
         />
       ) : (
         <>
@@ -46,6 +71,38 @@ export function Poster({
   );
 }
 
+export function DetailBackdrop({
+  metadata,
+}: {
+  metadata: TitleMetadata | null;
+}) {
+  const [failed, setFailed] = useState<string[]>([]);
+  useEffect(
+    () => setFailed([]),
+    [
+      metadata?.source,
+      metadata?.sourceId,
+      metadata?.fetchedAt,
+      metadata?.artwork?.fetchedAt,
+    ],
+  );
+  const url = [metadata?.backdropUrl, metadata?.thumbUrl].find(
+    (candidate) => candidate && !failed.includes(candidate),
+  );
+  if (!url) return null;
+  return (
+    <div className="detail-backdrop" aria-hidden="true">
+      <img
+        key={url}
+        src={url}
+        alt=""
+        decoding="async"
+        onError={() => setFailed((urls) => [...urls, url])}
+      />
+    </div>
+  );
+}
+
 export function MetadataInfo({ match }: { match: MetadataAssociation }) {
   const metadata = match.metadata;
   const [expanded, setExpanded] = useState(false);
@@ -58,7 +115,7 @@ export function MetadataInfo({ match }: { match: MetadataAssociation }) {
         {metadata?.overview ||
           (metadata
             ? "暂无可用简介。"
-            : "尚未关联影片资料，保留原始文件名供浏览。未匹配媒体也可以直接尝试播放，不要求 TMDB 凭据。")}
+            : "尚未关联影片资料，保留原始文件名供浏览。未匹配媒体也可以直接尝试播放，不要求在线资料源凭据。")}
       </p>
       {longOverview && (
         <button
@@ -74,13 +131,27 @@ export function MetadataInfo({ match }: { match: MetadataAssociation }) {
           {match.error}
         </p>
       )}
+      {metadata?.artwork?.error && (
+        <p className="fine" role="status">
+          横版图片暂不可用，已使用回退展示；稍后可刷新资料重试。
+        </p>
+      )}
       {metadata && (
         <p className="fine">
-          <a href={metadata.sourceUrl} target="_blank" rel="noreferrer">
-            资料来源：TMDB ↗
-          </a>{" "}
-          · {match.selection === "manual" ? "手动匹配" : "TMDB 影片资料"} ·
-          缓存有效至 {new Date(metadata.expiresAt * 1000).toLocaleDateString()}
+          {metadata.sourceUrl ? (
+            <a href={metadata.sourceUrl} target="_blank" rel="noreferrer">
+              资料来源：{metadata.source}
+              {metadata.provider ? ` / ${metadata.provider}` : ""} ↗
+            </a>
+          ) : (
+            <span>资料来源：{metadata.source}</span>
+          )}{" "}
+          ·{" "}
+          {match.selection === "manual"
+            ? "手动匹配"
+            : `${metadata.source} 影片资料`}{" "}
+          · 缓存有效至{" "}
+          {new Date(metadata.expiresAt * 1000).toLocaleDateString()}
         </p>
       )}
     </div>
@@ -88,6 +159,7 @@ export function MetadataInfo({ match }: { match: MetadataAssociation }) {
 }
 
 type Status = {
+  sources: SourceStatus[];
   revision: number;
   configured: boolean;
   running: boolean;
@@ -134,18 +206,27 @@ export function MetadataStatus() {
     }
   }
   return (
-    <section className="metadata-status" aria-label="TMDB 设置与状态">
+    <section className="metadata-status" aria-label="影片资料源设置与状态">
       <div>
         <strong>影片资料</strong>
         <span className="fine">
           {!status
             ? "正在读取设置…"
             : !status.configured
-              ? "未配置 TMDB 凭据；本地浏览与播放不受影响。由部署者设置 TMDB_READ_ACCESS_TOKEN_FILE 后重启。"
+              ? "未配置影片资料源（TMDB / TVDB / MetaTube）；本地浏览与播放不受影响。请由部署者配置服务或凭据文件后重启。"
               : status.running
-                ? "正在后台获取 TMDB 资料，本地播放不受影响…"
-                : "已配置 TMDB · 中文优先 · 扫描与匹配相互独立"}
+                ? "正在按目录优先级获取资料和海报，本地播放不受影响…"
+                : "按目录选择资料源 · 扫描与匹配相互独立"}
         </span>
+        <p className="fine">
+          {status?.sources
+            .map(
+              (source) =>
+                `${source.name}：${source.configured ? (source.cooldownUntil * 1000 > Date.now() ? "冷却中" : "已配置") : "未配置"}`,
+            )
+            .join(" · ")}{" "}
+          · <a href="/directories">配置目录资料源</a>
+        </p>
         {(error || status?.error) && (
           <p className="notice" role="status">
             {error || status?.error}
@@ -155,9 +236,7 @@ export function MetadataStatus() {
       {status?.configured && (
         <button
           className="secondary"
-          disabled={
-            busy || status.running || status.cooldownUntil * 1000 > Date.now()
-          }
+          disabled={busy || status.running}
           onClick={refresh}
         >
           匹配 / 刷新到期资料
@@ -176,6 +255,9 @@ export function TMDBCredits() {
       <span>
         This product uses the TMDB API but is not endorsed or certified by TMDB.
       </span>
+      <a href="https://www.thetvdb.com" target="_blank" rel="noreferrer">
+        Metadata provided by TheTVDB ↗
+      </a>
     </section>
   );
 }

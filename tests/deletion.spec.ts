@@ -34,6 +34,13 @@ test.beforeEach(async ({ request }) => {
       HOUSEHOLD_PASSWORD: "browser-test-password",
       HOUSEHOLD_PASSWORD_FILE: "",
       COOKIE_SECURE: "false",
+      METATUBE_URL: "",
+      METATUBE_TOKEN: "",
+      METATUBE_TOKEN_FILE: "",
+      TVDB_API_KEY: "",
+      TVDB_API_KEY_FILE: "",
+      TVDB_PIN: "",
+      TVDB_PIN_FILE: "",
       TMDB_READ_ACCESS_TOKEN: "",
       TMDB_READ_ACCESS_TOKEN_FILE: "",
     },
@@ -212,9 +219,9 @@ test("单文件删除：真实播放、取消/Escape、路径风险二次确认�
   });
   await awaitScan(context, directory.id);
   await page.reload();
-  await expect(
-    page.getByRole("link", { name: new RegExp(name) }),
-  ).toContainText("不可用");
+  await expect(page.getByRole("link", { name: new RegExp(name) })).toHaveCount(
+    0,
+  );
 });
 
 test("删除失败：真实权限错误及确认后目标替换不误删", async ({
@@ -291,14 +298,11 @@ test("文件已删除但真实 SQLite 写锁阻止索引更新：明确反馈并
     data: {},
   });
   await awaitScan(context, directory.id);
-  const detail = await (
-    await context.request.get(`/api/media/${file.id}`)
-  ).json();
-  expect(detail.available).toBe(false);
-  await page.reload();
-  await expect(
-    page
-      .getByRole("region", { name: "媒体信息", exact: true })
-      .getByText("文件不可用：已删除或源文件发生变化", { exact: true }),
-  ).toBeVisible();
+  expect((await context.request.get(`/api/media/${file.id}`)).status()).toBe(
+    404,
+  );
+  await page.goto("/library");
+  await expect(page.getByRole("link", { name: new RegExp(name) })).toHaveCount(
+    0,
+  );
 });

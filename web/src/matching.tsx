@@ -64,7 +64,8 @@ function MatchingDialog({
   const [query, setQuery] = useState(target.title);
   const [items, setItems] = useState<TitleMetadata[] | null>(null);
   const [more, setMore] = useState(false);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [selected, setSelected] = useState<TitleMetadata | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<"search" | "save" | null>(null);
   const base = `/api/matching/${target.kind}/${encodeURIComponent(target.id)}`;
@@ -83,16 +84,19 @@ function MatchingDialog({
     setError("");
     setSelected(null);
     setItems(null);
+    setWarnings([]);
     try {
       const result = await api<{
         items: TitleMetadata[];
         moreResults: boolean;
+        warnings: string[];
       }>(`${base}/search?q=${encodeURIComponent(query.trim())}`, undefined, {
         signal: controller.signal,
       });
       if (!controller.signal.aborted) {
         setItems(result.items);
         setMore(result.moreResults);
+        setWarnings(result.warnings);
       }
     } catch (error) {
       if (!controller.signal.aborted) setError(message(error));
@@ -109,7 +113,11 @@ function MatchingDialog({
     try {
       await api(
         `${base}/selection`,
-        { tmdbId: selected, kind: target.kind },
+        {
+          source: selected.source,
+          sourceId: selected.sourceId,
+          kind: target.kind,
+        },
         { signal: controller.signal },
       );
       saved();
@@ -134,7 +142,7 @@ function MatchingDialog({
         {target.kind === "movie" ? "电影" : "电视剧"} · {target.title}
       </p>
       <p className="fine">
-        仅修改影片资料，不改名、移动或改写视频，也不改变季集关系和观看进度。电视剧的已组织单集共享同一资料关联。
+        仅修改影片资料，不改名、移动或改写视频，也不改变季集关系和观看进度。电视剧的已组织单集共享同一资料关联。候选按此目录启用的资料源优先级排列。
       </p>
       <form className="matching-search" onSubmit={search}>
         <label htmlFor="matching-query">搜索作品标题</label>
@@ -151,7 +159,7 @@ function MatchingDialog({
             className="secondary"
             disabled={busy !== null || !query.trim()}
           >
-            {busy === "search" ? "正在搜索…" : "搜索 TMDB"}
+            {busy === "search" ? "正在搜索…" : "搜索资料源"}
           </button>
         </div>
       </form>
@@ -160,31 +168,45 @@ function MatchingDialog({
           {error}。原有资料关联未改变。
         </p>
       )}
+      {warnings.length > 0 && (
+        <p className="notice" role="status">
+          {warnings.join("；")}
+        </p>
+      )}
       {items?.length === 0 && (
         <p role="status" className="notice">
           没有找到候选，请换个标题重试。原有资料关联未改变。
         </p>
       )}
       {more && items && (
-        <p className="notice">仅显示前 20 个候选，请细化标题以缩小范围。</p>
+        <p className="notice">
+          每个资料源最多显示前 20 个候选，请细化标题以缩小范围。
+        </p>
       )}
       {items && items.length > 0 && (
         <fieldset className="matching-candidates" disabled={busy !== null}>
           <legend>选择正确作品，确认后才更新资料</legend>
           {items.map((item) => (
-            <label className="matching-candidate" key={item.tmdbId}>
+            <label
+              className="matching-candidate"
+              key={`${item.source}:${item.sourceId}`}
+            >
               <input
                 type="radio"
-                name="tmdb-candidate"
-                checked={selected === item.tmdbId}
-                onChange={() => setSelected(item.tmdbId)}
+                name="metadata-candidate"
+                checked={
+                  selected?.source === item.source &&
+                  selected?.sourceId === item.sourceId
+                }
+                onChange={() => setSelected(item)}
               />
               <span>
                 <strong>{item.title}</strong>
                 <span className="fine">
-                  {item.originalTitle} ·{" "}
+                  {item.number || item.originalTitle} ·{" "}
                   {item.kind === "movie" ? "电影" : "电视剧"} ·{" "}
-                  {item.year || "年份未知"} · TMDB #{item.tmdbId}
+                  {item.year || "年份未知"} · {item.source}
+                  {item.provider ? ` / ${item.provider}` : ""} #{item.sourceId}
                 </span>
               </span>
             </label>

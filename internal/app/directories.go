@@ -3,6 +3,7 @@ package app
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,23 +14,28 @@ import (
 )
 
 type Directory struct {
-	ID           string `json:"id"`
-	Path         string `json:"path"`
-	Kind         string `json:"kind"`
-	ScanStatus   string `json:"scanStatus"`
-	ScanError    string `json:"scanError"`
-	ScanStarted  int64  `json:"scanStarted"`
-	ScanFinished int64  `json:"scanFinished"`
-	Identity     string `json:"-"`
+	MetadataSources []string `json:"metadataSources"`
+	ID              string   `json:"id"`
+	Path            string   `json:"path"`
+	Kind            string   `json:"kind"`
+	ScanStatus      string   `json:"scanStatus"`
+	ScanError       string   `json:"scanError"`
+	ScanStarted     int64    `json:"scanStarted"`
+	ScanFinished    int64    `json:"scanFinished"`
+	Identity        string   `json:"-"`
 }
 
-const directoryColumns = `id, path, kind, scan_status, scan_error, scan_started, scan_finished, identity`
+const directoryColumns = `id, path, kind, scan_status, scan_error, scan_started, scan_finished, identity, metadata_sources`
 
 type scanner interface{ Scan(...any) error }
 
 func scanDirectory(row scanner) (Directory, error) {
 	var d Directory
-	err := row.Scan(&d.ID, &d.Path, &d.Kind, &d.ScanStatus, &d.ScanError, &d.ScanStarted, &d.ScanFinished, &d.Identity)
+	var sources string
+	err := row.Scan(&d.ID, &d.Path, &d.Kind, &d.ScanStatus, &d.ScanError, &d.ScanStarted, &d.ScanFinished, &d.Identity, &sources)
+	if err == nil {
+		err = json.Unmarshal([]byte(sources), &d.MetadataSources)
+	}
 	return d, err
 }
 
@@ -87,7 +93,10 @@ func (a *App) initializeLibrary() error {
  );
  CREATE INDEX IF NOT EXISTS media_files_directory ON media_files(directory_id);
  UPDATE media_directories SET scan_status='interrupted', scan_error='扫描因应用重启中断，请手动重新扫描' WHERE scan_status IN ('pending','running');`)
-	return err
+	if err != nil {
+		return err
+	}
+	return a.initializeDirectorySources()
 }
 
 // openDirectory grants a bounded filesystem handle, not an arbitrary server path.
@@ -174,19 +183,27 @@ func (a *App) directories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	roots := append([]string{}, a.config.MediaRoots...)
-	respond(w, 200, map[string]any{"directories": directories, "allowedRoots": roots})
+	respond(w, 200, map[string]any{"directories": directories, "allowedRoots": roots, "metadataSources": a.metadata.sources()})
 }
 
 func (a *App) addDirectory(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Path string `json:"path"`
-		Kind string `json:"kind"`
+		Path            string   `json:"path"`
+		MetadataSources []string `json:"metadataSources"`
+		Kind            string   `json:"kind"`
 	}
 	if !decode(w, r, &input) {
 		return
 	}
 	if input.Kind != "movie" && input.Kind != "series" {
 		fail(w, 400, "目录类型必须为电影或电视剧")
+		return
+	}
+	if input.MetadataSources == nil {
+		input.MetadataSources = []string{"tmdb", "tvdb"}
+	}
+	if !validMetadataSources(input.MetadataSources) {
+		fail(w, 400, "资料源只能是 tmdb/tvdb/metatube，不能重复")
 		return
 	}
 	root, info, err := a.openDirectory(input.Path)
@@ -222,8 +239,9 @@ func (a *App) addDirectory(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "该目录已接入或与已接入目录重叠，请直接重新扫描")
 		return
 	}
-	d := Directory{ID: newID(), Path: input.Path, Kind: input.Kind, ScanStatus: "pending", Identity: fileIdentity(info)}
-	_, err = a.db.ExecContext(r.Context(), "INSERT INTO media_directories(id,path,kind,scan_status,identity) VALUES(?,?,?,?,?)", d.ID, d.Path, d.Kind, d.ScanStatus, d.Identity)
+	d := Directory{MetadataSources: input.MetadataSources, ID: newID(), Path: input.Path, Kind: input.Kind, ScanStatus: "pending", Identity: fileIdentity(info)}
+	sources, _ := json.Marshal(d.MetadataSources)
+	_, err = a.db.ExecContext(r.Context(), "INSERT INTO media_directories(id,path,kind,scan_status,identity,metadata_sources) VALUES(?,?,?,?,?,?)", d.ID, d.Path, d.Kind, d.ScanStatus, d.Identity, string(sources))
 	if err != nil {
 		fail(w, 500, "保存媒体目录失败")
 		return

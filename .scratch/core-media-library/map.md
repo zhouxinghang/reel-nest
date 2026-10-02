@@ -1,6 +1,6 @@
 # 核心家庭媒体管理系统：Ticket 索引
 
-发布日期：2026-09-30。用户已确认以下 9 个纵向切片及依赖。后续按用户要求开始实施，当前已完成 01–09 及追加的 11（首页、收藏与最近添加）；Docker 校验按用户要求跳过。
+发布日期：2026-09-30。用户已确认原始 9 个纵向切片及依赖；2026-10-01 追加扫描同步、数字单集识别及 Emby 首页/收藏/最近添加，当前已完成 01–16（含按目录配置 TMDB / TVDB 资料源、演员/导演信息、人物照片/关联作品、人物页性能优化及多类型影片图片）。Docker 校验按用户要求跳过。
 
 ## 执行依据
 
@@ -10,7 +10,7 @@
 - [ADR 0002：以宿主机挂载目录作为媒体接入边界](/Users/bytedance/workspace/reel-nest/docs/adr/0002-host-mounted-media-directories.md)。
 - [ADR 0003：外部播放器使用不过期的单文件只读链接](/Users/bytedance/workspace/reel-nest/docs/adr/0003-non-expiring-read-only-stream-links.md)。
 
-正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–09 及 11，不新增技术锁定 ADR。
+正式规格与已接受 ADR 高于历史讨论。Go、React/TypeScript、SQLite、Docker Compose 及精细工程默认值只是推荐，不是新增的已确认技术约束；单机 Docker、功能范围与授权/删除边界是约束。发布时仓库尚无应用代码；现已采用 Go、React/TypeScript、SQLite 实现 01–16，不新增技术锁定 ADR。
 
 ## Tickets 与依赖
 
@@ -25,15 +25,22 @@
 | 07 | [TMDB 影片资料与故障降级](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/07-tmdb-metadata-and-fallback.md) | 03, 04 | resolved |
 | 08 | [手动修正影片资料匹配](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/08-manual-metadata-matching.md) | 07 | resolved |
 | 09 | [安全地永久删除单个源文件](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/09-single-file-permanent-deletion.md) | 02 | resolved |
+| 10 | [扫描同步移除与数字单集识别](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/10-scan-sync-and-numeric-episodes.md) | 02, 03 | resolved |
 | 11 | [Emby 首页、家庭收藏与最近添加](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/11-emby-home-favorites-recent.md) | 02, 03, 04 | resolved |
+| 12 | [目录影片资料源与优先级](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/12-directory-metadata-sources.md) | 07, 08 | resolved |
+| 13 | [演员、导演信息](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/13-cast-and-directors.md) | 12 | resolved |
+| 14 | [人物照片与关联作品](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/14-person-photos-and-works.md) | 13 | resolved |
+| 15 | [人物关联作品页性能优化](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/15-person-page-performance.md) | 14 | resolved |
+| 16 | [多类型影片图片](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/16-title-artwork.md) | 12, 14 | resolved |
+| 17 | [MetaTube 影片资料源](/Users/bytedance/workspace/reel-nest/.scratch/core-media-library/issues/17-metatube-provider.md) | 12, 16 | resolved |
 
 所有依赖均指向更早编号，且只列真正阻塞本项的能力。每项交付自身必要的持久化、接口、界面、测试及使用说明，不拆出横向“后端/前端/测试”任务。
 
 ## Frontier
 
-- 已完成：**01–09、11**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
-- 当前 frontier：**无**。10 个 implementation tickets 均已 resolved，无 claimed ticket；父规格保持原 ready-for-agent 状态，Docker/实机未验证项不伪报通过。
-- 最新变更（2026-10-01）：11 新增 Emby 风格首页、共享收藏与最近添加；10 的扫描同步/数字单集变更保留在工作区，未纳入本次独立提交。01 的 Docker 实测验收仍未勾选。
+- 已完成：**01–17**（resolved）；Docker 实测按用户要求跳过并保留未验证记录，IINA/PotPlayer 实机结果单独列为未验证。
+- 当前 frontier：**无**。01–17 均已 resolved，无 claimed ticket；父规格保持原 ready-for-agent 状态，Docker/实机未验证项不伪报通过。
+- 最新变更（2026-10-02）：17 个 ticket 与索引状态一致；17 增加自部署 MetaTube 电影资料源、服务地址/Token、目录启用与持久身份映射。01 的 Docker 实测验收继续保留未勾选。
 - 领取时将对应 ticket 的 Status 改为 claimed；完成时追加 Answer、标记 resolved 并更新本索引。未完成的阻塞项不能跳过。
 
 依赖说明：07 必须用实际浏览器播放验证 TMDB 故障降级，不能仅展示播放入口，因此依赖 04；09 只依赖稳定媒体文件身份与基础详情，不需要等待 TMDB、电视剧组织或播放器。05 复用 04 的媒体读取契约，06 复用 04 的网页播放器。
@@ -61,6 +68,7 @@
 | 07 | 15, 21, 22, 23, 24, 25, 26, 57, 58 |
 | 08 | 27 |
 | 09 | 46, 47, 48, 49, 50, 51, 52, 53, 54, 56 |
+| 10 | 7, 14, 16, 18, 19 |
 
 覆盖编号合并后为 1–60，无遗漏。尤其保持：仅浏览器写家庭共用观看进度、未匹配媒体仍可观看、串流链接不过期且不授予管理权、删除仅作用于一个真实视频文件。
 
@@ -107,4 +115,31 @@
 - 2026-10-01（收尾复核）：本轮开始时 01–09 已全部 resolved，不重复领取或扩大功能范围。重新通过禁用缓存的 31 个 Go 应用用例、全量 race/vet、10 个 Chrome 流程、生产构建/格式/依赖审计、Linux 交叉编译及真实旧资料版本→当前版本升级/删除/重启验证，未发现回归问题。
 - 本轮仅更新验证与各 issue 的复核记录，状态仍全部为 resolved；Docker 按用户要求跳过，其他实机未验证项保持原样。父规格及领域/ADR 文档未修改，当前仍无 frontier；详情见验证记录的「01–09 收尾复核」节。
 
-- 2026-10-01：完成 11，新增 Emby 风格全宽首页、家庭收藏和真实最近添加；旧库收录日期保持未知，收藏与观看进度独立，串流凭证不能修改收藏。验证与参考限制见验证记录；此前扫描同步/数字单集改动未纳入此次提交。
+- 2026-10-01：完成 10。完整成功扫描改为事务性移除源目录中已不存在的媒体记录，同时清理观看进度、文件级资料关联及空电视剧；扫描失败/中断仍保留旧索引。电视剧目录新增“作品目录/纯数字文件名”规则，并支持从直接季目录取得季号。
+- 新增 2 个应用级测试，总计 33 个；全量 `npm test`（含 10 个 Chrome 流程）、race、vet、格式与 diff 检查通过。另以临时应用数据对 `/Users/bytedance/Downloads/test2` 进行只读公开 HTTP 扫描，确认 `太平年/01.mp4` 识别为第 1 季第 1 集，未修改用户媒体。
+- 01–10 全部 resolved，当前无 frontier；Docker 与其他实机未验证项保持不变。
+
+- 2026-10-01：完成 11，新增 Emby 风格全宽首页、家庭收藏和真实最近添加；旧库收录日期保持未知，收藏与观看进度独立，串流凭证不能修改收藏。
+- 全套 14 个 Chrome 流程、Go 应用测试、race/vet、格式与 diff 检查通过；本地 8090 已备份数据库并更新，实际桌面/窄屏界面通过检查，未改变用户媒体和观看进度。参考存档缺少首页画面，不声称逐像素一致；01–11 全部 resolved，当前无 frontier。
+
+
+- 2026-10-01：完成 12；按媒体目录独立配置 TMDB / TVDB 启用与顺序，顺序下载资料/海报、失败回退、手动匹配来源标识及旧 TMDB 数据原子迁移。自动配置变化不覆盖手动选择，不改写媒体文件或进度。
+- 最终 `npm test`（42 个应用测试、1 个启动器测试、16 个 Chrome 流程）、全量及最终资料增量 race、vet、格式与 diff 检查通过；目视检查目录资料源窄屏截图。真实 TMDB/TVDB 与 Docker 仍未实测，用户服务未重启；既有工作区改动完整保留，01–12 全部 resolved。
+
+
+- 2026-10-01：完成 13；电影/电视剧演职员资料与来源内去重、角色合并、导演过滤、旧缓存补齐及 24 小时失败重试间隔已交付。单集明确为整部电视剧资料，自动/手动匹配均接入，不改变媒体、进度、手动选择和已有资料期限。
+- 45 个 Go 应用测试、启动器测试、17 个 Chrome 流程、全量及最终演职员增量 race、vet、构建、格式/diff 检查通过，目视检查桌面及 390px 长名单。README/API/验证记录已更新；真实两源联通及 Docker 未实测，用户服务未重启，01–13 全部 resolved，当前无 frontier。
+- 2026-10-01 15:24：按用户后续“重启服务”要求，完整备份后构建并重启本地 8090，健康检查/新版前端核验通过，原数据保留；现有 2 条 TMDB 资料的演职员已实际补齐，TVDB 尚未配置凭据。详见验证记录部署补充节；ticket 状态不变。
+
+
+- 2026-10-01：完成 14，增加演员/导演照片、人物页及本地关联作品跳转；同名/跨源不误合并，电视剧去重，旧缓存无损补齐，照片独立缓存与故障退避。
+- 50 个 Go 应用测试、启动器测试、20 个 Chrome 流程、全量及最终人物/演职员增量 race、vet、构建与格式/diff 检查通过。桌面/390px/长姓名已目视检查；真实两源照片及 Docker/其他实机未验证，未操作用户媒体或重启现有服务。01–14 全部 resolved，当前无 frontier。
+- 2026-10-02：完成 15；人物关联作品由全库 JSON 扫描改为按来源和人物 key 的持久派生索引，照片关联改为轻量查询。5000 部隔离作品的目标人物 HTTP 查询从约 2.69 秒降至约 6 毫秒；全量 Go、人物 race、9 个资料浏览器流程、vet 与生产构建通过。未操作用户媒体或重启现有服务，01–15 全部 resolved。
+
+- 2026-10-02：完成 16；Emby 分类的竖版海报、横版封面及详情背景、两源按需获取/缓存、缺图回退及旧有效资料补齐已交付。全量 Go / race、23 个浏览器流程、vet、构建和格式/diff 检查通过，最终图片专项回归通过，桌面/窄屏已目视检查。未操作用户媒体或重启现有服务，01–16 全部 resolved。
+
+- 2026-10-02 00:32：按用户要求备份并重启本地 8090，新 PID 6113 健康且使用新版静态资源；原数据保留，2 条 TMDB 资料已补齐封面/背景引用。未主动扫描、播放、下载横图或改写用户媒体，ticket 状态不变；部署边界见验证记录。
+
+- 2026-10-02：完成 17；MetaTube 电影搜索/详情/编号匹配/演职员姓名/三类图片、服务地址与 Token 配置、目录显式启用和回退已交付。全量 Go/race/vet、24 个 Chrome 流程、专项 race 与浏览器两次重复、构建和格式/diff 检查通过。没有调用真实服务、重启用户应用或改写用户媒体；真实 MetaTube 与 Docker 部署未验证，01–17 全部 resolved。
+
+- 2026-10-02 09:42：按用户要求备份并重启应用，8090 新 PID 48308 健康，新版 MetaTube 页面和存储已生效；原有业务数据保持一致，MetaTube 尚未配置。17 状态仍 resolved，部署记录见 docs/verification.md。

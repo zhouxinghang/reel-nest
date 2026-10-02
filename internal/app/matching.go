@@ -14,13 +14,13 @@ func (a *App) matchingTarget(r *http.Request) (metadataTarget, error) {
 	var err error
 	switch target.Kind {
 	case "movie":
-		err = a.db.QueryRowContext(r.Context(), `SELECT f.filename FROM media_files f JOIN media_directories d ON d.id=f.directory_id WHERE f.id=? AND d.kind='movie'`, target.ID).Scan(&target.Title)
+		err = a.db.QueryRowContext(r.Context(), `SELECT f.filename,f.directory_id FROM media_files f JOIN media_directories d ON d.id=f.directory_id WHERE f.id=? AND d.kind='movie'`, target.ID).Scan(&target.Title, &target.DirectoryID)
 	case "series":
-		err = a.db.QueryRowContext(r.Context(), `SELECT s.title FROM series s WHERE s.id=? AND EXISTS(SELECT 1 FROM file_organization o WHERE o.series_id=s.id)`, target.ID).Scan(&target.Title)
+		err = a.db.QueryRowContext(r.Context(), `SELECT s.title,s.directory_id FROM series s WHERE s.id=? AND EXISTS(SELECT 1 FROM file_organization o WHERE o.series_id=s.id)`, target.ID).Scan(&target.Title, &target.DirectoryID)
 		if errors.Is(err, sql.ErrNoRows) {
 			// Unorganized series files can have a title association without
 			// inventing season/episode numbers or merging independent files.
-			err = a.db.QueryRowContext(r.Context(), `SELECT f.filename FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id WHERE f.id=? AND d.kind='series' AND o.series_id IS NULL`, target.ID).Scan(&target.Title)
+			err = a.db.QueryRowContext(r.Context(), `SELECT f.filename,f.directory_id FROM media_files f JOIN media_directories d ON d.id=f.directory_id LEFT JOIN file_organization o ON o.media_file_id=f.id WHERE f.id=? AND d.kind='series' AND o.series_id IS NULL`, target.ID).Scan(&target.Title, &target.DirectoryID)
 		}
 	default:
 		err = sql.ErrNoRows
@@ -38,7 +38,7 @@ func (a *App) matching(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "无法读取匹配对象")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 65*time.Second)
 	defer cancel()
 	if r.Method == "GET" {
 		query := strings.TrimSpace(r.URL.Query().Get("q"))
@@ -46,23 +46,56 @@ func (a *App) matching(w http.ResponseWriter, r *http.Request) {
 			fail(w, 400, "请输入 1–200 字节的作品标题")
 			return
 		}
-		candidates, complete, err := a.metadata.client.search(ctx, target.Kind, query)
+		sources, _, err := a.directorySources(ctx, target.DirectoryID)
 		if err != nil {
-			fail(w, 503, err.Error())
+			fail(w, 500, "无法读取目录资料源")
 			return
 		}
-		// Search never changes a stored association, including empty results/cancel.
-		respond(w, 200, map[string]any{"items": candidates, "moreResults": !complete})
+		candidates := []TitleMetadata{}
+		warnings := []string{}
+		more, succeeded := false, false
+		for _, source := range sources {
+			client := a.metadata.providers[source]
+			if !client.configured() {
+				continue
+			}
+			sourceCtx, stop := context.WithTimeout(ctx, 20*time.Second)
+			items, complete, err := client.search(sourceCtx, target.Kind, query)
+			stop()
+			if err != nil {
+				warnings = append(warnings, err.Error())
+				continue
+			}
+			succeeded = true
+			candidates = append(candidates, items...)
+			more = more || !complete
+		}
+		if !succeeded {
+			if len(warnings) == 0 {
+				warnings = append(warnings, "目录未启用已配置的资料源；请检查 TMDB / TVDB / MetaTube 设置")
+			}
+			fail(w, 503, strings.Join(warnings, "；"))
+			return
+		}
+		// Read-only search preserves priority order and reports partial failures.
+		respond(w, 200, map[string]any{"items": candidates, "moreResults": more, "warnings": warnings})
 		return
 	}
 	var body struct {
-		TMDBID int64  `json:"tmdbId"`
-		Kind   string `json:"kind"`
+		TMDBID   int64  `json:"tmdbId"`
+		Source   string `json:"source"`
+		SourceID int64  `json:"sourceId"`
+		Kind     string `json:"kind"`
 	}
 	if !decode(w, r, &body) {
 		return
 	}
-	if body.TMDBID <= 0 || body.Kind != target.Kind {
+	if body.Source == "" && body.TMDBID > 0 && body.SourceID == 0 {
+		body.Source, body.SourceID = "tmdb", body.TMDBID // Legacy API clients.
+	}
+	body.Source = strings.ToLower(body.Source)
+	client, exists := a.metadata.providers[body.Source]
+	if !exists || body.SourceID <= 0 || body.Kind != target.Kind || (body.TMDBID != 0 && (body.Source != "tmdb" || body.TMDBID != body.SourceID)) {
 		fail(w, 400, "候选作品类型或标识不符")
 		return
 	}
@@ -71,7 +104,18 @@ func (a *App) matching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer a.metadata.operation.Unlock()
-	m, poster, typ, warning, err := a.metadata.client.details(ctx, target.Kind, body.TMDBID)
+	sources, _, err := a.directorySources(ctx, target.DirectoryID)
+	if err != nil {
+		fail(w, 500, "无法读取目录资料源")
+		return
+	}
+	if !sourceEnabled(sources, body.Source) {
+		fail(w, 400, "候选资料源未在此目录启用")
+		return
+	}
+	sourceCtx, stop := context.WithTimeout(ctx, 20*time.Second)
+	m, poster, typ, warning, err := fetchMetadataDetails(sourceCtx, client, target.Kind, body.SourceID)
+	stop()
 	if err != nil {
 		fail(w, 503, err.Error())
 		return

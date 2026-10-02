@@ -56,18 +56,44 @@ export type SeriesDetail = SeriesSummary & {
   }[];
 };
 
+export type CreditPerson = {
+  id: number;
+  name: string;
+  key: string;
+  photoUrl?: string;
+};
+
 export type TitleMetadata = {
-  source: "TMDB";
+  source: "TMDB" | "TVDB" | "MetaTube";
+  sourceId: number;
   tmdbId: number;
   kind: "movie" | "series";
   title: string;
   originalTitle: string;
+  number?: string;
+  provider?: string;
   year: string;
   overview: string;
   posterUrl: string;
+  thumbUrl?: string;
+  backdropUrl?: string;
+  artwork?: {
+    status: "available" | "failed";
+    fetchedAt: number;
+    error?: string;
+  };
   sourceUrl: string;
   fetchedAt: number;
   expiresAt: number;
+  credits?: {
+    status: "available" | "failed";
+    cast: (CreditPerson & { roles: string[] })[];
+    directors: CreditPerson[];
+    fetchedAt: number;
+    retryAt?: number;
+    error?: string;
+    truncated?: boolean;
+  };
 };
 export type MetadataAssociation = {
   metadata: TitleMetadata | null;

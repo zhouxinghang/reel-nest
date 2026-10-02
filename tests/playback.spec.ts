@@ -54,8 +54,8 @@ test("真实 VP8 播放、定位、跨浏览器续播、看完、解码与文件
   await login(page);
   await page.getByText("服务器状态", { exact: true }).click();
   await expect(
-    page.getByRole("region", { name: "TMDB 设置与状态" }),
-  ).toContainText("未配置 TMDB 凭据");
+    page.getByRole("region", { name: "影片资料源设置与状态" }),
+  ).toContainText("未配置影片资料源（TMDB / TVDB / MetaTube）");
   const added = await context.request.post("/api/directories", {
     data: { path: root, kind: "movie" },
   });

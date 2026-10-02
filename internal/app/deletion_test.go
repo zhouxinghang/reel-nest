@@ -132,20 +132,19 @@ func TestPermanentDeletionOnlyRemovesConfirmedSingleFile(t *testing.T) {
 	request(t, a.client, "POST", base+"/delete", deleteBody(p), 410)
 	rescan(t, a, dir.ID)
 	awaitScan(t, a, dir.ID, "completed")
-	requireAvailability(t, a, file.ID, false)
+	request(t, a.client, "GET", base, nil, 404)
 	a.close()
 	b := start(t, app.Config{DataDir: data, MediaRoots: []string{root}})
 	login(t, b)
-	requireAvailability(t, b, file.ID, false)
+	request(t, b.client, "GET", b.server.URL+"/api/media/"+file.ID, nil, 404)
 	for path, content := range keep {
 		requireFile(t, path, content)
 	}
 	// Reusing the old pathname cannot make an old confirmation delete its new occupant.
 	writeMedia(t, name, "new unrelated occupant")
-	request(t, b.client, "POST", b.server.URL+"/api/media/"+file.ID+"/delete", deleteBody(p), 410)
+	request(t, b.client, "POST", b.server.URL+"/api/media/"+file.ID+"/delete", deleteBody(p), 404)
 	rescan(t, b, dir.ID)
 	awaitScan(t, b, dir.ID, "completed")
-	requireAvailability(t, b, file.ID, false)
 	var replacementID string
 	for _, item := range library(t, b) {
 		if item.Path == name && item.Available {
@@ -383,7 +382,7 @@ func TestDeletionReportsRealIndexWriteFailureAndScanRepairs(t *testing.T) {
 	request(t, a.client, "POST", a.server.URL+"/api/media/"+file.ID+"/delete", deleteBody(p), 410)
 	rescan(t, a, d.ID)
 	awaitScan(t, a, d.ID, "completed")
-	requireAvailability(t, a, file.ID, false)
+	request(t, a.client, "GET", a.server.URL+"/api/media/"+file.ID, nil, 404)
 }
 
 func TestConcurrentDeletionAndScanCannotResurrectFile(t *testing.T) {

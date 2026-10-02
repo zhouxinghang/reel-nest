@@ -1,4 +1,4 @@
-// This harness replaces only the external TMDB origins. The production app,
+// This harness replaces only the external metadata origins. The production app,
 // embedded UI, authentication, SQLite, scanning and playback are unchanged.
 package main
 
@@ -14,7 +14,15 @@ import (
 )
 
 func main() {
-	application, err := app.New(app.Config{DataDir: os.Getenv("DATA_DIR"), MediaRoots: []string{os.Getenv("MEDIA_ROOTS")}, Username: "family", Password: "browser-test-password", Assets: web.Assets(), TMDBToken: "isolated-browser-token", TMDBAPIURL: "http://127.0.0.1:18092", TMDBImageURL: "http://127.0.0.1:18092/images"})
+	tvdbKey := ""
+	if os.Getenv("TEST_TVDB") == "true" {
+		tvdbKey = "isolated-browser-tvdb-key"
+	}
+	metaTubeURL := ""
+	if os.Getenv("TEST_METATUBE") == "true" {
+		metaTubeURL = "http://127.0.0.1:18095"
+	}
+	application, err := app.New(app.Config{MetaTubeURL: metaTubeURL, MetaTubeToken: "isolated-browser-metatube-token", TVDBAPIKey: tvdbKey, TVDBAPIURL: "http://127.0.0.1:18094", TVDBImageURL: "http://127.0.0.1:18094/artwork", DataDir: os.Getenv("DATA_DIR"), MediaRoots: []string{os.Getenv("MEDIA_ROOTS")}, Username: "family", Password: "browser-test-password", Assets: web.Assets(), TMDBToken: "isolated-browser-token", TMDBAPIURL: "http://127.0.0.1:18092", TMDBImageURL: "http://127.0.0.1:18092/images"})
 	if err != nil {
 		log.Fatal(err)
 	}

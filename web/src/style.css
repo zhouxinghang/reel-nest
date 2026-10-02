@@ -2163,3 +2163,58 @@ button.danger.primary:hover:not(:disabled) {
     opacity: 0;
   }
 }
+
+/* Per-directory metadata settings remain usable on narrow screens. */
+.source-order {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.source-order legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.source-order ol {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.source-order li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.source-order label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.source-order input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.source-order small {
+  display: block;
+}
+.source-order-actions {
+  display: flex;
+  gap: 6px;
+}
+.source-order-actions button {
+  padding: 6px 12px;
+}
+.directory-sources {
+  margin-top: 12px;
+}
+.tmdb-credits {
+  flex-wrap: wrap;
+}

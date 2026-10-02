@@ -19,6 +19,16 @@ import (
 )
 
 type Config struct {
+	MetaTubeURL     string // Self-hosted service base URL; HTTP is allowed on trusted networks.
+	MetaTubeToken   string
+	MetaTubeTimeout time.Duration
+
+	TVDBAPIKey   string
+	TVDBPIN      string
+	TVDBAPIURL   string // Override only for controlled external-service tests.
+	TVDBImageURL string
+	TVDBTimeout  time.Duration
+
 	TMDBToken    string
 	TMDBAPIURL   string // Override only for controlled external-service tests.
 	TMDBImageURL string
@@ -159,8 +169,12 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("POST /api/matching/{kind}/{id}/selection", a.auth(http.HandlerFunc(a.matching)))
 	mux.Handle("GET /api/metadata/status", a.auth(http.HandlerFunc(a.metadataStatus)))
 	mux.Handle("POST /api/metadata/refresh", a.auth(http.HandlerFunc(a.refreshMetadata)))
+	mux.Handle("GET /api/metadata/posters/{source}/{kind}/{id}", a.auth(http.HandlerFunc(a.metadataPoster)))
 	mux.Handle("GET /api/metadata/posters/{kind}/{id}", a.auth(http.HandlerFunc(a.metadataPoster)))
+	mux.Handle("GET /api/metadata/images/{source}/{kind}/{id}/{type}", a.auth(http.HandlerFunc(a.metadataImage)))
 	mux.Handle("GET /api/library", a.auth(http.HandlerFunc(a.library)))
+	mux.Handle("GET /api/people/{source}/{key}", a.auth(http.HandlerFunc(a.person)))
+	mux.Handle("GET /api/people/{source}/{key}/photo", a.auth(http.HandlerFunc(a.personPhoto)))
 	mux.Handle("POST /api/favorites/{kind}/{id}", a.auth(http.HandlerFunc(a.favorite)))
 	mux.Handle("GET /api/media/{id}", a.auth(http.HandlerFunc(a.media)))
 	mux.Handle("POST /api/media/{id}/deletion-preview", a.auth(http.HandlerFunc(a.deletionPreview)))
@@ -176,6 +190,7 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("GET /api/series/{id}", a.auth(http.HandlerFunc(a.series)))
 	mux.Handle("GET /api/directories", a.auth(http.HandlerFunc(a.directories)))
 	mux.Handle("POST /api/directories", a.auth(http.HandlerFunc(a.addDirectory)))
+	mux.Handle("POST /api/directories/{id}/metadata-sources", a.auth(http.HandlerFunc(a.updateDirectorySources)))
 	mux.Handle("POST /api/directories/{id}/scan", a.auth(http.HandlerFunc(a.rescan)))
 	mux.Handle("/api/", a.auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "接口不存在") })))
 	mux.HandleFunc("/", a.page)

@@ -131,7 +131,28 @@ func TestDirectoryAutomaticAndManualScanKeepsFileIdentity(t *testing.T) {
 	awaitScan(t, b, dir.ID, "completed")
 }
 
-func TestFailedScanPreservesRecordsAndCompleteScanMarksMissing(t *testing.T) {
+func TestSuccessfulRescanRemovesMissingMediaFromLibrary(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "待删除.mp4")
+	writeMedia(t, path, "isolated video fixture")
+	a := start(t, app.Config{DataDir: t.TempDir(), Username: "family", Password: password, MediaRoots: []string{root}})
+	login(t, a)
+	d := addDirectory(t, a, root)
+	awaitScan(t, a, d.ID, "completed")
+	file := library(t, a)[0]
+	saveProgress(t, a, file.ID, 3, false)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	rescan(t, a, d.ID)
+	awaitScan(t, a, d.ID, "completed")
+	if items := library(t, a); len(items) != 0 {
+		t.Fatalf("missing source file remained in library: %+v", items)
+	}
+	request(t, a.client, "GET", a.server.URL+"/api/media/"+file.ID, nil, 404)
+}
+
+func TestFailedScanPreservesRecordsAndCompleteScanRemovesMissing(t *testing.T) {
 	allowed := t.TempDir()
 	root := filepath.Join(allowed, "movies")
 	movie := filepath.Join(root, "珍藏.mp4")
@@ -172,20 +193,19 @@ func TestFailedScanPreservesRecordsAndCompleteScanMarksMissing(t *testing.T) {
 	}
 	rescan(t, a, d.ID)
 	awaitScan(t, a, d.ID, "completed")
-	if items := library(t, a); len(items) != 1 || items[0].Available || items[0].ID != original.ID {
-		t.Fatalf("missing file still available: %+v", items)
+	if items := library(t, a); len(items) != 0 {
+		t.Fatalf("missing file remained in library: %+v", items)
 	}
+	request(t, a.client, "GET", a.server.URL+"/api/media/"+original.ID, nil, 404)
 	writeMedia(t, movie, "isolated replacement with different contents and length")
 	rescan(t, a, d.ID)
 	awaitScan(t, a, d.ID, "completed")
 	items := library(t, a)
-	if len(items) != 2 {
+	if len(items) != 1 {
 		t.Fatalf("replacement must have a new identity: %+v", items)
 	}
-	for _, item := range items {
-		if item.Available && item.ID == original.ID {
-			t.Fatal("old identity reused for replacement")
-		}
+	if !items[0].Available || items[0].ID == original.ID {
+		t.Fatal("old identity reused for replacement")
 	}
 }
 

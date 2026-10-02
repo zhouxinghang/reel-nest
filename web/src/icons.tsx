@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 
 const paths = {
+  person: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 22v-2a8 8 0 0 1 16 0v2" />
+    </>
+  ),
   library: (
     <>
       <rect x="3" y="3" width="7" height="7" rx="1" />

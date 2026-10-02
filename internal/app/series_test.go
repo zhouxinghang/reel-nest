@@ -146,6 +146,8 @@ func TestEpisodeRecognitionIsConservativeAndIndependentOfFolderLayout(t *testing
 		{"城南往事/S00/S00E01.extra.mp4", "城南往事", 0, 1},
 		{"城南往事/Season 02/S01E05.mp4", "城南往事", 1, 5},
 		{"unrelated/folders/城南往事.S2E3.mp4", "城南往事", 2, 3},
+		{"太平年/01.mp4", "太平年", 1, 1},
+		{"太平年/第2季/03.mp4", "太平年", 2, 3},
 		{"multi/回家.S01E01E02.mkv", "", 0, 0},
 		{"multi/回家.S01E01-02.mkv", "", 0, 0},
 		{"multi/回家.S01E01-E02.mkv", "", 0, 0},
@@ -161,6 +163,7 @@ func TestEpisodeRecognitionIsConservativeAndIndependentOfFolderLayout(t *testing
 		{"TV/Season 1/S01E01.mp4", "", 0, 0},
 		{"unknown/回家.S01E00.mp4", "", 0, 0},
 		{"unknown/回家.S999999E1.mp4", "", 0, 0},
+		{"unknown/S1000/01.mp4", "", 0, 0},
 		{"unknown/回家.S01E01abc.mp4", "", 0, 0},
 		{"unknown/NEWS01E01.mp4", "", 0, 0},
 	}
@@ -199,7 +202,7 @@ func TestEpisodeRecognitionIsConservativeAndIndependentOfFolderLayout(t *testing
 			}
 		})
 	}
-	if len(series) != 3 {
+	if len(series) != 4 {
 		t.Fatalf("unexpected guessed series: %+v", series)
 	}
 	for _, file := range library(t, a) {
@@ -207,6 +210,33 @@ func TestEpisodeRecognitionIsConservativeAndIndependentOfFolderLayout(t *testing
 			t.Fatal("movie was incorrectly organized as an episode")
 		}
 	}
+}
+
+func TestNumericEpisodeFilenameUsesSeriesFolderAndEmptySeriesIsRemoved(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "太平年", "01.mp4")
+	writeMedia(t, path, "isolated episode fixture")
+	a := start(t, app.Config{DataDir: t.TempDir(), Username: "family", Password: password, MediaRoots: []string{root}})
+	login(t, a)
+	d := addSeriesDirectory(t, a, root)
+	items, shows := seriesLibrary(t, a)
+	if len(items) != 1 || len(shows) != 1 || items[0].Episode == nil {
+		t.Fatalf("numeric episode was not organized: items=%+v series=%+v", items, shows)
+	}
+	if ref := items[0].Episode; ref.SeriesTitle != "太平年" || ref.SeasonNumber != 1 || ref.EpisodeNumber != 1 {
+		t.Fatalf("wrong numeric episode organization: %+v", ref)
+	}
+	seriesID := shows[0].ID
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	rescan(t, a, d.ID)
+	awaitScan(t, a, d.ID, "completed")
+	items, shows = seriesLibrary(t, a)
+	if len(items) != 0 || len(shows) != 0 {
+		t.Fatalf("missing episode or empty series remained: items=%+v series=%+v", items, shows)
+	}
+	request(t, a.client, "GET", a.server.URL+"/api/series/"+seriesID, nil, 404)
 }
 
 func TestSeriesOrganizationSurvivesRescanAndOfflineRestart(t *testing.T) {

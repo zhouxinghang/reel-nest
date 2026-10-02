@@ -3,6 +3,7 @@
   --header-height: 60px;
   --detail-gutter: clamp(24px, 4.1vw, 72px);
   background: #101010;
+  isolation: isolate;
 }
 .detail-page .app-main {
   width: 100%;
@@ -324,6 +325,206 @@
   font-weight: 500;
   margin: 0 0 20px;
 }
+.credits-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  margin-bottom: 22px;
+}
+.credits-heading h2 {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0;
+}
+.title-credits h3 {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: #aaa;
+  font-weight: 500;
+}
+/* Photo cards share the same presentation for actors and directors. */
+.credits-directors {
+  margin-bottom: 28px;
+}
+.credits-cast {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 20px 16px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.credits-cast li {
+  min-width: 0;
+}
+.person-card {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+.person-photo {
+  overflow: hidden;
+  aspect-ratio: 2 / 3;
+  background: #25272a;
+  border-radius: 6px;
+}
+.person-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+.person-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  color: #777;
+}
+.person-photo-placeholder svg {
+  width: 42%;
+  height: auto;
+  stroke-width: 1;
+}
+.person-photo-placeholder span {
+  font-size: 12px;
+}
+.person-card-copy {
+  padding: 12px 2px 4px;
+  overflow-wrap: anywhere;
+}
+.person-card-copy strong {
+  display: block;
+  color: #eee;
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.person-card-copy > span {
+  color: #aaa;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.person-card:hover strong,
+.person-work-card:hover h3 {
+  color: var(--accent);
+}
+.person-card:hover .person-photo {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.credits-toggle {
+  margin-top: 14px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+.person-hero {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 36px;
+  align-items: center;
+  max-width: 1040px;
+}
+.person-hero h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.person-facts {
+  color: #ccc;
+}
+.person-facts span {
+  padding: 0 8px;
+  color: #777;
+}
+.person-works-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.person-works-heading h2 {
+  margin: 0;
+}
+.person-filters {
+  display: flex;
+  gap: 8px;
+}
+.person-filters button {
+  border-radius: 24px;
+  padding: 8px 16px;
+}
+.person-filters button[aria-pressed="true"] {
+  background: #353b30;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.person-work-grid {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 28px 22px;
+}
+.person-work-grid li {
+  min-width: 0;
+}
+.person-work-card {
+  display: block;
+  max-width: 250px;
+  overflow-wrap: anywhere;
+}
+.person-work-card h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 14px 0 6px;
+}
+.person-work-card p {
+  color: #aaa;
+  font-size: 13px;
+  margin: 6px 0;
+}
+.person-work-card .person-work-role {
+  color: #d0d0d0;
+}
+.person-error h1 {
+  font-size: 24px;
+}
+@media (max-width: 520px) {
+  .credits-cast {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 12px;
+  }
+  .person-card-copy strong {
+    font-size: 13px;
+  }
+  .person-hero {
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .person-hero h1 {
+    font-size: 25px;
+    margin-top: 0;
+  }
+  .person-hero .eyebrow {
+    margin-top: 0;
+    font-size: 10px;
+  }
+  .person-hero .muted {
+    font-size: 14px;
+  }
+  .person-work-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 16px;
+  }
+}
 .detail-source-path {
   margin-bottom: 10px;
   font-size: 14px;
@@ -535,4 +736,30 @@
     width: 25px;
     height: 25px;
   }
+}
+
+/* Decorative backdrop belongs to the page, not the poster column. No portrait
+   fallback: missing landscape artwork keeps the readable plain canvas. */
+.detail-backdrop {
+  position: fixed;
+  inset: 0 0 auto;
+  height: min(85vh, 950px);
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.detail-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0.45;
+}
+.detail-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #10101070, #10101020),
+    linear-gradient(0deg, #101010 0%, #10101088 30%, transparent 100%);
 }

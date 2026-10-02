@@ -101,9 +101,9 @@ func TestReadOnlyStreamsPersistWithoutSessionsAndCannotChangeTarget(t *testing.T
 	}
 	rescan(t, b, d.ID)
 	awaitScan(t, b, d.ID, "completed")
-	readContent(t, http.DefaultClient, "GET", b.server.URL+link, "", 410)
+	readContent(t, http.DefaultClient, "GET", b.server.URL+link, "", 404)
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
-	readContent(t, http.DefaultClient, "GET", b.server.URL+link, "", 410)
+	readContent(t, http.DefaultClient, "GET", b.server.URL+link, "", 404)
 }
