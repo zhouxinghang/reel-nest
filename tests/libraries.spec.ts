@@ -148,17 +148,19 @@ test("具名媒体库：创建、目录分组、隔离浏览、搜索、改名�
       }),
     ).toBeVisible();
   }
-  const classicShelf = page.getByRole("region", {
-    name: "最近添加 · 经典电影",
+  const recentShelf = page.getByRole("region", {
+    name: "最近添加",
     exact: true,
   });
-  await expect(classicShelf.locator(".media-card h2")).toHaveCount(2);
-  await expect(classicShelf).not.toContainText("家庭独有");
+  await expect(page.locator(".home-shelf")).toHaveCount(1);
+  await expect(recentShelf.locator(".media-card h2")).toHaveCount(6);
+  await expect(recentShelf).toContainText("经典独有");
+  await expect(recentShelf).toContainText("家庭独有");
   await expect(
-    page
-      .getByRole("region", { name: "最近添加 · 家庭电视剧", exact: true })
-      .locator(".media-card h2"),
+    recentShelf.locator(".media-card h2").filter({ hasText: "共同片名" }),
   ).toHaveCount(2);
+  await expect(recentShelf.locator(".series-card h2")).toHaveText(["星河"]);
+  await expect(recentShelf).toContainText("无法组织.webm");
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
     path: testInfo.outputPath("named-libraries-desktop.png"),
@@ -308,4 +310,142 @@ test("具名媒体库：创建、目录分组、隔离浏览、搜索、改名�
   await expect(page.getByRole("alert")).toHaveText("媒体库不存在");
   await expect(page.locator(".media-card")).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test("最近添加：跨目录统一排序、首页总量上限和完整列表", async ({
+  page,
+  context,
+}, testInfo) => {
+  const login = await context.request.post("/api/login", {
+    data: { username: "family", password: "browser-test-password" },
+  });
+  expect(login.ok()).toBe(true);
+  const root = join(
+    process.env.REELNEST_TEST_ROOT!,
+    "media",
+    `recent-${randomUUID()}`,
+  );
+  async function awaitScan(id: string) {
+    await expect
+      .poll(async () => {
+        const data = await (
+          await context.request.get("/api/directories")
+        ).json();
+        return (data.directories as Directory[]).find((dir) => dir.id === id)
+          ?.scanStatus;
+      })
+      .toBe("completed");
+  }
+  const created: Directory[] = [];
+  for (const name of ["A", "B"]) {
+    const path = join(root, name);
+    mkdirSync(path, { recursive: true });
+    for (let i = 1; i <= 12; i++)
+      writeFileSync(join(path, `${name}-${i}.webm`), "isolated recent fixture");
+    const response = await context.request.post("/api/directories", {
+      data: { name, path, kind: "movie", metadataSources: [] },
+    });
+    expect(response.status()).toBe(201);
+    const directory = (await response.json()) as Directory;
+    created.push(directory);
+    await awaitScan(directory.id);
+  }
+  // Add to the older directory last: correct ordering must interleave libraries.
+  writeFileSync(join(created[0].path, "A-latest.webm"), "newest fixture");
+  expect(
+    (
+      await context.request.post(`/api/directories/${created[0].id}/scan`, {
+        data: {},
+      })
+    ).status(),
+  ).toBe(202);
+  await awaitScan(created[0].id);
+  const data = await (
+    await context.request.get("/api/library?sort=recent")
+  ).json();
+  const entries = data.items as MediaFile[];
+  expect(entries).toHaveLength(25);
+  expect(entries[0].filename).toBe("A-latest.webm");
+  expect(entries.map((entry) => entry.directoryId)).toEqual([
+    created[0].id,
+    ...Array(12).fill(created[1].id),
+    ...Array(12).fill(created[0].id),
+  ]);
+  expect(entries[0].addedAt).toBeGreaterThan(entries[1].addedAt);
+  expect(entries[12].addedAt).toBeGreaterThan(entries[13].addedAt);
+
+  await page.goto("/library");
+  await expect(page.locator(".home-library-tile")).toHaveCount(2);
+  const shelf = page.getByRole("region", { name: "最近添加", exact: true });
+  await expect(page.locator(".home-shelf")).toHaveCount(1);
+  await expect(shelf.locator(".media-card h2")).toHaveText(
+    entries.slice(0, 20).map((entry) => entry.filename),
+  );
+  await shelf.getByRole("link", { name: "最近添加", exact: true }).click();
+  await expect(page).toHaveURL(/\/library\?type=recent$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("最近添加");
+  await expect(page.locator(".home-card-grid")).toHaveCount(1);
+  await expect(page.locator(".library-group")).toHaveCount(0);
+  await expect(page.locator(".media-card h2")).toHaveText(
+    entries.map((entry) => entry.filename),
+  );
+  expect(
+    await page
+      .locator(".media-card")
+      .evaluateAll((links) => links.map((link) => link.getAttribute("href"))),
+  ).toEqual(entries.map((entry) => `/media/${entry.id}`));
+  await expect(page.locator(".card-added")).toHaveCount(25);
+
+  await page.getByLabel("排序方式").selectOption("title");
+  await expect(page.locator(".media-card h2")).toHaveText(
+    entries
+      .map((entry) => entry.filename)
+      .sort((a, b) => a.localeCompare(b, "zh-CN", { numeric: true })),
+  );
+  await page.getByLabel("排序方式").selectOption("recent");
+  await page.getByRole("button", { name: "列表视图", exact: true }).click();
+  await expect(page.locator(".home-card-grid")).toHaveClass(/home-card-list/);
+  await page.getByLabel("搜索文件名").fill("-1.");
+  await expect(page.locator(".media-card h2")).toHaveText([
+    "B-1.webm",
+    "A-1.webm",
+  ]);
+  await expect(page.locator(".library-group")).toHaveCount(0);
+  await page.getByLabel("搜索文件名").fill("");
+  const categories = page.getByRole("group", { name: "媒体分类" });
+  await categories.getByRole("button", { name: "电视剧", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "没有找到对应的媒体" }),
+  ).toBeVisible();
+  await categories.getByRole("button", { name: "电影", exact: true }).click();
+  await expect(page.locator(".media-card")).toHaveCount(25);
+  await page
+    .getByRole("button", { name: "添加收藏：A-latest.webm", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "取消收藏：A-latest.webm", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "海报视图", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 900 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("recent-unified-mobile.png"),
+    fullPage: true,
+  });
+  await page.getByLabel("选择媒体库").selectOption(created[0].id);
+  await expect(page).toHaveURL(
+    new RegExp(`type=recent&directory=${created[0].id}`),
+  );
+  await expect(page.locator(".media-card h2")).toHaveText(
+    entries
+      .filter((entry) => entry.directoryId === created[0].id)
+      .map((entry) => entry.filename),
+  );
+  await expect(page.locator(".library-group")).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".media-card")).toHaveCount(13);
 });

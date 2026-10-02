@@ -562,22 +562,20 @@ test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添
       .locator(".home-page")
       .evaluate((el) => getComputedStyle(el).backgroundColor),
   ).toBe("rgb(20, 20, 20)");
-  const recentMovies = page.getByRole("region", {
-    name: "最近添加 · Home 电影",
+  const recent = page.getByRole("region", {
+    name: "最近添加",
     exact: true,
   });
-  await expect(recentMovies.locator(".media-card h2").first()).toHaveText(
-    lastName,
-  );
+  await expect(recent.locator(".media-card h2").first()).toHaveText(lastName);
   await page.screenshot({
     path: testInfo.outputPath("emby-home-desktop.png"),
     fullPage: true,
   });
-  await recentMovies
+  await recent
     .getByRole("button", { name: `添加收藏：${lastName}`, exact: true })
     .click();
   await expect(
-    recentMovies.getByRole("button", {
+    recent.getByRole("button", {
       name: `取消收藏：${lastName}`,
       exact: true,
     }),
@@ -667,9 +665,12 @@ test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添
   ).toHaveAttribute("aria-pressed", "true");
   await page.goto("/library?type=recent");
   await page.getByLabel("搜索文件名").fill("Home ");
-  await expect(
-    page.locator(".home-card-grid .media-card h2").first(),
-  ).toHaveText(lastName);
+  await expect(page.locator(".library-group")).toHaveCount(0);
+  await expect(page.locator(".home-card-grid .media-card h2")).toHaveText([
+    lastName,
+    "Home show",
+    firstName,
+  ]);
   await context.request.post(`/api/directories/${movieDir.id}/scan`, {
     data: {},
   });
@@ -686,9 +687,7 @@ test("Emby 首页、家庭收藏持久化、收藏失败恢复与真实最近添
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/library");
-    await expect(
-      page.getByRole("region", { name: "最近添加 · Home 电影" }),
-    ).toBeVisible();
+    await expect(page.getByRole("region", { name: "最近添加" })).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

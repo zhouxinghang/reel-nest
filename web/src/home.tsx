@@ -385,6 +385,22 @@ export function Library({ filter }: { filter: LibraryFilter }) {
         b.progress!.updatedAt - a.progress!.updatedAt ||
         a.id.localeCompare(b.id),
     );
+  function cardGrid(collection: Entry[]) {
+    return (
+      <div
+        className={`home-card-grid${view === "list" ? " home-card-list" : ""}`}
+      >
+        {collection.map((entry) => (
+          <Card
+            key={`${entry.kind}-${entry.id}`}
+            entry={entry}
+            recent={filter === "recent"}
+            onFavorite={onFavorite}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="emby-library">
       <h1 className={home ? "sr-only" : "browse-heading"}>
@@ -503,23 +519,17 @@ export function Library({ filter }: { filter: LibraryFilter }) {
                   ))}
                 </Shelf>
               )}
-              {collections
-                .filter((collection) => collection.entries.length > 0)
-                .map(({ directory, entries: collection }) => (
-                  <Shelf
-                    key={directory.id}
-                    title={`最近添加 · ${directory.name}`}
-                    more={libraryURL(directory.id)}
-                  >
-                    {collection.slice(0, 20).map((entry) => (
-                      <Card
-                        key={`${entry.kind}-${entry.id}`}
-                        entry={entry}
-                        onFavorite={onFavorite}
-                      />
-                    ))}
-                  </Shelf>
-                ))}
+              {entries.length > 0 && (
+                <Shelf title="最近添加" more="/library?type=recent">
+                  {entries.slice(0, 20).map((entry) => (
+                    <Card
+                      key={`${entry.kind}-${entry.id}`}
+                      entry={entry}
+                      onFavorite={onFavorite}
+                    />
+                  ))}
+                </Shelf>
+              )}
             </>
           )}
           {!home && (
@@ -629,44 +639,37 @@ export function Library({ filter }: { filter: LibraryFilter }) {
                   {filter === "favorites" ? "收藏 · 家庭共享" : "媒体"}
                 </p>
                 {entries.length ? (
-                  [...groups].map(([id, collection]) => {
-                    const directory = directories.find(
-                      (item) => item.id === id,
-                    )!;
-                    return (
-                      <section
-                        className="library-group"
-                        key={id}
-                        aria-label={`媒体库：${directory.name}`}
-                      >
-                        {!selectedDirectory && (
-                          <>
-                            <div className="library-group-heading">
-                              <h2>
-                                <a href={libraryURL(id)}>{directory.name}</a>
-                              </h2>
-                              <span className="fine">
-                                {collection.length} 项
-                              </span>
-                            </div>
-                            <p className="fine file-path">{directory.path}</p>
-                          </>
-                        )}
-                        <div
-                          className={`home-card-grid${view === "list" ? " home-card-list" : ""}`}
+                  filter === "recent" ? (
+                    cardGrid(entries)
+                  ) : (
+                    [...groups].map(([id, collection]) => {
+                      const directory = directories.find(
+                        (item) => item.id === id,
+                      )!;
+                      return (
+                        <section
+                          className="library-group"
+                          key={id}
+                          aria-label={`媒体库：${directory.name}`}
                         >
-                          {collection.map((entry) => (
-                            <Card
-                              key={`${entry.kind}-${entry.id}`}
-                              entry={entry}
-                              recent={filter === "recent"}
-                              onFavorite={onFavorite}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    );
-                  })
+                          {!selectedDirectory && (
+                            <>
+                              <div className="library-group-heading">
+                                <h2>
+                                  <a href={libraryURL(id)}>{directory.name}</a>
+                                </h2>
+                                <span className="fine">
+                                  {collection.length} 项
+                                </span>
+                              </div>
+                              <p className="fine file-path">{directory.path}</p>
+                            </>
+                          )}
+                          {cardGrid(collection)}
+                        </section>
+                      );
+                    })
+                  )
                 ) : (
                   <div className="home-empty">
                     <Icon name={filter === "favorites" ? "heart" : "search"} />

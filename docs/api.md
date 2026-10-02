@@ -22,7 +22,7 @@
 
 一个已接入目录对应一个具名媒体库；名称不是身份，同名媒体库仍按目录 ID 隔离。旧目录启动迁移时用文件夹名补全名称（去除控制字符并截取至 80 字符，空名回退“媒体库”），无需读取媒体文件或重扫。
 
-网页 `/library?directory={id}` 为单库入口，刷新/浏览器前进后退保持选择；全局分类、搜索、收藏、最近添加按目录分组展示，目录下的电视剧仍保留季集组织。`/api/library` 的 `directories` 始终包含全部已接入目录（含空库），只有 `items/series` 应用查询条件。
+网页 `/library?directory={id}` 为单库入口，刷新/浏览器前进后退保持选择；全局分类、搜索、收藏按目录分组展示；首页「最近添加」跨目录统一展示最新 20 项，完整入口 `/library?type=recent` 也不按目录分组，按实际收录时间统一排序。电视剧仍保留季集组织。`/api/library` 的 `directories` 始终包含全部已接入目录（含空库），只有 `items/series` 应用查询条件。
 
 媒体文件字段：`id / directoryId / directoryName / directoryPath / filename / relativePath / path / kind / size / modifiedAt / available / matched / episode / organizationReason / progress / match`。大小为字节，修改时间为 Unix 秒；`available` 是成功删除后的即时索引状态，不是实时探测结果。完整成功扫描会移除未发现的文件记录；扫描失败或中断不发布部分结果。`matched` 表示存在未过期的影片资料。
 
