@@ -216,20 +216,3 @@ func (s *Store) MediaFiles(ctx context.Context, library, after string, limit int
 }
 
 func (s *Store) Ready(ctx context.Context) bool { return s.reader.PingContext(ctx) == nil }
-func (s *Store) ConfiguredProviders(ctx context.Context) (map[string]bool, error) {
-	rows, e := s.reader.QueryContext(ctx, "SELECT source,secrets IS NOT NULL FROM provider_settings")
-	if e != nil {
-		return nil, e
-	}
-	defer rows.Close()
-	m := map[string]bool{}
-	for rows.Next() {
-		var key string
-		var value bool
-		if e = rows.Scan(&key, &value); e != nil {
-			return nil, e
-		}
-		m[key] = value
-	}
-	return m, rows.Err()
-}

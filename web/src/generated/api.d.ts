@@ -933,7 +933,7 @@ export interface components {
       configured: boolean;
       revision: components["schemas"]["Revision"];
     };
-    /** @description Omitted/null/blank secrets preserve existing values; explicit clear deletes. Trimmed secret/PIN <=4096 UTF-8 bytes with no internal whitespace/control characters. Only TVDB accepts pin/clearPin, only MetaTube accepts url. URL <=2048 bytes, HTTP(S) with optional prefix, no userinfo/query/fragment. Changing address with an old token requires a replacement or explicit clear; cannot transfer token. Saving never waits for upstream requests. */
+    /** @description Omitted/null/blank secrets preserve existing values; explicit clear deletes. Trimmed secret/PIN <=4096 UTF-8 bytes with no internal whitespace/control characters. Only TVDB accepts pin/clearPin, only MetaTube accepts url. URL <=2048 bytes, HTTP(S) with optional prefix, no userinfo/query/fragment. Changing address with an old token requires a replacement or explicit clear; cannot transfer token. MetaTube URLs are normalized to an explicit /v1 API suffix, with lowercase host and no default port or trailing slash; reverse-proxy prefix case is preserved. Null URL preserves; blank URL clears. Saving never waits for upstream requests. An unchanged save preserves the revision. */
     SettingsPatch: {
       revision: components["schemas"]["Revision"];
       credential?: string | null;

@@ -19,6 +19,7 @@ import (
 	"reelnest/internal/catalog"
 	"reelnest/internal/identity"
 	"reelnest/internal/mediafs"
+	"reelnest/internal/metadata"
 	"reelnest/internal/model"
 	"reelnest/internal/store"
 	transport "reelnest/internal/transport/http"
@@ -54,7 +55,11 @@ func start(t *testing.T) *harness {
 	if e != nil {
 		t.Fatal(e)
 	}
-	handler, e := transport.New(s, i, c, []string{root}, false)
+	m, e := metadata.New(ctx, s)
+	if e != nil {
+		t.Fatal(e)
+	}
+	handler, e := transport.New(s, i, c, m, []string{root}, false)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -70,6 +75,7 @@ func start(t *testing.T) *harness {
 		if e := c.Close(); e != nil {
 			t.Error(e)
 		}
+		m.Close()
 		if e := s.Close(); e != nil {
 			t.Error(e)
 		}

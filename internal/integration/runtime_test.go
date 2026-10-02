@@ -47,6 +47,13 @@ func TestNewRuntimePersistsAndOwnsDataDirectoryLifecycle(t *testing.T) {
 		return string(b)
 	}
 	call("POST", "/api/login", `{"username":"family","password":"a-long-test-password"}`, 200)
+	call("PATCH", "/api/settings/metadata/tmdb", `{"revision":1,"credential":"isolated-runtime-token"}`, 200)
+	call("PATCH", "/api/settings/metadata/tvdb", `{"revision":1,"credential":"isolated-runtime-key","pin":"isolated-runtime-pin"}`, 200)
+	call("PATCH", "/api/settings/metadata/metatube", `{"revision":1,"url":"http://127.0.0.1:1/proxy"}`, 200)
+	settings := call("GET", "/api/settings/metadata", "", 200)
+	if strings.Contains(settings, "isolated-runtime-") {
+		t.Fatal("configuration response exposes secrets")
+	}
 	if other, e := app.NewRuntime(context.Background(), config); !errors.Is(e, store.ErrDataDirLocked) {
 		if other != nil {
 			other.Close()
@@ -75,4 +82,43 @@ func TestNewRuntimePersistsAndOwnsDataDirectoryLifecycle(t *testing.T) {
 		t.Fatal(body)
 	}
 	call("GET", "/api/libraries", "", 200)
+	if got := call("GET", "/api/settings/metadata", "", 200); got != settings {
+		t.Fatal("restart changed provider settings")
+	}
+}
+
+func TestNewRuntimeRejectsMissingSettingsKeyWithoutRegeneratingIt(t *testing.T) {
+	config := app.RuntimeConfig{DataDir: t.TempDir(), MediaRoots: []string{t.TempDir()}, Username: "family", Password: "a-long-test-password"}
+	runtime, err := app.NewRuntime(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = runtime.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(config.DataDir, "metadata-settings.key")
+	key, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if next, err := app.NewRuntime(context.Background(), config); !errors.Is(err, store.ErrInvalidKey) {
+		if next != nil {
+			next.Close()
+		}
+		t.Fatal("missing key accepted", err)
+	}
+	if _, err = os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("missing key was regenerated", err)
+	}
+	if err = os.WriteFile(path, key, 0600); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err = app.NewRuntime(context.Background(), config)
+	if err != nil {
+		t.Fatal("complete key restore failed", err)
+	}
+	runtime.Close()
 }

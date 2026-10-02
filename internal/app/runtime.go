@@ -9,6 +9,7 @@ import (
 	"reelnest/internal/catalog"
 	"reelnest/internal/identity"
 	"reelnest/internal/mediafs"
+	"reelnest/internal/metadata"
 	"reelnest/internal/store"
 	transport "reelnest/internal/transport/http"
 )
@@ -21,11 +22,12 @@ type RuntimeConfig struct {
 	CookieSecure                bool
 }
 type Runtime struct {
-	handler http.Handler
-	catalog *catalog.Catalog
-	store   *store.Store
-	once    sync.Once
-	err     error
+	handler  http.Handler
+	catalog  *catalog.Catalog
+	metadata *metadata.Service
+	store    *store.Store
+	once     sync.Once
+	err      error
 }
 
 func NewRuntime(ctx context.Context, config RuntimeConfig) (_ *Runtime, err error) {
@@ -50,11 +52,15 @@ func NewRuntime(ctx context.Context, config RuntimeConfig) (_ *Runtime, err erro
 	if e != nil {
 		return nil, e
 	}
+	r.metadata, e = metadata.New(ctx, s)
+	if e != nil {
+		return nil, e
+	}
 	r.catalog, e = catalog.New(ctx, s, fs)
 	if e != nil {
 		return nil, e
 	}
-	r.handler, e = transport.New(s, i, r.catalog, config.MediaRoots, config.CookieSecure)
+	r.handler, e = transport.New(s, i, r.catalog, r.metadata, config.MediaRoots, config.CookieSecure)
 	if e != nil {
 		return nil, e
 	}
@@ -68,6 +74,9 @@ func (r *Runtime) Close() error {
 	r.once.Do(func() {
 		if r.catalog != nil {
 			r.err = r.catalog.Close()
+		}
+		if r.metadata != nil {
+			r.metadata.Close()
 		}
 		r.err = errors.Join(r.err, r.store.Close())
 	})

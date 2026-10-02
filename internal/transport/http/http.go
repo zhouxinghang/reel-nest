@@ -1,6 +1,6 @@
 // Package http provides explicit contract DTOs and authentication adapters.
-// Stage 02 mounts identity/library/scan routes only; it is not a second version
-// exposed by cmd/reelnest. Remaining routes join this assembly before cutover.
+// This assembly is not exposed by cmd/reelnest until the remaining routes and
+// UI land. It mounts identity/library/scan and provider-setting routes so far.
 package http
 
 import (
@@ -20,6 +20,7 @@ import (
 	"reelnest/internal/catalog"
 	"reelnest/internal/identity"
 	"reelnest/internal/mediafs"
+	"reelnest/internal/metadata"
 	"reelnest/internal/model"
 	"reelnest/internal/store"
 )
@@ -28,18 +29,19 @@ type Transport struct {
 	store     *store.Store
 	identity  *identity.Identity
 	catalog   *catalog.Catalog
+	metadata  *metadata.Service
 	contract  *api.Contract
 	roots     []string
 	secure    bool
 	cursorKey [32]byte
 }
 
-func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, roots []string, secure bool) (http.Handler, error) {
+func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, m *metadata.Service, roots []string, secure bool) (http.Handler, error) {
 	contract, e := api.Load()
 	if e != nil {
 		return nil, e
 	}
-	t := &Transport{s, i, c, contract, append([]string{}, roots...), secure, s.Keys().Stream}
+	t := &Transport{store: s, identity: i, catalog: c, metadata: m, contract: contract, roots: append([]string{}, roots...), secure: secure, cursorKey: s.Keys().Stream}
 	mux := http.NewServeMux()
 	register := func(pattern string, auth bool, handler http.HandlerFunc) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +77,8 @@ func New(s *store.Store, i *identity.Identity, c *catalog.Catalog, roots []strin
 		respond(w, 200, session{name})
 	})
 	register("GET /api/libraries", true, t.libraries)
+	register("GET /api/settings/metadata", true, t.metadataSettings)
+	register("PATCH /api/settings/metadata/{source}", true, t.updateMetadataSettings)
 	register("POST /api/libraries", true, t.createLibrary)
 	register("PATCH /api/libraries/{id}", true, t.updateLibrary)
 	register("POST /api/libraries/{id}/scans", true, func(w http.ResponseWriter, r *http.Request) {
@@ -359,13 +363,13 @@ func (t *Transport) libraries(w http.ResponseWriter, r *http.Request) {
 	for _, l := range items {
 		result.Items = append(result.Items, library(l))
 	}
-	configured, e := t.store.ConfiguredProviders(r.Context())
+	settings, e := t.metadata.Settings()
 	if e != nil {
 		t.fail(w, e)
 		return
 	}
-	for _, source := range []string{"tmdb", "tvdb", "metatube"} {
-		result.Sources = append(result.Sources, providerStatus{Source: source, Name: map[string]string{"tmdb": "TMDB", "tvdb": "TVDB", "metatube": "MetaTube"}[source], Configured: configured[source]})
+	for _, p := range settings {
+		result.Sources = append(result.Sources, providerStatus{Source: p.Source(), Name: providerName(p.Source()), Configured: p.Configured()})
 	}
 	respond(w, 200, result)
 }
